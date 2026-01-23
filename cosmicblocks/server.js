@@ -1,40 +1,20 @@
 // Cosmic Blocks
 // by Narcissa Wright
 
+
 // timing how long server booting up takes. takes longer if production bc i minify the client js which takes >10sec.
 var start = new Date();
 var startTime = start.getTime();
 
-// render CSS
-var sass = require('node-sass');
-sass.render({
-	file: './cosmicblocks/style.scss',
-	outFile: './cosmicblocks/client/style.css',
-	outputStyle: 'compressed',
-}, function(error, result) {
-	if(!error){
-		fs.writeFile('./cosmicblocks/client/style.css', result.css, function(err){
-			if(!err){
-				console.log('minified style.scss successfully.');
-			} else {
-				console.log('Sass failure!!');
-				console.log(err);
-			}
-		});
-	} else {
-		console.log('Sass failure!!');
-		console.log(error);
-	}
-});
+
 
 // set up
-var compressor = require('node-minify');
+// var compressor = require('node-minify');
 var express = require('express'); // this is an express application
-var signature = require('cookie-signature');
-var cookie = require('cookie');
+// var signature = require('cookie-signature');
+// var cookie = require('cookie');
 var crypto = require('crypto');
-var hsl = require('hsl-to-hex'); // color tool
-var cookieParser = require('cookie-parser');
+// var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var https = require('https');
 var http = require('http');
@@ -42,18 +22,30 @@ var path = require('path');
 var fs = require('fs'); // this enables reading files I guess.
 var app = express();
 const CREDENTIALS = require('./credentials.js');
+const command_line_args = process.argv.slice(2)
+
+
+sass_to_css()
+
 var https_options = {
 	// I have to pass these when I create the https server. currently I manually update them.
-	key: fs.readFileSync('ssl/key.pem'),
-	cert: fs.readFileSync('ssl/cert.pem')
+	// I removed this as I don't think this is needed in a normal case at all.
+	// key: fs.readFileSync('ssl/key.pem'),
+	// cert: fs.readFileSync('ssl/cert.pem')
 };
 
 // process.env.NODE_ENV is set via the scripts in package.json
 // there are two scripts: start, and test.
 // each listens on a different port. test will not save data to the database (except login/new user).
-if (process.env.NODE_ENV === 'start') {
+const environment = command_line_args[0] || process.env.NODE_ENV
+if (environment === 'start') {
 	var port = 8888;
 	var saveData = true;
+	
+	
+	fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
+	
+	/* don't use compressor for now, and just do what the test one is doing
 	compressor.minify({
 		compressor: 'gcc',
 		input: './cosmicblocks/client.js',
@@ -66,7 +58,9 @@ if (process.env.NODE_ENV === 'start') {
 			}
 		}
 	});
-} else if (process.env.NODE_ENV === 'test') {
+	*/
+	
+} else if (environment === 'test') {
 	var port = 9001;
 	var saveData = false;
 	fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
@@ -75,12 +69,12 @@ if (process.env.NODE_ENV === 'start') {
 }
 
 // let the console know which environment/port this is:
-console.log("NODE_ENV: " + process.env.NODE_ENV);
+console.log("NODE_ENV: " + environment);
 console.log("PORT: " + port);
 
 var handleDBResult = function(err, User, db) {
 	if (err) {
-		console.log("handleDBResult err");
+		console.log("handleDBResult err", err);
 		return;
 	}
 	// no error
@@ -119,12 +113,28 @@ var handleDBResult = function(err, User, db) {
 	// socket.io is used for having a realtime application.
 	// all of the game-related stuff is passed between client and server via socket.io.
 	var io = require('socket.io')(server);
-	io.use(passportSocketIo.authorize({
-	  cookieParser: cookieParser, 
-	  key: CREDENTIALS.sessionKey, 
-	  secret: CREDENTIALS.sessionSecret, 
-	  store: sessionStore 
-	}));
+	{
+		// @TODO check if this will work.
+		const wrap = middleware => (socket, next) => middleware(socket.request, {}, next)
+		io.use(wrap(sessionMiddleware))
+		io.use(wrap(passport.initialize()))
+		io.use(wrap(passport.session()))
+		
+		io.use((socket, next) => {
+			if (socket.request.user) {
+				next();
+			} else {
+				next(new Error('unauthorized'))
+			}
+		});
+	}
+	// instead of this:
+	// io.use(passportSocketIo.authorize({
+	//   cookieParser: cookieParser, 
+	//   key: CREDENTIALS.sessionKey, 
+	//   secret: CREDENTIALS.sessionSecret, 
+	//   store: sessionStore 
+	// }));
 
 	passport.use('twitter', new TwitterStrategy({
 		// this key/secret is from the Twitter App page that has Cosmic Blocks.
@@ -1441,7 +1451,7 @@ var handleDBResult = function(err, User, db) {
 			lightnessBonus = rand(10, 20);
 		}
 		var randomLightness = (rand(50, 75) + lightnessBonus);
-		return hsl(randomHue,randomSaturation,randomLightness);
+		return hslToHex(randomHue,randomSaturation,randomLightness);
 	}
 	
 	function hexColorDelta(hex1, hex2) {
@@ -1497,7 +1507,7 @@ var handleDBResult = function(err, User, db) {
 		function h2d(h) { return parseInt(h, 16); } // convert a hex value to decimal 
 		weight = (typeof(weight) !== 'undefined') ? weight : 50; // set the weight to 50%, if that argument is omitted
 		var color = "#";
-		for(var i = 0; i <= 5; i += 2) { // loop through each of the 3 hex pairs—red, green, and blue
+		for(var i = 0; i <= 5; i += 2) { // loop through each of the 3 hex pairsï¿½red, green, and blue
 			var v1 = h2d(color_1.substr(i, 2)), // extract the current pairs
 				v2 = h2d(color_2.substr(i, 2)),
 				// combine the current pairs from each source color, according to the specified weight
@@ -2992,7 +3002,8 @@ var handleDBResult = function(err, User, db) {
 
 connectToDB(handleDBResult);
 function connectToDB(callback) {
-
+	console.log('credentials', CREDENTIALS)
+	
 	// time to connect to the database:
 	var User = undefined;
 	var orm = require("orm");
@@ -3021,4 +3032,121 @@ function connectToDB(callback) {
 		return callback(null, User, db);
 	});
 }
-// eof
+
+
+
+
+// ---------------
+// static tasks to run 
+// Convert the SASS into CSS
+function sass_to_css() {
+	const fs = require('fs')
+	const path = require('path')
+	const sass = require('sass')
+	const sass_compile_result = sass.compile('./cosmicblocks/client/style.css')
+	const minified_css_string = sass_compile_result.css
+	fs.writeFileSync('./cosmicblocks/client/style.css', minified_css_string)
+	console.log('written output css to /client/style.css')
+}
+
+
+
+// 
+// putting small requires flattened out here, in order to reduce dependencies
+// 
+
+// This was hsl npm package.
+function hslToHex(hue, saturation, luminosity) {
+	
+	// resolve degrees to 0 - 359 range
+	{
+		hue = Math.abs(hue)
+		
+		// for safety:
+		hue = clamp(hue, 0, 1e8)
+		hue = hue % 360
+	}
+	
+	// enforce constraints
+	saturation = clamp(saturation, 0, 100)
+	luminosity = clamp(luminosity, 0, 100)
+
+	// convert to 0 to 1 range used by hsl-to-rgb-for-reals
+	saturation /= 100
+	luminosity /= 100
+
+	// let hsl-to-rgb-for-reals do the hard work
+	var rgb = hslToRgb(hue, saturation, luminosity)
+	
+	return '#' + 
+		rgb[0].toString(16).padStart(2, 0) +
+		rgb[1].toString(16).padStart(2, 0) +
+		rgb[2].toString(16).padStart(2, 0)
+}
+
+function clamp(value, min, max) {
+	if(value < min) {
+		return min
+	}
+	if(value > max) {
+		return max
+	}
+	return value
+}
+
+// expected hue range: [0, 360)
+// expected saturation range: [0, 1]
+// expected lightness range: [0, 1]
+function hslToRgb(hue, saturation, lightness) {
+	// based on algorithm from http://en.wikipedia.org/wiki/HSL_and_HSV#Converting_to_RGB
+	if( hue == undefined ){
+		return [0, 0, 0]
+	}
+
+	var chroma = (1 - Math.abs((2 * lightness) - 1)) * saturation
+	var huePrime = hue / 60
+	var secondComponent = chroma * (1 - Math.abs((huePrime % 2) - 1))
+
+	huePrime = Math.floor(huePrime)
+	var red
+	var green
+	var blue
+
+	if( huePrime === 0 ){
+		red = chroma
+		green = secondComponent
+		blue = 0
+	} else if( huePrime === 1 ){
+		red = secondComponent
+		green = chroma
+		blue = 0
+	} else if( huePrime === 2 ){
+		red = 0
+		green = chroma
+		blue = secondComponent
+	} else if( huePrime === 3 ){
+		red = 0
+		green = secondComponent
+		blue = chroma
+	} else if( huePrime === 4 ){
+		red = secondComponent
+		green = 0
+		blue = chroma
+	} else if( huePrime === 5 ){
+		red = chroma
+		green = 0
+		blue = secondComponent
+	}
+
+	var lightnessAdjustment = lightness - (chroma / 2)
+	red += lightnessAdjustment
+	green += lightnessAdjustment
+	blue += lightnessAdjustment
+
+	return [
+			Math.abs(Math.round(red * 255)),
+			Math.abs(Math.round(green * 255)),
+			Math.abs(Math.round(blue * 255))
+	]
+
+}
