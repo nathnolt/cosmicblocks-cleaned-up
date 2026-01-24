@@ -1,101 +1,2634 @@
-var $jscomp=$jscomp||{};$jscomp.scope={};$jscomp.ASSUME_ES5=!1;$jscomp.ASSUME_NO_NATIVE_MAP=!1;$jscomp.ASSUME_NO_NATIVE_SET=!1;$jscomp.defineProperty=$jscomp.ASSUME_ES5||"function"==typeof Object.defineProperties?Object.defineProperty:function(a,b,c){a!=Array.prototype&&a!=Object.prototype&&(a[b]=c.value)};$jscomp.getGlobal=function(a){return"undefined"!=typeof window&&window===a?a:"undefined"!=typeof global&&null!=global?global:a};$jscomp.global=$jscomp.getGlobal(this);$jscomp.SYMBOL_PREFIX="jscomp_symbol_";
-$jscomp.initSymbol=function(){$jscomp.initSymbol=function(){};$jscomp.global.Symbol||($jscomp.global.Symbol=$jscomp.Symbol)};$jscomp.symbolCounter_=0;$jscomp.Symbol=function(a){return $jscomp.SYMBOL_PREFIX+(a||"")+$jscomp.symbolCounter_++};
-$jscomp.initSymbolIterator=function(){$jscomp.initSymbol();var a=$jscomp.global.Symbol.iterator;a||(a=$jscomp.global.Symbol.iterator=$jscomp.global.Symbol("iterator"));"function"!=typeof Array.prototype[a]&&$jscomp.defineProperty(Array.prototype,a,{configurable:!0,writable:!0,value:function(){return $jscomp.arrayIterator(this)}});$jscomp.initSymbolIterator=function(){}};$jscomp.arrayIterator=function(a){var b=0;return $jscomp.iteratorPrototype(function(){return b<a.length?{done:!1,value:a[b++]}:{done:!0}})};
-$jscomp.iteratorPrototype=function(a){$jscomp.initSymbolIterator();a={next:a};a[$jscomp.global.Symbol.iterator]=function(){return this};return a};$jscomp.iteratorFromArray=function(a,b){$jscomp.initSymbolIterator();a instanceof String&&(a+="");var c=0,d={next:function(){if(c<a.length){var e=c++;return{value:b(e,a[e]),done:!1}}d.next=function(){return{done:!0,value:void 0}};return d.next()}};d[Symbol.iterator]=function(){return d};return d};
-$jscomp.polyfill=function(a,b,c,d){if(b){c=$jscomp.global;a=a.split(".");for(d=0;d<a.length-1;d++){var e=a[d];e in c||(c[e]={});c=c[e]}a=a[a.length-1];d=c[a];b=b(d);b!=d&&null!=b&&$jscomp.defineProperty(c,a,{configurable:!0,writable:!0,value:b})}};$jscomp.polyfill("Array.prototype.keys",function(a){return a?a:function(){return $jscomp.iteratorFromArray(this,function(a){return a})}},"es6","es3");
-$jscomp.findInternal=function(a,b,c){a instanceof String&&(a=String(a));for(var d=a.length,e=0;e<d;e++){var f=a[e];if(b.call(c,f,e,a))return{i:e,v:f}}return{i:-1,v:void 0}};$jscomp.polyfill("Array.prototype.find",function(a){return a?a:function(a,c){return $jscomp.findInternal(this,a,c).v}},"es6","es3");
-var menuState,global_moveCount,standby,you,yourName,opponents=[],socket,isGhost,ghostFlow,inGame=!1,showWinState=!1,player=!1,emptyColor="#d5ccbd",priorColorList=[],audioEnabled=!0,gameTimer,debounce,colors={preference:"server",server:["",""],client:["",""]},hoverAudio=new Audio("sfx/hover.ogg"),moveAudio=new Audio("sfx/move3.ogg"),collisionAudio=new Audio("sfx/collision3.ogg"),beepAudio=new Audio("sfx/beep.ogg"),newgameAudio=new Audio("sfx/newgame.ogg"),forfeitAudio=new Audio("sfx/forfeit.ogg"),
-drawgameAudio=new Audio("sfx/drawgame.ogg"),youwinAudio=new Audio("sfx/youwin.ogg"),gameoverAudio=new Audio("sfx/gameover.ogg"),drawacceptedAudio=new Audio("sfx/drawaccepted.ogg"),connectAudio=new Audio("sfx/connect.ogg"),disconnectedAudio=new Audio("sfx/disconnected.ogg"),opponentdisconnectedAudio=new Audio("sfx/opponentdisconnected.ogg"),timeoutAudio=new Audio("sfx/timeover.ogg"),detonateAudio=new Audio("sfx/detonate2.ogg");
-function buildBoard(a,b){$("#board").empty();for(var c=0;c<a;c++){for(var d='\x3cdiv class\x3d"board_row"\x3e',e=0;e<b;e++)d+='\x3cdiv id\x3d"x'+(e+1)+"y"+(c+1)+'" class\x3d"block empty"\x3e\x3c/div\x3e';d+="\x3c/div\x3e";$("#board").append(d)}sizeBoard(a,b)}function resizeFunction(){sidebarsResize();0<$("#menuContainer").length&&menuResize();0<$("#board").length&&sizeBoard();if(0<$("#blockListEditor").length){var a=hSpace();$("#blockListEditor").css("width",a)}}
-function sidebarsResize(){if(1450<$(window).width()){var a=222+($(window).width()-1450)/3;300<a&&(a=300)}else a=222;$("#chatPanel").css("width",a+"px");$("#leaderboard").css("width",a+"px")}
-function sizeBoard(){var a=[];$(".board_row").map(function(b){a[b]=$(this).children().length});var b=Math.max.apply(Math,a),c=$(".board_row").length,d=getBlockSize(c,b);b=b*d+"px";c=c*d+"px";$("#board").css("width",b);$("#board").css("height",c);$(".board_row").css("height",d);$(".block").css("width",d);$(".block").css("height",d)}function hSpace(){var a=$(window).width();$("#chatPanel").is(":visible")&&(a-=$("#chatPanel").width());return a}
-function vSpace(){return $(window).height()-38-$("#menuContainer").height()-10}function getBlockSize(a,b){var c=hSpace(),d=vSpace();return b/a>c/d?Math.floor(c/b):Math.floor(d/a)}
-function buildMenu(a){$("#menu").remove();$("#menuContainer").append('\x3cdiv id\x3d"menu"\x3e\x3c/div\x3e');var b='\x3cdiv class\x3d"menu_row"\x3e';var c=0,d=Math.floor(Object.keys(a).length/2),e;for(e in a){c++;c>d&&(d=9001,b+='\x3c/div\x3e\x3cdiv class\x3d"menu_row"\x3e');b+='\x3cdiv class\x3d"menu_block';0==a[e].ammo&&(b+=" disabled nohover noammo");var f=null!==a[e].ammo&&"inf"!==a[e].ammo?'\x3cdiv class\x3d"ammo" id\x3d"'+e+'-ammo"\x3e'+a[e].ammo+"\x3c/div\x3e":"";var h=getSVG8by8(e);b+='" id\x3d"'+
-e+'" \x3e'+f+h+"\x3c/div\x3e"}b+="\x3c/div\x3e";$("#menu").append(b);menuResize()}function menuResize(){var a=hSpace(),b=[];$(".menu_row").map(function(a){b[a]=$(this).children().length});var c=Math.max.apply(Math,b);a=.5*Math.floor(a/c)-10;75<a&&(a=75);$(".menu_block").css("height",a);$(".menu_block").css("width",a)}function menuHideBlocksAndResize(){$(".menu_block.disabled").addClass("nohover").css("opacity",0);menuResize()}
-function renderBoard(a){for(var b=0;b<priorColorList.length;b++)$(".block").removeClass(priorColorList[b]);$.each(a,function(a,b){updateBlock(b.x+1,b.y+1,b.type,b.possessionDisplayName,b.moveNum,b.origin,b.color,b.duration,b.history,b.originColor,b.possession,b.possessionColorSpread)})}
-function getSVG8by8(a,b){var c="";if("blank"!==a){c+='\x3csvg version\x3d"1.2" baseProfile\x3d"tiny" xmlns\x3d"http://www.w3.org/2000/svg" xmlns:xlink\x3d"http://www.w3.org/1999/xlink" xmlns:a\x3d"http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/" x\x3d"0px" y\x3d"0px" width\x3d"80px" height\x3d"80px" viewBox\x3d"0 0 80 80" xml:space\x3d"preserve"\x3e\x3cdefs\x3e\x3c/defs\x3e';"circle"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e':
-"base"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/\x3e\x3ccircle class\x3d"jewel" cx\x3d"40" cy\x3d"40" r\x3d"7.5"/\x3e':"star"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/\x3e':
-"ostar"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/\x3e':"plus"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"62.5,35 45,35 45,17.5 35,17.5 35,35 17.5,35 17.5,45 35,45 35,62.5 45,62.5 45,45 62.5,45 "/\x3e':
-"oplus"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"62.5,35 45,35 45,17.5 35,17.5 35,35 17.5,35 17.5,45 35,45 35,62.5 45,62.5 45,45 62.5,45 "/\x3e':"cross"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"59.445,52.374 47.071,40 59.445,27.625 52.374,20.555 40,32.929 27.625,20.555 20.555,27.625 32.929,40 20.555,52.374 27.625,59.445 40,47.071 52.374,59.445 "/\x3e':"ocross"==a?c+=
-'\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"59.445,52.374 47.071,40 59.445,27.625 52.374,20.555 40,32.929 27.625,20.555 20.555,27.625 32.929,40 20.555,52.374 27.625,59.445 40,47.071 52.374,59.445 "/\x3e':"arrow1"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"22.42,57.58 46.762,52.419 40,47.071 59.445,27.626 52.374,20.555 32.929,40 27.582,33.238 "/\x3e':"arrow11"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"22.42,57.58 46.762,52.419 40,47.071 59.445,27.626 52.374,20.555 32.929,40 27.582,33.238 "/\x3e':
-"arrow2"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"40,64.861 53.563,44 45,45 45,17.5 35,17.5 35,45 26.438,44 "/\x3e':"arrow22"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"40,64.861 53.563,44 45,45 45,17.5 35,17.5 35,45 26.438,44 "/\x3e':"arrow3"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"57.58,57.58 52.419,33.238 47.071,40 27.626,20.555 20.555,27.626 40,47.071 33.238,52.419 "/\x3e':
-"arrow33"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"57.58,57.58 52.419,33.238 47.071,40 27.626,20.555 20.555,27.626 40,47.071 33.238,52.419 "/\x3e':"arrow4"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"15.139,40 36,53.563 35,45 62.5,45 62.5,35 35,35 36,26.438 "/\x3e':"arrow44"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"15.139,40 36,53.563 35,45 62.5,45 62.5,35 35,35 36,26.438 "/\x3e':
-"arrow6"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"64.861,40 44,26.438 45,35 17.5,35 17.5,45 45,45 44,53.563 "/\x3e':"arrow66"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"64.861,40 44,26.438 45,35 17.5,35 17.5,45 45,45 44,53.563 "/\x3e':"arrow7"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"22.42,22.42 27.582,46.762 32.929,40 52.374,59.445 59.445,52.374 40,32.929 46.762,27.582 "/\x3e':
-"arrow77"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"22.42,22.42 27.582,46.762 32.929,40 52.374,59.445 59.445,52.374 40,32.929 46.762,27.582 "/\x3e':"arrow8"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"40,15.139 26.438,36 35,35 35,62.5 45,62.5 45,35 53.563,36 "/\x3e':"arrow88"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"40,15.139 26.438,36 35,35 35,62.5 45,62.5 45,35 53.563,36 "/\x3e':
-"arrow9"==a?c+='\x3cpolygon class\x3d"shape" points\x3d"57.58,22.42 33.238,27.581 40,32.929 20.555,52.374 27.626,59.445 47.071,40 52.419,46.762 "/\x3e':"arrow99"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3cpolygon class\x3d"shape" points\x3d"57.58,22.42 33.238,27.581 40,32.929 20.555,52.374 27.626,59.445 47.071,40 52.419,46.762 "/\x3e':"hbar"==a?c+='\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"35" width\x3d"45" height\x3d"10"/\x3e':
-"ohbar"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"35" width\x3d"45" height\x3d"10"/\x3e':"vbar"==a?c+='\x3crect class\x3d"shape" x\x3d"35" y\x3d"17.5" width\x3d"10" height\x3d"45"/\x3e':"ovbar"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3crect class\x3d"shape" x\x3d"35" y\x3d"17.5" width\x3d"10" height\x3d"45"/\x3e':
-"tlbr"==a?c+='\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"35" transform\x3d"matrix(-0.7071 -0.7071 0.7071 -0.7071 40 96.5684)" width\x3d"45" height\x3d"10"/\x3e':"otlbr"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"35" transform\x3d"matrix(-0.7071 -0.7071 0.7071 -0.7071 40 96.5684)" width\x3d"45" height\x3d"10"/\x3e':"bltr"==a?c+='\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"34.999" transform\x3d"matrix(0.7071 -0.7071 0.7071 0.7071 -16.5682 40.0007)" width\x3d"45" height\x3d"10"/\x3e':
-"obltr"==a?c+='\x3ccircle fill\x3d"none" class\x3d"oShape" stroke\x3d"#000000" stroke-width\x3d"5" cx\x3d"40" cy\x3d"40" r\x3d"30"/\x3e\x3crect class\x3d"shape" x\x3d"17.5" y\x3d"34.999" transform\x3d"matrix(0.7071 -0.7071 0.7071 0.7071 -16.5682 40.0007)" width\x3d"45" height\x3d"10"/\x3e':"ice"==a?c+='\x3crect fill\x3d"#B6E3FF" width\x3d"80" height\x3d"80"/\x3e\x3cpolygon fill\x3d"#CFF1FF" points\x3d"80,38.375 0,29.375 0,17.125 80,24 "/\x3e\x3cpolygon fill\x3d"#CFF1FF" points\x3d"80,65 0,49.375 0,37.125 80,50.5 "/\x3e\x3cpolygon fill\x3d"#FFFFFF" stroke\x3d"#B6E3FF" points\x3d"25.536,43.786 28.788,54.874 39.875,58.125 28.788,61.377 25.536,72.464 22.285,61.377 11.197,58.125 22.285,54.874 "/\x3e\x3cpolygon fill\x3d"#FFFFFF" stroke\x3d"#B6E3FF" points\x3d"53.339,11.322 56.591,22.41 67.678,25.661 56.591,28.913 53.339,40 50.088,28.913 39,25.661 50.088,22.41 "/\x3e':
-"knight"==a?c+='\x3cpath d\x3d"M24.457,70.447c0,0,0.238-11.977,6.288-17.872C43.651,40,41.666,37.022,41.666,37.022s-4.964-1.986-11.694,4.082 c-6.729,6.066-11.692,8.493-12.134,3.86c0,0-6.288,0.221-5.957-3.86c0.331-4.082,13.127-19.084,14.893-24.159 c1.765-5.074,1.985-7.391,1.985-7.391s5.185,2.427,6.839,5.074c0,0,3.751-5.185,6.73-5.074l1.103,4.412 c0,0,12.024,1.765,16.988,14.672c4.964,12.907,4.964,41.809,4.964,41.809"/\x3e\x3cpath fill\x3d"#AD0000" d\x3d"M31.347,22.019c0,0-6.067,3.162-6.067,7.281c0,0.184,0,0.441,0,0.441s4.964-1.765,5.516-4.743"/\x3e':
-"mine"==a?c+='\n\t\t\t\t\x3cg class\x3d"mineMetal"\x3e\n\t\t\t\t\t\x3ccircle cx\x3d"40" cy\x3d"40" r\x3d"4.2"/\x3e\n\t\t\t\t\t\x3cpath d\x3d"M59.7,49.5C59.7,49.5,59.7,49.5,59.7,49.5c0.2-0.4,0.3-0.7,0.5-1.1c0,0,0-0.1,0-0.1c0.1-0.3,0.3-0.6,0.4-1\n\t\t\t\t\tc0-0.1,0.1-0.2,0.1-0.3c0.1-0.3,0.2-0.5,0.3-0.8c0-0.1,0.1-0.3,0.1-0.4c0.1-0.2,0.1-0.5,0.2-0.7c0-0.1,0.1-0.3,0.1-0.4\n\t\t\t\t\tc0.1-0.2,0.1-0.5,0.1-0.7c0-0.1,0.1-0.3,0.1-0.4c0-0.2,0.1-0.5,0.1-0.7c0-0.1,0-0.3,0.1-0.4c0-0.3,0.1-0.5,0.1-0.8\n\t\t\t\t\tc0-0.1,0-0.3,0-0.4c0-0.4,0-0.8,0-1.2c0-0.4,0-0.8,0-1.2c0-0.1,0-0.3,0-0.4c0-0.3,0-0.5-0.1-0.8c0-0.1,0-0.3-0.1-0.4\n\t\t\t\t\tc0-0.3-0.1-0.5-0.1-0.8c0-0.1,0-0.3-0.1-0.4c0-0.3-0.1-0.5-0.2-0.8c0-0.1-0.1-0.3-0.1-0.4c-0.1-0.3-0.1-0.5-0.2-0.8\n\t\t\t\t\tc0-0.1-0.1-0.2-0.1-0.3c-0.1-0.3-0.2-0.6-0.3-0.9c0-0.1,0-0.1-0.1-0.2c-0.3-0.7-0.6-1.5-0.9-2.2c0,0,0,0,0,0\n\t\t\t\t\tc-2.5-5.1-6.9-9.1-12.3-11c0,0,0,0,0,0c-0.4-0.1-0.7-0.2-1.1-0.4c-0.1,0-0.2,0-0.2-0.1c-0.3-0.1-0.6-0.2-0.9-0.2\n\t\t\t\t\tc-0.1,0-0.2-0.1-0.3-0.1c-0.3-0.1-0.5-0.1-0.8-0.2c-0.1,0-0.3,0-0.4-0.1c-0.3,0-0.5-0.1-0.8-0.1c-0.1,0-0.3,0-0.4-0.1\n\t\t\t\t\tc-0.3,0-0.6-0.1-0.8-0.1c-0.1,0-0.2,0-0.4,0c-0.4,0-0.8,0-1.2,0c-0.4,0-0.8,0-1.2,0c-0.1,0-0.3,0-0.4,0c-0.3,0-0.5,0-0.8,0.1\n\t\t\t\t\tc-0.1,0-0.3,0-0.4,0.1c-0.2,0-0.5,0.1-0.7,0.1c-0.1,0-0.3,0.1-0.4,0.1c-0.2,0-0.5,0.1-0.7,0.1c-0.1,0-0.3,0.1-0.4,0.1\n\t\t\t\t\tc-0.2,0.1-0.5,0.1-0.7,0.2c-0.1,0-0.3,0.1-0.4,0.1c-0.3,0.1-0.5,0.2-0.8,0.3c-0.1,0-0.2,0.1-0.3,0.1c-0.3,0.1-0.6,0.2-1,0.4\n\t\t\t\t\tc0,0-0.1,0-0.1,0c-6,2.5-10.6,7.6-12.5,13.9c0,0.1,0,0.1-0.1,0.2c-0.1,0.3-0.2,0.6-0.2,0.9c0,0.1,0,0.2-0.1,0.3\n\t\t\t\t\tc-0.1,0.3-0.1,0.6-0.2,0.8c0,0.1,0,0.3-0.1,0.4c0,0.3-0.1,0.5-0.1,0.8c0,0.1,0,0.3-0.1,0.4c0,0.3-0.1,0.6-0.1,0.8\n\t\t\t\t\tc0,0.1,0,0.2,0,0.4c0,0.4,0,0.8,0,1.2c0,0.4,0,0.8,0,1.2c0,0.1,0,0.2,0,0.4c0,0.3,0,0.6,0.1,0.8c0,0.1,0,0.3,0.1,0.4\n\t\t\t\t\tc0,0.3,0.1,0.5,0.1,0.8c0,0.1,0,0.3,0.1,0.4c0,0.3,0.1,0.5,0.2,0.8c0,0.1,0.1,0.2,0.1,0.3c0.1,0.3,0.1,0.6,0.2,0.9\n\t\t\t\t\tc0,0.1,0,0.2,0.1,0.2c0.1,0.4,0.2,0.7,0.4,1.1c0,0,0,0,0,0c1.9,5.4,5.9,9.8,11,12.3c0,0,0,0,0,0c0.7,0.3,1.4,0.7,2.2,0.9\n\t\t\t\t\tc0.1,0,0.1,0,0.2,0.1c0.3,0.1,0.6,0.2,0.9,0.3c0.1,0,0.2,0.1,0.3,0.1c0.3,0.1,0.5,0.1,0.8,0.2c0.1,0,0.3,0.1,0.4,0.1\n\t\t\t\t\tc0.3,0.1,0.5,0.1,0.8,0.2c0.1,0,0.3,0.1,0.4,0.1c0.3,0,0.5,0.1,0.8,0.1c0.1,0,0.3,0,0.4,0.1c0.3,0,0.5,0.1,0.8,0.1\n\t\t\t\t\tc0.1,0,0.3,0,0.4,0c0.4,0,0.8,0,1.2,0c0.4,0,0.8,0,1.2,0c0.1,0,0.2,0,0.4,0c0.3,0,0.6,0,0.8-0.1c0.1,0,0.3,0,0.4-0.1\n\t\t\t\t\tc0.3,0,0.5-0.1,0.8-0.1c0.1,0,0.3,0,0.4-0.1c0.3-0.1,0.6-0.1,0.8-0.2c0.1,0,0.2,0,0.3-0.1c0.3-0.1,0.6-0.2,0.9-0.2\n\t\t\t\t\tc0.1,0,0.1,0,0.2-0.1c1.2-0.4,2.3-0.8,3.4-1.3c0,0,0,0,0,0C54,57.4,57.5,53.9,59.7,49.5z M40,46.2c-3.4,0-6.2-2.8-6.2-6.2\n\t\t\t\t\ts2.8-6.2,6.2-6.2s6.2,2.8,6.2,6.2S43.4,46.2,40,46.2z"/\x3e\n\t\t\t\t\t\x3cpath fill\x3d"#1C1C1C" d\x3d"M18.9,51.1l-1,1c-1.6,1.6-1.6,4.1,0,5.7l4.4,4.4c1.6,1.6,4.1,1.6,5.7,0l1-1C24.7,58.9,21.2,55.4,18.9,51.1z "/\x3e\';\n\t\t\t\t\t\x3cpath fill\x3d"#1C1C1C" d\x3d"M61.1,29l1.3-1.3c1.6-1.6,1.6-4.1,0-5.7L58,17.7c-1.6-1.6-4.1-1.6-5.7,0l-1.3,1.3 C55.4,21.2,58.9,24.7,61.1,29z"/\x3e\';\n\t\t\t\t\t\x3cpath fill\x3d"#1C1C1C" d\x3d"M61.1,51c-2.2,4.3-5.7,7.8-10,10.1l1.1,1.1c1.6,1.6,4.1,1.6,5.7,0l4.4-4.4c1.6-1.6,1.6-4.1,0-5.7L61.1,51z" /\x3e\';\n\t\t\t\t\t\x3cpath fill\x3d"#1C1C1C" d\x3d"M18.9,28.9c2.3-4.3,5.8-7.8,10.1-10l-1.2-1.2c-1.6-1.6-4.1-1.6-5.7,0L17.8,22c-1.6,1.6-1.6,4.1,0,5.7 L18.9,28.9z"/\x3e\';\n\t\t\t\t\x3c/g\x3e\n\t\t\t\t\x3ccircle class\x3d"mineLights" cx\x3d"30" cy\x3d"30" r\x3d"2"/\x3e\n\t\t\t\t\x3ccircle class\x3d"mineLights" cx\x3d"50" cy\x3d"30" r\x3d"2"/\x3e\n\t\t\t\t\x3ccircle class\x3d"mineLights" cx\x3d"30" cy\x3d"50" r\x3d"2"/\x3e\n\t\t\t\t\x3ccircle class\x3d"mineLights" cx\x3d"50" cy\x3d"50" r\x3d"2"/\x3e\n\t\t\t\t':
-"reclaim"==a&&(c+='\x3cpolygon fill\x3d"#E3FFE1" points\x3d"13.2,21.3 15.1,27.8 21.5,29.7 15.1,31.6 13.2,38 11.3,31.6 4.8,29.7 11.3,27.8 \t"/\x3e\n\t\t\t\x3cpolygon fill\x3d"#E3FFE1" points\x3d"40.8,60 42.7,66.4 49.2,68.3 42.7,70.2 40.8,76.7 38.9,70.2 32.5,68.3 38.9,66.4 \t"/\x3e\n\t\t\t\x3cpolygon fill\x3d"#E3FFE1" points\x3d"64.5,37.2 66.3,43.6 72.8,45.5 66.3,47.4 64.5,53.8 62.6,47.4 56.1,45.5 62.6,43.6 \t"/\x3e\n\t\t\t\x3cpolygon fill\x3d"#E3FFE1" points\x3d"62.7,11.2 64.6,17.6 71,19.5 64.6,21.4 62.7,27.8 60.8,21.4 54.3,19.5 60.8,17.6 \t"/\x3e\n\t\t\t\x3cpolygon fill\x3d"#E3FFE1" points\x3d"32.5,3.8 34.4,10.3 40.8,12.2 34.4,14.1 32.5,20.5 30.6,14.1 24.1,12.2 30.6,10.3 \t"/\x3e\n\t\t\t\x3cpolygon fill\x3d"#E3FFE1" points\x3d"15.5,50.3 17.4,56.8 23.9,58.7 17.4,60.6 15.5,67 13.7,60.6 7.2,58.7 13.7,56.8 \t"/\x3e\n\t\t\t\x3cpath fill\x3d"#006616" d\x3d"M45.5,62.8l-0.4-0.6c-0.5-0.8-1.3-2.7-3.1-10.3c-1.1-5-2.6-5.8-5.7-5.9h-1.6v16.8H22.6V18.3l1-0.2\n\t\t\tc3.5-0.6,8.3-0.9,13.1-0.9c6.9,0,11.4,1.1,14.6,3.6c2.9,2.3,4.4,5.7,4.4,9.9c0,5-2.9,8.7-6.3,10.7c2.6,2,3.7,5.2,4.4,7.6\n\t\t\tc0.4,1.3,0.7,2.7,1.1,4c0.9,3.3,1.8,6.7,2.3,7.8l0.9,1.8H45.5z M37.2,36.5c4,0,6.4-1.8,6.4-4.9c0-3.1-2-4.6-5.9-4.7\n\t\t\tc-1.2,0-2.2,0.1-3.1,0.1v9.4H37.2z"/\x3e\n\t\t\t\x3cpath fill\x3d"#B3FFC1" d\x3d"M36.7,18.5c6.3,0,10.8,1,13.8,3.4c2.5,2,3.9,5,3.9,8.9c0,5.4-3.9,9.2-7.5,10.5v0.2c3,1.2,4.6,4.1,5.7,8\n\t\t\tc1.3,4.8,2.7,10.4,3.5,12h-9.9c-0.7-1.2-1.7-4.7-3-9.9c-1.1-5.3-3-6.8-6.9-6.8h-2.9v16.8h-9.6V19.4C27,18.9,31.6,18.5,36.7,18.5\n\t\t\t M33.4,37.8h3.8c4.8,0,7.7-2.4,7.7-6.1c0-3.9-2.7-5.9-7.1-6c-2.3,0-3.7,0.2-4.4,0.3V37.8 M36.7,16c-4.8,0-9.7,0.3-13.3,0.9\n\t\t\tl-2.1,0.3v2.1v42.1V64h2.5h9.6h2.5v-2.5V47.2h0.4c2.3,0,3.5,0.3,4.5,4.9l0,0l0,0c1.8,7.6,2.7,9.7,3.2,10.6l0.7,1.2h1.4h9.9h4\n\t\t\tl-1.8-3.6c-0.5-1-1.4-4.5-2.2-7.5c-0.4-1.3-0.7-2.7-1.1-4.1c-0.6-2.2-1.6-5-3.6-7.2c3.1-2.3,5.5-6.1,5.5-10.9\n\t\t\tc0-4.6-1.7-8.3-4.9-10.9C48.7,17.2,44,16,36.7,16L36.7,16z M35.9,28.2c0.6,0,1.2,0,1.9,0c4.6,0.1,4.6,2.4,4.6,3.5\n\t\t\tc0,3.2-3.2,3.6-5.2,3.6h-1.3V28.2L35.9,28.2z"/\x3e');
-c+='\x3cpath class\x3d"border" d\x3d"M80,80H0V0h80V80L80,80z M2.5,77.5h75v-75h-75V77.5L2.5,77.5z"/\x3e';if("mine"!==a||"board"!==b)c+='\x3crect class\x3d"border2" x\x3d"2.5" y\x3d"2.5" fill\x3d"none" stroke-width\x3d"1.5" width\x3d"75" height\x3d"75"/\x3e';c+="\x3c/svg\x3e"}return c}
-function updateBlock(a,b,c,d,e,f,h,n,q,r,l,k){var g="#x"+a+"y"+b;"blank"==c?$(g).empty().addClass("empty").css("background-color",""):"blockade"==c?($(g).empty().removeClass("empty").css("background-color","#000000"),!1!==n&&"undefined"!==typeof e&&0<e&&$(g).append('\x3cspan class\x3d"duration"\x3e'+n+"\x3c/span\x3e")):"blank"!=c&&(n=getSVG8by8(c,"board"),"mine"!==c?$(g).html(n).removeClass("empty"):$(g).html(n).addClass("empty"),"ice"==c&&$(g).addClass("ice"),"undefined"!=typeof l&&(0==l.length&&
-"mine"!==c?$(g).css("background-color",ColorLuminance(h,.1)):$(g).css("background-color","")));$(g).data("blockType",c);$(g).data("possession",l);$(g).data("possessionDisplayName",d);$(g).data("moveNum",e);$(g).data("x",a);$(g).data("y",b);$(g).data("history",q);$(g).data("possessionColorSpread",k);if("undefined"!==typeof h){$(g).data("possessionColor",h);$(g).removeClass("prior-collision");$(g).removeClass(function(a,b){return(b.match(/\bcolor-\S+/g)||[]).join(" ")});1>$("#color-"+h.substr(1)).length&&
-addNewStyle(h);if("undefined"!==typeof k)if(0<k.length)for(a=0;a<k.length;a++){var m="color-"+k[a].color.substr(1),p=k[a].color;$(g).addClass("color-d5ccbd");"blank"!==c&&$(g).css("background-color",ColorLuminance(emptyColor,.1));setTimeout(function(){$(g).removeClass("color-d5ccbd");var a=mix(emptyColor,p,60);$(g).css("background-color",a);$(g).addClass(m);setTimeout(function(){$(g).css("background-color","")},100)},100*(k[a].layer+1)+100)}else $(g).addClass("color-"+h.substr(1));else $(g).addClass("color-"+
-h.substr(1));e==global_moveCount&&0<global_moveCount&&0==showWinState&&("collision"==f||"collision fade"==f?$(g).addClass("prior-collision"):$(g).addClass("prior-"+r.substr(1)))}}function obtainID(a){var b=$(a).attr("id"),c=b.indexOf("y");a=parseInt(b.substr(1,c),10);b=parseInt(b.substr(c+1),10);return[a,b]}function get_pos(a,b,c){return(b-1)*c+a-1}
-function highlight(a,b,c,d,e){var f=[];f=getMoves(c);$.each(f,function(c,f){c=a+f[0];f=b+f[1];1<=c&&c<=e&&1<=f&&f<=d&&$("#x"+c+"y"+f).addClass("highlighted")})}
-function getMoves(a){var b={base:function(){return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]},star:function(){return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]},ostar:function(){return[[-2,-2],[0,-2],[2,-2],[-2,0],[2,0],[-2,2],[0,2],[2,2]]},p1:function(){return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]},p2:function(){return[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]},plus:function(){return[[0,-1],[-1,0],[1,0],[0,1]]},oplus:function(){return[[0,-2],
-[-2,0],[2,0],[0,2]]},cross:function(){return[[-1,-1],[1,-1],[-1,1],[1,1]]},ocross:function(){return[[-2,-2],[2,-2],[-2,2],[2,2]]},hbar:function(){return[[-1,0],[1,0]]},ohbar:function(){return[[-2,0],[2,0]]},vbar:function(){return[[0,-1],[0,1]]},ovbar:function(){return[[0,-2],[0,2]]},tlbr:function(){return[[-1,-1],[1,1]]},otlbr:function(){return[[-2,-2],[2,2]]},bltr:function(){return[[-1,1],[1,-1]]},obltr:function(){return[[-2,2],[2,-2]]},arrow1:function(){return[[-1,1]]},arrow11:function(){return[[-2,
-2]]},arrow2:function(){return[[0,1]]},arrow22:function(){return[[0,2]]},arrow3:function(){return[[1,1]]},arrow33:function(){return[[2,2]]},arrow4:function(){return[[-1,0]]},arrow44:function(){return[[-2,0]]},arrow6:function(){return[[1,0]]},arrow66:function(){return[[2,0]]},arrow7:function(){return[[-1,-1]]},arrow77:function(){return[[-2,-2]]},arrow8:function(){return[[0,-1]]},arrow88:function(){return[[0,-2]]},arrow9:function(){return[[1,-1]]},arrow99:function(){return[[2,-2]]},blockade:function(){return[[]]},
-blank:function(){return[[]]},ice:function(){return[[]]},knight:function(){return[[1,2],[2,1],[-1,2],[2,-1],[1,-2],[-2,1],[-1,-2],[-2,-1]]},mine:function(){return[[]]},reclaim:function(){return[[]]}};if("function"!==typeof b[a])throw console.log("SHIT! SHIT!"),Error("Invalid action.");return b[a]()}
-function getCircleType(a){return"star"==a?"ostar":"plus"==a?"oplus":"cross"==a?"ocross":"hbar"==a?"ohbar":"vbar"==a?"ovbar":"tlbr"==a?"otlbr":"bltr"==a?"obltr":"arrow1"==a?"arrow11":"arrow2"==a?"arrow22":"arrow3"==a?"arrow33":"arrow4"==a?"arrow44":"arrow6"==a?"arrow66":"arrow7"==a?"arrow77":"arrow8"==a?"arrow88":"arrow9"==a?"arrow99":!1}
-function joinGame(a,b,c,d,e,f,h,n){$(".menu_block").removeClass("nohover");opponents=[];if(function(){for(var a in d)if(a==you)return!0;return!1}()){var q=function(){$("#x"+l+"y"+k).removeClass("prior-"+d[you].color.substr(1)).removeClass("highlighted");$(".menu_block").addClass("disabled");menuState=!1};$(".block").removeClass("nohover");player=!0;for(var r in d)r!=you&&opponents.push(r);"practice"===n?0===$("#reset").length&&($("#gameButtons").prepend('\x3cdiv class\x3d"buttonStyle" id\x3d"reset"\x3eReset\x3c/div\x3e'),
-$("#reset").on("click",function(){1<global_moveCount&&socket.emit("practice reset")})):($("#gameButtons").prepend('\x3cdiv class\x3d"buttonStyle" id\x3d"forfeit"\x3eForfeit\x3c/div\x3e'),$("#forfeit").on("click",function(){socket.emit("forfeit")}));var l=!1,k=!1,g=!1,m,p="blank";$(document).off("click");$(document).on("click",function(a){0==standby&&1==menuState&&0===$(a.target).closest(".block").length&&0===$(a.target).closest(".menu_block:not(.nohover)").length&&q()});$(".block").off();$(".block").on("click",
-function(){if(0==standby){g=obtainID($(this));l=g[0];k=g[1];$(".highlighted").removeClass("highlighted");$(this).addClass("highlighted");$(".prior-collision").removeClass("prior-collision");if($(this).hasClass("prior-"+d[you].color.substr(1)))$(".prior-"+d[you].color.substr(1)).removeClass("prior-"+d[you].color.substr(1)).removeClass("highlighted"),$(".menu_block").addClass("disabled"),menuState=!1;else if($(".prior-"+d[you].color.substr(1)).removeClass("prior-"+d[you].color.substr(1)),$(this).addClass("prior-"+
-d[you].color.substr(1)),$(this).hasClass("empty"))$(".menu_block:not(.nohover)").removeClass("disabled"),$("#circle").addClass("disabled"),$("#reclaim").addClass("disabled"),menuState=!0;else{p=$("#x"+l+"y"+k).data("blockType");$(".menu_block").addClass("disabled");menuState=!0;0!=getCircleType(p)&&$("#circle:not(.nohover)").removeClass("disabled");var a=$("#x"+l+"y"+k).data("possession");1==a.length&&a[0]==you&&"base"!==p&&"blockade"!==p&&$("#reclaim:not(.nohover)").removeClass("disabled")}for(a=
-0;a<opponents.length;a++)$(".prior-"+d[opponents[a]].color.substr(1)).removeClass("prior-"+d[opponents[a]].color.substr(1))}});$(".block").hover(function(){if(0==standby){var a=obtainID($(this)),b=a[0];a=a[1];m=$(this).data("blockType");highlight(b,a,m,e,f)}},function(){0==standby&&$(".highlighted").removeClass("highlighted")});$("#menuContainer").on({mouseenter:function(){if(!$(this).hasClass("disabled")&&0!=menuState){m=$(this).attr("id");p=$("#x"+l+"y"+k).data("blockType");get_pos(l,k,f);"circle"==
-m&&(m=getCircleType(p));updateBlock(l,k,m);highlight(l,k,m,e,f);var a=new Audio("sfx/hover.ogg");audioEnabled&&a.play()}},mouseleave:function(){$(this).hasClass("disabled")||0==menuState||(updateBlock(l,k,p),$(".highlighted").not("#x"+l+"y"+k).removeClass("highlighted"))}},".menu_block:not(.nohover)");$("#menuContainer").on("click",".menu_block:not(.nohover)",function(){if(1==menuState&&0==standby)if($(this).hasClass("disabled"))q();else{renderStandby();m=$(this).attr("id");if(0!=$(this).find(".ammo").length){var a=
-parseInt($("#"+m+"-ammo").html());a--;$("#"+m+"-ammo").html(a);0==a&&$(this).addClass("nohover disabled noammo")}socket.emit("attempt move",l,k,m,global_moveCount)}});1>opponents.length?standby=!1:d[you].onStandBy?(standby=!0,a=get_pos(tempBlock[0],tempBlock[1],numCols),updateBlock(tempBlock[0],tempBlock[1],tempBlock[2],void 0,void 0,boardData[a].randInt),renderStandby()):standby=opponents[0].onStandBy?!0:!1}else renderExitButton(),$(".block").addClass("nohover");menuState=!1}
-function timeLimitUpdate(a){0==a?$("#timeLimit").html("\x26infin;"):$("#timeLimit").html(a);log('\x3cspan class\x3d"dimMsg"\x3etime limit set to '+$("#timeLimit").html())}
-function collisionUpdate(a){if("undefined"!==typeof a)if(!0===a.permanence)$("#collisionSetting").html("Permanent"),log('\x3cspan class\x3d"dimMsg"\x3epermanent collisions\x3c/span\x3e');else{var b="s";1===a.permanence&&(b="");$("#collisionSetting").html('\x3cspan class\x3d"collisionTurnCount"\x3e'+a.permanence.toString()+"\x3c/span\x3e Turn"+b);log('\x3cspan class\x3d"dimMsg"\x3ecollisions last '+a.permanence.toString()+" turn"+b)}}
-function renderStandby(){standby=!0;$("#container").removeClass("timeWarning");$(".menu_block").addClass("disabled");$(".block").addClass("nohover").removeClass("highlighted").addClass("disabled");menuState=!1}function drawOffered(a){$("#offerDraw").off();$("#offerDraw").addClass("offered");$("#offerDraw").html("Accept Draw");$("#offerDraw").on("click",function(){cleanup(3,"drawAccepted");socket.emit("draw accepted",a)})}
-function cleanup(a,b){$("#container").removeClass("timeWarning");clearInterval(gameTimer);1<a.length?audioEnabled&&drawgameAudio.play():a[0]==you?audioEnabled&&youwinAudio.play():audioEnabled&&gameoverAudio.play();player&&"dc"!==b&&"practice"!==b&&($('\x3cdiv class\x3d"buttonStyle" id\x3d"rematch"\x3e\x3cspan\x3eRematch\x3c/span\x3e\x3c/div\x3e').insertBefore("#toggleAudio"),$("#rematch").on("click",function(){socket.emit("yes rematch");$("#rematch").off();$("#rematch \x3e span").text("Offered Rematch").addClass("blinkText")}));
-$(".block","#board").addClass("disabled").off();for(a=0;a<priorColorList.length;a++)$(".block").removeClass(priorColorList[a]);$(".highlighted").removeClass("highlighted");$(".menu_block").addClass("disabled");$("#offerDraw").remove();$("#forfeit").remove();$(".moveStatus").remove();$("#timer").remove();$(".waitMsg").parent().remove();renderExitButton();var c=debounce=Math.random();ghostFlow&&setTimeout(function(){debounce==c&&exitGame()},6E4)}
-function readableBlockName(a){var b={base:"source",ostar:"jump star",plus:"+",oplus:"jump +",cross:"x",ocross:"jump x",ohbar:"jump hbar",ovbar:"jump vbar",otlbr:"jump tlbr",obltr:"jump bltr",arrow1:"arrow1",arrow11:"jump arrow1",arrow2:"arrow2",arrow22:"jump arrow2",arrow3:"arrow3",arrow33:"jump arrow3",arrow4:"arrow4",arrow44:"jump arrow4",arrow6:"arrow6",arrow66:"jump arrow6",arrow7:"arrow7",arrow77:"jump arrow7",arrow8:"arrow8",arrow88:"jump arrow8",arrow9:"arrow9",arrow99:"jump arrow9",mine:"stealthy mine"};
-return b.hasOwnProperty(a)?b[a]:a}
-function blockHoverData(){$("#board").on({mouseenter:function(){var a=$(this).data("blockType");a=readableBlockName(a);var b=$(this).data("history"),c=$(this).data("possessionColor"),d=$(this).data("x"),e=$(this).data("y"),f=!0,h=$(this).data("possessionDisplayName");$(this).data("possessionColorSpread");"source"==a&&(a="undefined"!==typeof b[0]?'\x3cspan style\x3d"color: '+b[0].playerColor+';"\x3e'+b[0].playerDisplayName+"'s source\x3c/span\x3e":"unclaimed source",f=!1);d='\x3cdiv class\x3d"dimMsg"\x3ex: \x3cb\x3e'+
-d+"\x3c/b\x3e,\x26ensp;y: \x3cb\x3e"+e+"\x3c/b\x3e\x3c/div\x3e"+('\x3cdiv style\x3d"font-weight: bold; color:white; font-size:15px;"\x3e'+a+"\x3c/div\x3e");f&&!1!==h&&"blockade"!==a&&(d+='\x3cdiv\x3epossessed by \x3cb style\x3d"color: '+c+'"\x3e'+h+"\x3c/b\x3e\x3c/div\x3e");if(f)for(a=0;a<b.length;a++)d+=b[a];$("#bottomInfo").append(d)},mouseleave:function(){$("#bottomInfo").html("")}},".block");$("#menuContainer").on({mouseenter:function(){var a=$(this).attr("id"),b=readableBlockName(a),c="";c=player?
-c+("\x3cdiv\x3e"+yourName+"'s stockpile\x3c/div\x3e"):c+'\x3cdiv class\x3d"dimMsg"\x3estarting stockpile\x3c/div\x3e';c+='\x3cdiv style\x3d"font-weight: bold; color:white; font-size:15px;"\x3e'+b+"\x3c/div\x3e";0!=$(this).find(".ammo").length&&(a=parseInt($("#"+a+"-ammo").html()),c+="\x3cdiv\x3e\x3cb\x3e"+a+"\x3c/b\x3e remaining\x3c/div\x3e");$("#bottomInfo").append(c)},mouseleave:function(){$("#bottomInfo").html("")}},".menu_block")}
-function renderExitButton(){0===$("#exit").length&&($("#gameButtons").prepend('\x3cdiv id\x3d"exit" class\x3d"buttonStyle"\x3eExit to Lobby\x3c/div\x3e'),$("#exit").on("click",function(){exitGame()}))}function exitGame(){$("#sidebar").empty();$("#container").removeClass("timeWarning");clearInterval(gameTimer);$(".waitMsg").parent().remove();showWinState=inGame=!1;socket.emit("exit to lobby")}
-function showPath(a,b){var c,d;$.each(a,function(e,f){$(".block:eq("+f+")").removeClass("disabled").addClass("nohover");c=setTimeout(function(){1==showWinState?$(".block:eq("+f+")").addClass("prior-"+b.substr(1)):($(".block").removeClass("prior"+b.substr(1)),clearTimeout(c),clearTimeout(d))},500*e);d=setTimeout(function(){$(".block:eq("+f+")").removeClass("prior-"+b.substr(1));e==a.length-1&&(1==showWinState?showPath(a,b):(clearTimeout(c),clearTimeout(d)))},500*(e+1))})}
-function ColorLuminance(a,b){a=String(a).replace(/[^0-9a-f]/gi,"");6>a.length&&(a=a[0]+a[0]+a[1]+a[1]+a[2]+a[2]);b=b||0;var c="#",d;for(d=0;3>d;d++){var e=parseInt(a.substr(2*d,2),16);e=Math.round(Math.min(Math.max(0,e+e*b),255)).toString(16);c+=("00"+e).substr(e.length)}return c}
-function mix(a,b,c){a=a.slice(1);b=b.slice(1);c="undefined"!==typeof c?c:50;for(var d="#",e=0;5>=e;e+=2){var f=parseInt(a.substr(e,2),16),h=parseInt(b.substr(e,2),16);for(f=Math.floor(h+c/100*(f-h)).toString(16);2>f.length;)f="0"+f;d+=f}return d}function updateStyles(a,b){var c=mix(a,b,50);updateStyle("p1color",a);updateStyle("p2color",b);updateStyle("mixedcolor",c)}
-function updateStyle(a,b){$("#"+a).empty();var c="."+a+" { background-color: "+b+"; } "+("."+a+" svg .border { fill: "+ColorLuminance(b,-.65)+" }");c=c+("."+a+".empty svg .border { opacity: 0; }")+("."+a+" svg .border2 { stroke: "+ColorLuminance(b,.125)+" }");b!==emptyColor&&(c+="."+a+" svg .outline { fill: "+ColorLuminance(b,.125)+"; }",c+="."+a+" svg .jewel { fill: "+b+"; animation: jewel-"+b.substr(1)+" 1s infinite alternate ease-in-out; }",c+="@keyframes jewel-"+b.substr(1)+" { 0% { opacity: 0.2; } 100% { opacity: 1; } }");
-var d=mix(b,emptyColor,55),e=ColorLuminance(b,-.09);c=c+("."+a+".empty { background-color: "+d+"; box-shadow: inset 0 0 0 1px "+e+";  }")+("."+a+":hover:not(.nohover):not(.disabled), ."+a+".highlighted { background-color: "+ColorLuminance(d,.125)+"; cursor:pointer; }");c+=".prior-"+b.substr(1)+"::before { animation: origin-"+b.substr(1)+' 0.25s infinite alternate; content:""; display: block; height: 100%; width: 100%; position: absolute; left: 0; top: 0; background-color: '+hex2rgba(mix(b,"#ffffff",
-50),50)+"; box-shadow: inset 0 0 0 1px "+ColorLuminance(b,-.3)+", inset 0 0 0 3px "+b+"; }";priorColorList.push("prior-"+b.substr(1));c+="@keyframes origin-"+b.substr(1)+" { 0% { opacity: 0.2; } 40% { opacity: 0.25; } 60% { opacity: 0.95; } 100% { opacity: 1 } }";$("#"+a).append(c)}
-function addNewStyle(a){var b="color-"+a.substr(1);$("head").append('\x3cstyle class\x3d"dynamicStyle" id\x3d"'+b+'"\x3e\x3c/style\x3e');var c=""+("."+b+" { background-color: "+a+"; } ")+("."+b+" svg .border { fill: "+ColorLuminance(a,-.65)+" }");c=c+("."+b+".empty svg .border { opacity: 0; }")+("."+b+" svg .border2 { stroke: "+ColorLuminance(a,.125)+" }");a!==emptyColor&&(c+="."+b+" svg .outline { fill: "+ColorLuminance(a,.125)+"; }",c+="."+b+" svg .jewel { fill: "+a+"; animation: jewel-"+a.substr(1)+
-" 1s infinite alternate ease-in-out; }",c+="@keyframes jewel-"+a.substr(1)+" { 0% { opacity: 0.2; } 100% { opacity: 1; } }");var d=mix(a,emptyColor,55),e=ColorLuminance(a,-.09);c=c+("."+b+".empty { background-color: "+d+"; box-shadow: inset 0 0 0 1px "+e+";  }")+("."+b+":hover:not(.nohover):not(.disabled), ."+b+".highlighted { background-color: "+ColorLuminance(d,.125)+"; cursor:pointer; }");c+=".prior-"+a.substr(1)+"::before { animation: origin-"+a.substr(1)+' 0.25s infinite alternate; content:""; display: block; height: 100%; width: 100%; position: absolute; left: 0; top: 0; background-color: '+
-hex2rgba(mix(a,"#ffffff",50),50)+"; box-shadow: inset 0 0 0 1px "+ColorLuminance(a,-.3)+", inset 0 0 0 3px "+a+"; }";priorColorList.push("prior-"+a.substr(1));c+="@keyframes origin-"+a.substr(1)+" { 0% { opacity: 0.2; } 40% { opacity: 0.25; } 60% { opacity: 0.95; } 100% { opacity: 1 } }";$("#"+b).append(c)}function hex2rgba(a,b){a=a.replace("#","");var c=parseInt(a.substring(0,2),16),d=parseInt(a.substring(2,4),16);a=parseInt(a.substring(4,6),16);return"rgba("+c+","+d+","+a+","+b/100+")"}
-function renderRoomTitle(a){$("#sidebar").prepend('\x3cdiv id\x3d"roomTitle"\x3e\x3cspan\x3e'+a+"\x3c/span\x3e\x3c/div\x3e");$("body").append('\x3cspan id\x3d"titleWidth"\x3e'+a+"\x3c/span\x3e");a=$("#titleWidth").width();$("#titleWidth").remove();a=211/a;1>=a&&$("#roomTitle \x3e span").css("transform","scale("+a+",1)")}
-function addHeadingOld(a,b,c,d){d=$(".block").width()*(d-1);$("#gameHead").append('\x3cdiv class\x3d"heading-'+a+'" style\x3d"left: '+d+"px; color: "+c+';"\x3e'+b+"\x3c/div\x3e");b=$(".heading-"+a).width()+40-$(".block").width();d-=b/2;$(".heading-"+a).css("left",d)}
-function addHeading(a,b,c,d){var e="#playerRight";$("#playerLeft").is(":empty")&&(e="#playerLeft");a='\x3cdiv class\x3d"heading-'+a+'" style\x3d"color: '+c+';"\x3e'+b+' \x3cspan style\x3d"font-weight:normal; color:white;"\x3e';0<d&&(a+="("+d+")");a+="\x3c/span\x3e\x3c/div\x3e";$(e).append(a)}
-function menuBlockEnableDisable(){$(".menu_block:not(.nohover)").on("click",function(){$(this).hasClass("disabled")?($(this).removeClass("disabled"),socket.emit("blocklist update",this.id,!0)):($(this).addClass("disabled"),socket.emit("blocklist update",this.id,!1))})}
-function renderLeaderboard(a){for(var b=0;b<a.length;b++)$("#eloRank").append("\x3ctr\x3e\x3ctd\x3e"+(b+1)+'\x3c/td\x3e\x3ctd style\x3d"color:'+a[b].color+'"\x3e'+a[b].displayName+'\x3c/td\x3e\x3ctd class\x3d"alignRight"\x3e'+a[b].elo+"\x3c/td\x3e\x3c/tr\x3e")}
-function renderGames(a){for(var b=0;b<a.length;b++){var c="#"+a[b].gameState,d='\x3cdiv class\x3d"lobbyGame" style\x3d"border: 2px '+a[b].creatorColor+' solid" data-gameid\x3d'+a[b].id+"\x3e";d+='\x3cspan class\x3d"WhoVsWho"\x3e\x3cb\x3e'+a[b].creator+"\x3c/b\x3e";0<a[b].creatorElo&&(d+="\x26ensp;("+a[b].creatorElo+")");"practice"===a[b].gameType?d+='\x26emsp;\x3cspan class\x3d"dimMsg"\x3e[practice room]\x3c/span\x3e':a[b].full&&(d+='\x26emsp;\x3cspan class\x3d"dimMsg"\x3evs\x3c/span\x3e\x26emsp;\x3cb\x3e'+
-a[b].opponent+"\x3c/b\x3e",0<a[b].opponentElo&&(d+="\x26ensp;("+a[b].opponentElo+")"));d+="\x3c/span\x3e";"random"===a[b].gameType&&(d+='\x3cspan class\x3d"gameSettings"\x3eRandom\x3c/span\x3e');d+='\x3cdiv class\x3d"lobbyButtons"\x3e\x3cspan class\x3d"lobbyButton spectateGameButton"\x3eSpectate\x3c/span\x3e';0==isGhost&&"inprogress"!==a[b].gameState&&0==a[b].full&&(d+='\x3cspan class\x3d"lobbyButton joinGameButton"\x3ePlay\x3c/span\x3e');d+="\x3c/div\x3e\x3c/div\x3e";$(c).append(d)}$("#open").prepend('\x3cdiv class\x3d"lobbyLabel"\x3eopen games:\x3c/div\x3e');
-$("#inprogress").prepend('\x3cdiv class\x3d"lobbyLabel"\x3ein progress:\x3c/div\x3e');if(0==isGhost)$(".joinGameButton").on("click",function(){var a=$(this).parent().parent().data("gameid");socket.emit("join game",a)});$(".spectateGameButton").on("click",function(){var a=$(this).parent().parent().data("gameid");socket.emit("join game",a,"spec")});var e=debounce=Math.random();ghostFlow&&setTimeout(function(){for(var b="none",c=-9999999,d=0;d<a.length;d++)("open"==a[d].gameState||"inprogress"==a[d].gameState)&&
-a[d].full&&a[d].creatorElo+a[d].opponentElo>c&&a[d].creatorElo+a[d].opponentElo>c&&"practice"!==a[d].gameType&&(c=a[d].creatorElo+a[d].opponentElo,b=d);"none"!==b&&(debounce=e)&&socket.emit("join game",a[b].id,"spec")},3E3)}
-function toggleAudioButton(){0==audioEnabled&&($(".audioOn").hide(),$(".audioOff").show());$("#toggleAudio").on("click",function(){audioEnabled?(audioEnabled=!1,log('\x3cspan class\x3d"dimMsg"\x3eAudio disabled.\x3c/span\x3e'),$(".audioOn").hide(),$(".audioOff").show()):(audioEnabled=!0,log('\x3cspan class\x3d"dimMsg"\x3eAudio enabled.\x3c/span\x3e'),moveAudio.play(),$(".audioOn").show(),$(".audioOff").hide())})}
-function updateTimer(a,b){$("#container").removeClass("timeWarning");0==a?$("#timer").html("Turn \x3cb\x3e"+b+"\x3c/b\x3e, Time \x3cb\x3e\x26infin;\x3c/b\x3e"):($("#timer").html("Turn \x3cb\x3e"+b+"\x3c/b\x3e, Time \x3cb\x3e"+a+"\x3c/b\x3e"),clearInterval(gameTimer),gameTimer=setInterval(function(){a--;if(0==a)clearInterval(gameTimer);else if(10>=a&&0==standby){if($("#timer").html("Turn \x3cb\x3e"+b+'\x3c/b\x3e, Time \x3cb class\x3d"redMsg"\x3e'+a+"\x3c/b\x3e"),10==a&&$("#container").addClass("timeWarning"),
-audioEnabled){var c=new Audio("sfx/beep.ogg");c.volume=1-a/15;c.play()}}else $("#timer").html("Turn \x3cb\x3e"+b+"\x3c/b\x3e, Time \x3cb\x3e"+a+"\x3c/b\x3e")},1E3))}
-function onlinePlay(){socket=io();socket.on("connect",function(){});socket.on("disconnect",function(){log('\x3cb class\x3d"redMsg"\x3eDisconnected\x3c/b\x3e');$("#username").remove();$(".dynamicStyle").remove();showWinState=inGame=!1;$("#sidebar").empty();$("#container").empty();audioEnabled&&disconnectedAudio.play();socket=!1});socket.on("update user count",function(a){1==a?log('\x3cspan class\x3d"greenMsg"\x3e1 user online.\x3c/span\x3e'):log('\x3cspan class\x3d"greenMsg"\x3e'+a+" users online.\x3c/span\x3e")});
-socket.on("make chat available",function(a){$("#chat").remove();$("#chatPanel").append('\x3cdiv id\x3d"chat"\x3e\x3cinput id\x3d"chatInput" type\x3d"text" maxlength\x3d"140" value\x3d"" autocomplete\x3d"off" /\x3e\x3c/div\x3e');$("#chatInput").on("keydown",function(a){13==a.keyCode&&(a=$("#chatInput").val(),$("#chatInput").val(""),$.trim(a)&&socket.emit("send chat message",a))})});socket.on("update lobby",function(a,b){$("#open").empty();$("#inprogress").empty();$("#eloRank").empty();renderLeaderboard(b);
-renderGames(a)});socket.on("render lobby",function(a,b,c){player=!1;$("#lobby").remove();$("#leaderboard").remove();$("#headBoardContainer").remove();var d='\x3cdiv id\x3d"lobby"\x3e\x3ch1\x3e\x3cspan style\x3d"color:'+c.color+'"\x3e'+c.username+"\x3c/span\x3e, ";d+='welcome to Cosmic Blocks!\x3c/h1\x3e\x3cdiv style\x3d"padding:20px;"\x3e\x3cdiv id\x3d"optionButtons"\x3e';isGhost||(d+='\x3cdiv id\x3d"newgame" class\x3d"buttonStyle"\x3eCreate Game\x3c/div\x3e\x3cdiv id\x3d"randgame" class\x3d"buttonStyle"\x3eRandom Game\x3c/div\x3e\x3cdiv id\x3d"practice" class\x3d"buttonStyle"\x3ePractice Mode\x3c/div\x3e');
-d+='\x3ca id\x3d"howToPlay" class\x3d"buttonStyle" href\x3d"https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit" target\x3d"_blank"\x3eHow to Play\x3c/a\x3e\x3ca class\x3d"buttonStyle" href\x3d"https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" target\x3d"_blank"\x3eDocumentation\x3c/a\x3e\x3cdiv id\x3d"toggleAudio" class\x3d"buttonStyle"\x3e'+audioButtonSVG()+"\x3c/div\x3e\x3c/div\x3e";isGhost||(d+='\x3cdiv id\x3d"playerStats"\x3e\x3c/div\x3e');
-d+='\x3cdiv id\x3d"gameTypes"\x3e\x3cdiv id\x3d"open"\x3e\x3c/div\x3e\x3cdiv id\x3d"inprogress"\x3e\x3c/div\x3e\x3c/div\x3e\x3c/div\x3e\x3c/div\x3e\t\x3cdiv id\x3d"leaderboard"\x3e\x3ch1\x3eWorld Ranking\x3c/h1\x3e\x3cdiv id\x3d"rankingContainer"\x3e\x3ctable id\x3d"eloRank"\x3e\x3c/table\x3e\x3c/div\x3e\x3c/div\x3e';$("#container").append(d);$("#newgame").on("click",function(){socket.emit("new game")});$("#randgame").on("click",function(){socket.emit("new game","random")});$("#practice").on("click",
-function(){socket.emit("practice mode")});toggleAudioButton();renderLeaderboard(b);renderGames(a);isGhost||(0!==c.gamesPlayed&&(d='\x3cul id\x3d"lobbyUserData"\x3e'+('\x3cli\x3eGames Played\x3cspan class\x3d"stat"\x3e'+c.gamesPlayed+"\x3c/span\x3e\x3c/li\x3e"),0!==c.wins&&(d+='\x3cli\x3eGames Won\x3cspan class\x3d"stat"\x3e'+c.wins+"\x3c/span\x3e\x3c/li\x3e"),0!==c.draws&&(d+='\x3cli\x3eGames Drawn\x3cspan class\x3d"stat"\x3e'+c.draws+"\x3c/span\x3e\x3c/li\x3e"),0!==c.losses&&(d+='\x3cli\x3eGames Lost\x3cspan class\x3d"stat"\x3e'+
-c.losses+"\x3c/span\x3e\x3c/li\x3e"),0<c.displayElo&&(d+='\x3cli\x3ePoints\x3cspan class\x3d"stat"\x3e'+c.displayElo+"\x3c/span\x3e\x3c/li\x3e"),d+="\x3c/ul\x3e",$("#playerStats").append(d)),0!==c.remainingRerolls&&($("#optionButtons").append('\x3cdiv class\x3d"buttonStyle" id\x3d"rerollColor"\x3eNew Color\x3c/div\x3e'),$("#rerollColor").on("click",function(){socket.emit("attempt color reroll")})));resizeFunction()});socket.on("ran out of rerolls",function(a){$("#rerollColor").remove()});socket.on("update lobby name color",
-function(a){$(".lobbyName").css("color",a)});socket.on("remove player heading",function(){$("#playerRight").empty()});socket.on("setup game",function(a,b,c,d,e,f,h,n,q,r,l,k,g,m){inGame=!0;(function(){$("#lobby").remove();$("#leaderboard").remove();$("#container").append('\n\t\t\t\t\x3cdiv id\x3d"headBoardContainer"\x3e\n\t\t\t\t\t\x3cdiv id\x3d"gameHead"\x3e\n\t\t\t\t\t\t\x3cdiv id\x3d"playerLeft"\x3e\x3c/div\x3e\n\t\t\t\t\t\t\x3cdiv id\x3d"timeRemaining"\x3e\x3c/div\x3e\n\t\t\t\t\t\t\x3cdiv id\x3d"playerRight"\x3e\x3c/div\x3e\n\t\t\t\t\t\x3c/div\x3e\n\t\t\t\t\t\x3cdiv id\x3d"board"\x3e\x3c/div\x3e\n\t\t\t\t\t\x3cdiv id\x3d"menuContainer"\x3e\n\t\t\t\t\t\t\x3cdiv id\x3d"menuRightContainer"\x3e\n\t\t\t\t\t\t\t\x3cdiv id\x3d"gameButtons"\x3e\x3c/div\x3e\n\t\t\t\t\t\t\t\x3cdiv id\x3d"bottomInfo"\x3e\x3c/div\x3e\n\t\t\t\t\t\t\x3c/div\x3e\n\t\t\t\t\t\x3c/div\x3e\n\t\t\t\t\x3c/div\x3e');
-buildMenu(q);$(".winState").remove();buildBoard(d,e);renderBoard(f);$(".block").addClass("nohover");blockHoverData();renderExitButton();for(var a in h)addHeading(a,h[a].username,h[a].color,h[a].displayElo);"open"==n?"practice"===m?socket.emit("ready"):"spectator"!==b&&($("#gameButtons").append('\x3cdiv class\x3d"buttonStyle notready" id\x3d"ready"\x3eReady Up\x3c/div\x3e'),$("#ready").on("click",function(){$(this).hasClass("unbound")?log('\x3cspan class\x3d"redMsg"\x3ecannot ready as spectator\x3c/span\x3e'):
-$(this).hasClass("notready")?(socket.emit("ready"),$(this).html("Unready").removeClass("notready")):(socket.emit("not ready"),$(this).html("Ready Up").addClass("notready"))})):"inprogress"==n&&(global_moveCount=k,$("#timeRemaining").append('\x3cdiv id\x3d"timer"\x3eTurn \x3cb\x3e'+k+"\x3c/b\x3e, Time \x3cb\x3e"+g+"\x3c/b\x3e\x3c/div\x3e"),updateTimer(g,k));$("#gameButtons").append('\x3cdiv id\x3d"toggleAudio" class\x3d"buttonStyle"\x3e'+audioButtonSVG()+"\x3c/div\x3e");toggleAudioButton();$(".menu_block").addClass("nohover disabled")})()});
-socket.on("detonate",function(){audioEnabled&&detonateAudio.play()});socket.on("time limit update",function(a){timeLimitUpdate(a)});socket.on("collision update",function(a){collisionUpdate(a)});socket.on("game preset",function(a,b,c,d,e,f,h){timeLimitUpdate(b);collisionUpdate(h);buildBoard(c,d);renderBoard(a);buildMenu(e);$(".block").addClass("nohover");you==f?menuBlockEnableDisable():$("#menu").css("opacity","0.5")});socket.on("blocklist updated",function(a,b,c){b?$("#"+a).removeClass("disabled"):
-$("#"+a).addClass("disabled")});socket.on("rebuild board",function(a,b){buildBoard(a,b);log('\x3cspan class\x3d"dimMsg"\x3eNew dimensions: '+b+" x "+a+"\x3c/span\x3e");$(".block").addClass("nohover")});socket.on("kill game",function(){exitGame()});socket.on("build menu",function(a){buildMenu(a)});socket.on("add to heading",function(a,b,c,d){addHeading(a,b,c,d)});socket.on("remove from heading",function(a){$(".heading-"+a).remove();$("#ready").html("[ ] Ready").addClass("notready")});socket.on("update lobby welcome name color",
-function(a){$("#lobby \x3e h1 \x3e span").css("color",a)});socket.on("all players ready",function(a,b,c,d,e,f,h){$(".block","#board").off();$("#menuContainer").off();$("#board").off();blockHoverData();if("practice"!==h)$("#gameButtons \x3e *:not('#toggleAudio')").remove();else{for(var n=0;n<priorColorList.length;n++)$(".block").removeClass(priorColorList[n]);$(".highlighted").removeClass("highlighted");$(".menu_block").addClass("disabled")}0==b&&(b="\x26infin;");0===$("#timer").length&&$("#timeRemaining").append('\x3cdiv id\x3d"timer"\x3eTurn \x3cb\x3e1\x3c/b\x3e, Time \x3cb\x3e'+
-b+"\x3c/b\x3e\x3c/div\x3e");global_moveCount=1;$("#menu").css("opacity","1");audioEnabled&&newgameAudio.play();joinGame(a,global_moveCount,b,c,d,e,f,h)});socket.on("new move",function(a,b,c){global_moveCount++;$(".waitMsg").parent().remove();$(".block").removeClass("nohover").removeClass("disabled");"undefined"!==typeof c&&buildMenu(c);$(".menu_block").addClass("disabled");menuState=!1;$(".highlighted").removeClass("highlighted");0==b&&audioEnabled&&moveAudio.play();renderBoard(a);standby=!1});socket.on("victory",
-function(a,b,c,d){if(0==showWinState)for(cleanup(a,d),showWinState=!0,d=0;d<a.length;d++)showPath(b[d],c)});socket.on("log",function(a,b){log(a,b)});socket.on("store id",function(a,b,c){you=a;yourName=b;ghostFlow=isGhost=c});socket.on("connect audio",function(){audioEnabled&&connectAudio.play()});socket.on("remove rematch button",function(){$("#rematch").remove();ghostFlow&&setTimeout(function(){exitGame()},3E3)});socket.on("render board",function(a){renderBoard(a)});socket.on("collision",function(){audioEnabled&&
-collisionAudio.play()});socket.on("update timer",function(a,b){updateTimer(a,b)});socket.on("time out",function(a){log('\x3cspan class\x3d"dimMsg"\x3etime out\x3c/span\x3e');you!=a&&audioEnabled&&timeoutAudio.play()});socket.on("rematch offered",function(){$("#rematch \x3e span").text("Accept Rematch").addClass("blinkText")});socket.on("setup rematch",function(a,b,c){debounce=Math.random();$(".block").removeClass("nohover disabled ice");buildMenu(a);showWinState=!1;"undefined"!==typeof b&&0<b&&$("#playerLeft \x3e div \x3e span").html("("+
-b+")");"undefined"!==typeof c&&0<c&&$("#playerRight \x3e div \x3e span").html("("+c+")")});socket.on("draw offered",function(a){log("Draw Offered");drawOffered(a)});socket.on("console log",function(a){console.log(a)})}$(document).ready(function(){});
-$(window).on("load",function(){$("#container").append('\n\t\t\x3ch1 id\x3d"chatToggle"\x3e\x26laquo;\x3c/h1\x3e\n\t\t\x3cdiv id\x3d"chatPanel"\x3e\n\t\t\t\x3ch1\x3eChat\x3c/h1\x3e\n\t\t\t\x3cdiv id\x3d"logContainer"\x3e\n\t\t\t\t\x3cdiv id\x3d"log"\x3e\x3c/div\x3e\n\t\t\t\x3c/div\x3e\n\t\t\x3c/div\x3e ');sidebarsResize();updateStyle("nocolor","#d5ccbd");$(window).resize(function(){resizeFunction()});$("#chatToggle").on("click",function(){$("#chatPanel").is(":visible")?($("#chatPanel").hide(),$("#chatToggle").html("\x26raquo;")):
-($("#chatPanel").show(),$("#chatToggle").html("\x26laquo;"));resizeFunction()});onlinePlay();console.log("hello world")});function log(a,b){500<=$(".logLine").length&&$(".logLine").first().remove();b?$("#log").append('\x3cdiv class\x3d"logLine special"\x3e'+a+"\x3c/div\x3e"):$("#log").append('\x3cdiv class\x3d"logLine"\x3e'+a+"\x3c/div\x3e");$("#logContainer").scrollTop($("#log")[0].scrollHeight)}
-function audioButtonSVG(){return'\x3csvg version\x3d"1.2" baseProfile\x3d"tiny" xmlns\x3d"http://www.w3.org/2000/svg" xmlns:xlink\x3d"http://www.w3.org/1999/xlink" x\x3d"0px" y\x3d"0px" viewBox\x3d"0 0 400 400" overflow\x3d"scroll" xml:space\x3d"preserve"\x3e\x3cpath d\x3d"M159,226.5c0,11-9,20-20,20H71c-11,0-20-9-20-20V174c0-11,9-20,20-20h68c11,0,20,9,20,20V226.5z"/\x3e\x3cpath d\x3d"M75.3,189.3c-9.3,5.9-9.3,15.7,0,21.6l126.8,81.5c9.3,5.9,16.8,1.8,16.8-9.2V117c0-11-7.6-15.1-16.8-9.2L75.3,189.3z"/\x3e\x3cpath class\x3d"audioOn" fill\x3d"none" stroke\x3d"#2652AA" stroke-width\x3d"20" stroke-linecap\x3d"round" stroke-miterlimit\x3d"10" d\x3d"M314,126c0,0,90,74,0,148" /\x3e\x3ccircle class\x3d"audioOn" fill\x3d"#061059" cx\x3d"254" cy\x3d"200" r\x3d"21"/\x3e\x3cpath class\x3d"audioOn" fill\x3d"none" stroke\x3d"#123A89" stroke-width\x3d"20" stroke-linecap\x3d"round" stroke-miterlimit\x3d"10" d\x3d"M279,153c0,0,70,47,0,94"/\x3e\x3cline class\x3d"audioOff" fill\x3d"none" stroke\x3d"#890303" stroke-width\x3d"20" stroke-linecap\x3d"round" stroke-miterlimit\x3d"10" x1\x3d"249" y1\x3d"166" x2\x3d"318" y2\x3d"235"/\x3e\x3cline class\x3d"audioOff" fill\x3d"none" stroke\x3d"#890303" stroke-width\x3d"20" stroke-linecap\x3d"round" stroke-miterlimit\x3d"10" x1\x3d"318" y1\x3d"166" x2\x3d"249" y2\x3d"235"/\x3e\x3c/svg\x3e'};
+// Cosmic Blocks
+// by Narcissa Wright
+
+'use strict';
+
+	//   ****  ****   **      ***   ** **  //
+	//  **     ** **  **     ** **   ***   //
+	//  **     ****   **     ** **    *    //
+	//  **     ** **  **     ** **   ***   //
+	//   ****  ****   *****   ***   ** **  //
+
+// some global vars...
+var menuState; // is the menu disabled?
+var global_moveCount; // what turn is it
+var standby; // waiting for other player
+var you; // socket id.
+var yourName; //displayName.
+var opponents = []; // who u playin against
+var socket; // online multiplayer!
+var isGhost; // is this open in a second tab.
+var ghostFlow; // are you auto-spectating?
+var inGame = false; // are you in a game or in the lobby?
+var showWinState = false; // should the winState be shown?
+var player = false; // are you a player
+var emptyColor = "#d5ccbd"; // this is the empty block color passed in from server later on
+var priorColorList = []; // this will hold all the colors used for highlighting with the .prior-* class.
+var audioEnabled = true;
+var gameTimer;
+var debounce; // used for checking if renderGames function was run multiple times for ghostFlow delay....
+
+// new color rendering setup
+// preference is either 'server' or 'client'
+// server has the database name color of player1 and player2
+// client has your personal preference for player1 / player2, 
+var colors = {
+	preference: 'server',
+	server: ['', ''],
+	client: ['', '']
+}
+
+// sfx
+const hoverAudio = new Audio("sfx/hover.ogg");
+const moveAudio = new Audio("sfx/move3.ogg");
+const collisionAudio = new Audio("sfx/collision3.ogg");
+const beepAudio = new Audio("sfx/beep.ogg");
+const newgameAudio = new Audio("sfx/newgame.ogg");
+const forfeitAudio = new Audio("sfx/forfeit.ogg");
+const drawgameAudio = new Audio("sfx/drawgame.ogg");
+const youwinAudio = new Audio("sfx/youwin.ogg");
+const gameoverAudio = new Audio("sfx/gameover.ogg");
+const drawacceptedAudio = new Audio("sfx/drawaccepted.ogg");
+const connectAudio = new Audio("sfx/connect.ogg");
+const disconnectedAudio = new Audio("sfx/disconnected.ogg");
+const opponentdisconnectedAudio = new Audio("sfx/opponentdisconnected.ogg");
+const timeoutAudio = new Audio("sfx/timeover.ogg");
+const detonateAudio = new Audio("sfx/detonate2.ogg");
+
+
+function buildBoard(rows, cols) {
+	// clear the board
+	$("#board").empty();
+	
+	// begin building the physical board (as <div>s)
+	for (var i = 0; i < rows; i++) {
+		var buildstring = '<div class="board_row">';
+		for (var j = 0; j < cols; j++) {
+			// blocks start as empty blocks
+			buildstring += '<div id="x' + (j+1) + 'y' + (i+1) + '" class="block empty"></div>';
+		}
+		buildstring += '</div>';
+		$("#board").append(buildstring);
+	}
+	
+	sizeBoard(rows, cols);
+}
+function resizeFunction() {
+	sidebarsResize();
+	if ($("#menuContainer").length > 0) {
+		menuResize();
+	}
+	if ($("#board").length > 0) {
+		sizeBoard();
+	}
+	if ($("#blockListEditor").length > 0) {
+		let hWidth = hSpace();
+		$("#blockListEditor").css('width', hWidth);
+	}
+}
+function sidebarsResize() {
+  if ($(window).width() > 1450) {
+    var initialWidth = 222 + (($(window).width() - 1450) / 3);
+    if (initialWidth > 300) { initialWidth = 300; }
+  } else {
+    var initialWidth = 222;
+  }
+	$('#chatPanel').css('width', initialWidth + 'px');
+	$('#leaderboard').css('width', initialWidth + 'px');
+  //log(initialWidth);
+}
+function sizeBoard() {
+	
+	var arr = []; //populate the length of children into this array.
+	$('.board_row').map(function (i) {
+		arr[i] = $(this).children().length;
+	});
+	var cols = Math.max.apply(Math, arr); //get the max value from the array
+	var rows = $(".board_row").length;
+	
+	let blockSize = getBlockSize(rows, cols);
+	let boardWidth = (cols * blockSize) + 'px';
+	let boardHeight = (rows * blockSize) + 'px';
+	
+	$("#board").css('width', boardWidth);
+	$("#board").css('height', boardHeight);
+	$(".board_row").css('height', blockSize);
+	$(".block").css('width', blockSize);
+	$(".block").css('height', blockSize);
+}
+function hSpace () {
+    // for board/menu sizing.
+	let horizontalSpace = $(window).width();
+	if ($("#chatPanel").is(":visible")) {
+		horizontalSpace -= $("#chatPanel").width();
+	}
+	return horizontalSpace;
+}
+function vSpace () {
+	let verticalSpace = $(window).height() - 38 - $("#menuContainer").height() - 10; // 38 is $("#gameHead").height() but hardcoded for now.
+	return verticalSpace;
+}
+function getBlockSize(rows, cols) {
+	let blockSize = 50;
+	
+	// find available space
+	var horizontalSpace = hSpace();
+	var verticalSpace = vSpace();
+	
+	let windowRatio = horizontalSpace / verticalSpace;
+	let boardRatio = cols / rows;
+	
+	//if board ratio wider than window ratio then horizontally max the board!
+	//if board ratio taller than the window ratio then vertically max the board!!
+	if (boardRatio > windowRatio) {
+		blockSize = Math.floor(horizontalSpace / cols);
+	} else {
+		blockSize = Math.floor(verticalSpace / rows);
+	}
+
+	return blockSize;
+}
+function buildMenu (blockList) {
+	$("#menu").remove();
+	$("#menuContainer").append('<div id="menu"></div>');
+	// define what blocks are used in the menu.
+	var menuBlocks = blockList;
+	var buildString = '';
+	var ammoString = '';
+	buildString += '<div class="menu_row">';
+	//<div class="menu_block nohover disabled" style="opacity:0"></div> dummy block
+	
+	var position = 0;
+	var splitPoint = Math.floor(Object.keys(menuBlocks).length / 2);
+	
+	for (var block in blockList) {
+		position++;
+		if (position > splitPoint) {
+			splitPoint = 9001; // it's over 9000!!!
+			buildString += '</div><div class="menu_row">'; // new row
+		}
+		buildString += '<div class="menu_block';
+		if (blockList[block].ammo == 0) {
+			buildString += ' disabled nohover noammo';
+			ammoString = '';
+		}
+		// idk why it's "null" but w/e
+		if ((blockList[block].ammo !== null) && (blockList[block].ammo !== 'inf')) {
+			ammoString = '<div class="ammo" id="'+ block +'-ammo">'+ blockList[block].ammo +'</div>';
+		} else {
+			ammoString = '';
+		}
+		var SVGString = getSVG8by8(block);
+		buildString += '" id="' + block + '" >' + ammoString + SVGString + '</div>';
+	}
+	buildString += '</div>';
+	$('#menu').append(buildString);
+	menuResize();
+}
+function menuResize () {
+	var horizontalSpace = hSpace();
+	
+	var arr = []; //populate the length of children into this array.
+	$('.menu_row').map(function (i) {
+		arr[i] = $(this).children().length;
+	});
+	var menuLength = Math.max.apply(Math, arr); //get the max value from the array
+	
+	//let menuLength = $(".menu_block").length;
+	let menuBlockSize = ((Math.floor(horizontalSpace / menuLength)) * 0.5) - 10;
+	if (menuBlockSize > 75) {
+		menuBlockSize = 75;
+	}
+	$(".menu_block").css('height', menuBlockSize);
+	$(".menu_block").css('width', menuBlockSize);
+	//$(".menu_block").css('margin', menuBlockSize / 15);
+	//$("#menu").css('width', horizontalSpace * 0.8);
+}
+function menuHideBlocksAndResize () {
+	$(".menu_block.disabled").addClass('nohover').css('opacity', 0);
+	menuResize();
+}
+
+function renderBoard(data) {
+	for (var i = 0; i < priorColorList.length; i++) {
+		$(".block").removeClass(priorColorList[i]);
+	}
+	$.each(data, function( index, value ) {
+		let tempX = value.x + 1;
+		let tempY = value.y + 1;
+		updateBlock (tempX, tempY, value.type, value.possessionDisplayName, value.moveNum, value.origin, value.color, value.duration, value.history, value.originColor, value.possession, value.possessionColorSpread);
+	});
+	//log ('<span class="dimMsg">rendered board</span>');
+}
+
+function getSVG8by8(blockType, where) {
+	var SVGString = '';
+	if (blockType !== 'blank') {
+		var oShape = '<circle fill="none" class="oShape" stroke="#000000" stroke-width="5" cx="40" cy="40" r="30"/>';
+		var oOutline = '<path class="outline" d="M40,74.5C20.977,74.5,5.5,59.023,5.5,40S20.977,5.5,40,5.5S74.5,20.977,74.5,40S59.023,74.5,40,74.5L40,74.5 z"/>';
+		
+		SVGString += '<svg version="1.2" baseProfile="tiny" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:a="http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/" x="0px" y="0px" width="80px" height="80px" viewBox="0 0 80 80" xml:space="preserve"><defs></defs>';
+
+		if (blockType == 'circle') {
+			//SVGString += oOutline;
+			SVGString += oShape;
+		} else if (blockType == 'base') {
+			SVGString += '<polygon class="shape" points="62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/>';
+			SVGString += '<circle class="jewel" cx="40" cy="40" r="7.5"/>';
+		} else if (blockType == 'star') {
+			SVGString += '<polygon class="shape" points="62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/>';
+		} else if (blockType == 'ostar') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="62.5,45 62.499,34.999 52.071,35 59.445,27.625 52.374,20.555 44.999,27.93 44.999,17.5 35,17.5 35,27.929 27.625,20.555 20.555,27.625 27.928,35 17.5,35 17.5,45 27.929,45 20.555,52.374 27.625,59.445 35,52.072 34.999,62.499 45,62.5 44.999,52.07 52.374,59.445 59.445,52.374 52.071,45 "/>';
+		} else if (blockType == 'plus') {
+			SVGString += '<polygon class="shape" points="62.5,35 45,35 45,17.5 35,17.5 35,35 17.5,35 17.5,45 35,45 35,62.5 45,62.5 45,45 62.5,45 "/>';
+		} else if (blockType == 'oplus') {
+			//SVGString += oOutline;
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="62.5,35 45,35 45,17.5 35,17.5 35,35 17.5,35 17.5,45 35,45 35,62.5 45,62.5 45,45 62.5,45 "/>';
+		} else if (blockType == 'cross') {
+			SVGString += '<polygon class="shape" points="59.445,52.374 47.071,40 59.445,27.625 52.374,20.555 40,32.929 27.625,20.555 20.555,27.625 32.929,40 20.555,52.374 27.625,59.445 40,47.071 52.374,59.445 "/>';
+		} else if (blockType == 'ocross') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="59.445,52.374 47.071,40 59.445,27.625 52.374,20.555 40,32.929 27.625,20.555 20.555,27.625 32.929,40 20.555,52.374 27.625,59.445 40,47.071 52.374,59.445 "/>';
+		} else if (blockType == 'arrow1') {
+			SVGString += '<polygon class="shape" points="22.42,57.58 46.762,52.419 40,47.071 59.445,27.626 52.374,20.555 32.929,40 27.582,33.238 "/>';
+		} else if (blockType == 'arrow11') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="22.42,57.58 46.762,52.419 40,47.071 59.445,27.626 52.374,20.555 32.929,40 27.582,33.238 "/>';
+		} else if (blockType == 'arrow2') {
+			SVGString += '<polygon class="shape" points="40,64.861 53.563,44 45,45 45,17.5 35,17.5 35,45 26.438,44 "/>';
+		} else if (blockType == 'arrow22') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="40,64.861 53.563,44 45,45 45,17.5 35,17.5 35,45 26.438,44 "/>';
+		} else if (blockType == 'arrow3') {
+			SVGString += '<polygon class="shape" points="57.58,57.58 52.419,33.238 47.071,40 27.626,20.555 20.555,27.626 40,47.071 33.238,52.419 "/>';
+		} else if (blockType == 'arrow33') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="57.58,57.58 52.419,33.238 47.071,40 27.626,20.555 20.555,27.626 40,47.071 33.238,52.419 "/>';
+		} else if (blockType == 'arrow4') {
+			SVGString += '<polygon class="shape" points="15.139,40 36,53.563 35,45 62.5,45 62.5,35 35,35 36,26.438 "/>';
+		} else if (blockType == 'arrow44') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="15.139,40 36,53.563 35,45 62.5,45 62.5,35 35,35 36,26.438 "/>';
+		} else if (blockType == 'arrow6') {
+			SVGString += '<polygon class="shape" points="64.861,40 44,26.438 45,35 17.5,35 17.5,45 45,45 44,53.563 "/>';
+		} else if (blockType == 'arrow66') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="64.861,40 44,26.438 45,35 17.5,35 17.5,45 45,45 44,53.563 "/>';
+		} else if (blockType == 'arrow7') {
+			SVGString += '<polygon class="shape" points="22.42,22.42 27.582,46.762 32.929,40 52.374,59.445 59.445,52.374 40,32.929 46.762,27.582 "/>';
+		} else if (blockType == 'arrow77') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="22.42,22.42 27.582,46.762 32.929,40 52.374,59.445 59.445,52.374 40,32.929 46.762,27.582 "/>';
+		} else if (blockType == 'arrow8') {
+			SVGString += '<polygon class="shape" points="40,15.139 26.438,36 35,35 35,62.5 45,62.5 45,35 53.563,36 "/>';
+		} else if (blockType == 'arrow88') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="40,15.139 26.438,36 35,35 35,62.5 45,62.5 45,35 53.563,36 "/>';
+		} else if (blockType == 'arrow9') {
+			SVGString += '<polygon class="shape" points="57.58,22.42 33.238,27.581 40,32.929 20.555,52.374 27.626,59.445 47.071,40 52.419,46.762 "/>';
+		} else if (blockType == 'arrow99') {
+			SVGString += oShape;
+			SVGString += '<polygon class="shape" points="57.58,22.42 33.238,27.581 40,32.929 20.555,52.374 27.626,59.445 47.071,40 52.419,46.762 "/>';
+		} else if (blockType == 'hbar') {
+			SVGString += '<rect class="shape" x="17.5" y="35" width="45" height="10"/>';
+		} else if (blockType == 'ohbar') {
+			SVGString += oShape;
+			SVGString += '<rect class="shape" x="17.5" y="35" width="45" height="10"/>';
+		} else if (blockType == 'vbar') {
+			SVGString += '<rect class="shape" x="35" y="17.5" width="10" height="45"/>';
+		} else if (blockType == 'ovbar') {
+			SVGString += oShape;
+			SVGString += '<rect class="shape" x="35" y="17.5" width="10" height="45"/>';
+		} else if (blockType == 'tlbr') {
+			SVGString += '<rect class="shape" x="17.5" y="35" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 40 96.5684)" width="45" height="10"/>';
+		} else if (blockType == 'otlbr') {
+			SVGString += oShape;
+			SVGString += '<rect class="shape" x="17.5" y="35" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 40 96.5684)" width="45" height="10"/>';
+		} else if (blockType == 'bltr') {
+			SVGString += '<rect class="shape" x="17.5" y="34.999" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -16.5682 40.0007)" width="45" height="10"/>';
+		} else if (blockType == 'obltr') {
+			SVGString += oShape;
+			SVGString += '<rect class="shape" x="17.5" y="34.999" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -16.5682 40.0007)" width="45" height="10"/>';
+		} else if (blockType == 'ice') {
+			SVGString += '<rect fill="#B6E3FF" width="80" height="80"/>';
+			SVGString += '<polygon fill="#CFF1FF" points="80,38.375 0,29.375 0,17.125 80,24 "/>';
+			SVGString += '<polygon fill="#CFF1FF" points="80,65 0,49.375 0,37.125 80,50.5 "/>';
+			SVGString += '<polygon fill="#FFFFFF" stroke="#B6E3FF" points="25.536,43.786 28.788,54.874 39.875,58.125 28.788,61.377 25.536,72.464 22.285,61.377 11.197,58.125 22.285,54.874 "/>';
+			SVGString += '<polygon fill="#FFFFFF" stroke="#B6E3FF" points="53.339,11.322 56.591,22.41 67.678,25.661 56.591,28.913 53.339,40 50.088,28.913 39,25.661 50.088,22.41 "/>';
+		} else if (blockType == 'knight') {
+			SVGString += '<path d="M24.457,70.447c0,0,0.238-11.977,6.288-17.872C43.651,40,41.666,37.022,41.666,37.022s-4.964-1.986-11.694,4.082 c-6.729,6.066-11.692,8.493-12.134,3.86c0,0-6.288,0.221-5.957-3.86c0.331-4.082,13.127-19.084,14.893-24.159 c1.765-5.074,1.985-7.391,1.985-7.391s5.185,2.427,6.839,5.074c0,0,3.751-5.185,6.73-5.074l1.103,4.412 c0,0,12.024,1.765,16.988,14.672c4.964,12.907,4.964,41.809,4.964,41.809"/>';
+			SVGString += '<path fill="#AD0000" d="M31.347,22.019c0,0-6.067,3.162-6.067,7.281c0,0.184,0,0.441,0,0.441s4.964-1.765,5.516-4.743"/>';
+		} else if (blockType == 'mine') {
+			SVGString += `
+				<g class="mineMetal">
+					<circle cx="40" cy="40" r="4.2"/>
+					<path d="M59.7,49.5C59.7,49.5,59.7,49.5,59.7,49.5c0.2-0.4,0.3-0.7,0.5-1.1c0,0,0-0.1,0-0.1c0.1-0.3,0.3-0.6,0.4-1
+					c0-0.1,0.1-0.2,0.1-0.3c0.1-0.3,0.2-0.5,0.3-0.8c0-0.1,0.1-0.3,0.1-0.4c0.1-0.2,0.1-0.5,0.2-0.7c0-0.1,0.1-0.3,0.1-0.4
+					c0.1-0.2,0.1-0.5,0.1-0.7c0-0.1,0.1-0.3,0.1-0.4c0-0.2,0.1-0.5,0.1-0.7c0-0.1,0-0.3,0.1-0.4c0-0.3,0.1-0.5,0.1-0.8
+					c0-0.1,0-0.3,0-0.4c0-0.4,0-0.8,0-1.2c0-0.4,0-0.8,0-1.2c0-0.1,0-0.3,0-0.4c0-0.3,0-0.5-0.1-0.8c0-0.1,0-0.3-0.1-0.4
+					c0-0.3-0.1-0.5-0.1-0.8c0-0.1,0-0.3-0.1-0.4c0-0.3-0.1-0.5-0.2-0.8c0-0.1-0.1-0.3-0.1-0.4c-0.1-0.3-0.1-0.5-0.2-0.8
+					c0-0.1-0.1-0.2-0.1-0.3c-0.1-0.3-0.2-0.6-0.3-0.9c0-0.1,0-0.1-0.1-0.2c-0.3-0.7-0.6-1.5-0.9-2.2c0,0,0,0,0,0
+					c-2.5-5.1-6.9-9.1-12.3-11c0,0,0,0,0,0c-0.4-0.1-0.7-0.2-1.1-0.4c-0.1,0-0.2,0-0.2-0.1c-0.3-0.1-0.6-0.2-0.9-0.2
+					c-0.1,0-0.2-0.1-0.3-0.1c-0.3-0.1-0.5-0.1-0.8-0.2c-0.1,0-0.3,0-0.4-0.1c-0.3,0-0.5-0.1-0.8-0.1c-0.1,0-0.3,0-0.4-0.1
+					c-0.3,0-0.6-0.1-0.8-0.1c-0.1,0-0.2,0-0.4,0c-0.4,0-0.8,0-1.2,0c-0.4,0-0.8,0-1.2,0c-0.1,0-0.3,0-0.4,0c-0.3,0-0.5,0-0.8,0.1
+					c-0.1,0-0.3,0-0.4,0.1c-0.2,0-0.5,0.1-0.7,0.1c-0.1,0-0.3,0.1-0.4,0.1c-0.2,0-0.5,0.1-0.7,0.1c-0.1,0-0.3,0.1-0.4,0.1
+					c-0.2,0.1-0.5,0.1-0.7,0.2c-0.1,0-0.3,0.1-0.4,0.1c-0.3,0.1-0.5,0.2-0.8,0.3c-0.1,0-0.2,0.1-0.3,0.1c-0.3,0.1-0.6,0.2-1,0.4
+					c0,0-0.1,0-0.1,0c-6,2.5-10.6,7.6-12.5,13.9c0,0.1,0,0.1-0.1,0.2c-0.1,0.3-0.2,0.6-0.2,0.9c0,0.1,0,0.2-0.1,0.3
+					c-0.1,0.3-0.1,0.6-0.2,0.8c0,0.1,0,0.3-0.1,0.4c0,0.3-0.1,0.5-0.1,0.8c0,0.1,0,0.3-0.1,0.4c0,0.3-0.1,0.6-0.1,0.8
+					c0,0.1,0,0.2,0,0.4c0,0.4,0,0.8,0,1.2c0,0.4,0,0.8,0,1.2c0,0.1,0,0.2,0,0.4c0,0.3,0,0.6,0.1,0.8c0,0.1,0,0.3,0.1,0.4
+					c0,0.3,0.1,0.5,0.1,0.8c0,0.1,0,0.3,0.1,0.4c0,0.3,0.1,0.5,0.2,0.8c0,0.1,0.1,0.2,0.1,0.3c0.1,0.3,0.1,0.6,0.2,0.9
+					c0,0.1,0,0.2,0.1,0.2c0.1,0.4,0.2,0.7,0.4,1.1c0,0,0,0,0,0c1.9,5.4,5.9,9.8,11,12.3c0,0,0,0,0,0c0.7,0.3,1.4,0.7,2.2,0.9
+					c0.1,0,0.1,0,0.2,0.1c0.3,0.1,0.6,0.2,0.9,0.3c0.1,0,0.2,0.1,0.3,0.1c0.3,0.1,0.5,0.1,0.8,0.2c0.1,0,0.3,0.1,0.4,0.1
+					c0.3,0.1,0.5,0.1,0.8,0.2c0.1,0,0.3,0.1,0.4,0.1c0.3,0,0.5,0.1,0.8,0.1c0.1,0,0.3,0,0.4,0.1c0.3,0,0.5,0.1,0.8,0.1
+					c0.1,0,0.3,0,0.4,0c0.4,0,0.8,0,1.2,0c0.4,0,0.8,0,1.2,0c0.1,0,0.2,0,0.4,0c0.3,0,0.6,0,0.8-0.1c0.1,0,0.3,0,0.4-0.1
+					c0.3,0,0.5-0.1,0.8-0.1c0.1,0,0.3,0,0.4-0.1c0.3-0.1,0.6-0.1,0.8-0.2c0.1,0,0.2,0,0.3-0.1c0.3-0.1,0.6-0.2,0.9-0.2
+					c0.1,0,0.1,0,0.2-0.1c1.2-0.4,2.3-0.8,3.4-1.3c0,0,0,0,0,0C54,57.4,57.5,53.9,59.7,49.5z M40,46.2c-3.4,0-6.2-2.8-6.2-6.2
+					s2.8-6.2,6.2-6.2s6.2,2.8,6.2,6.2S43.4,46.2,40,46.2z"/>
+					<path fill="#1C1C1C" d="M18.9,51.1l-1,1c-1.6,1.6-1.6,4.1,0,5.7l4.4,4.4c1.6,1.6,4.1,1.6,5.7,0l1-1C24.7,58.9,21.2,55.4,18.9,51.1z "/>';
+					<path fill="#1C1C1C" d="M61.1,29l1.3-1.3c1.6-1.6,1.6-4.1,0-5.7L58,17.7c-1.6-1.6-4.1-1.6-5.7,0l-1.3,1.3 C55.4,21.2,58.9,24.7,61.1,29z"/>';
+					<path fill="#1C1C1C" d="M61.1,51c-2.2,4.3-5.7,7.8-10,10.1l1.1,1.1c1.6,1.6,4.1,1.6,5.7,0l4.4-4.4c1.6-1.6,1.6-4.1,0-5.7L61.1,51z" />';
+					<path fill="#1C1C1C" d="M18.9,28.9c2.3-4.3,5.8-7.8,10.1-10l-1.2-1.2c-1.6-1.6-4.1-1.6-5.7,0L17.8,22c-1.6,1.6-1.6,4.1,0,5.7 L18.9,28.9z"/>';
+				</g>
+				<circle class="mineLights" cx="30" cy="30" r="2"/>
+				<circle class="mineLights" cx="50" cy="30" r="2"/>
+				<circle class="mineLights" cx="30" cy="50" r="2"/>
+				<circle class="mineLights" cx="50" cy="50" r="2"/>
+				`;
+		} else if (blockType == 'reclaim') {
+			SVGString += `<polygon fill="#E3FFE1" points="13.2,21.3 15.1,27.8 21.5,29.7 15.1,31.6 13.2,38 11.3,31.6 4.8,29.7 11.3,27.8 	"/>
+			<polygon fill="#E3FFE1" points="40.8,60 42.7,66.4 49.2,68.3 42.7,70.2 40.8,76.7 38.9,70.2 32.5,68.3 38.9,66.4 	"/>
+			<polygon fill="#E3FFE1" points="64.5,37.2 66.3,43.6 72.8,45.5 66.3,47.4 64.5,53.8 62.6,47.4 56.1,45.5 62.6,43.6 	"/>
+			<polygon fill="#E3FFE1" points="62.7,11.2 64.6,17.6 71,19.5 64.6,21.4 62.7,27.8 60.8,21.4 54.3,19.5 60.8,17.6 	"/>
+			<polygon fill="#E3FFE1" points="32.5,3.8 34.4,10.3 40.8,12.2 34.4,14.1 32.5,20.5 30.6,14.1 24.1,12.2 30.6,10.3 	"/>
+			<polygon fill="#E3FFE1" points="15.5,50.3 17.4,56.8 23.9,58.7 17.4,60.6 15.5,67 13.7,60.6 7.2,58.7 13.7,56.8 	"/>
+			<path fill="#006616" d="M45.5,62.8l-0.4-0.6c-0.5-0.8-1.3-2.7-3.1-10.3c-1.1-5-2.6-5.8-5.7-5.9h-1.6v16.8H22.6V18.3l1-0.2
+			c3.5-0.6,8.3-0.9,13.1-0.9c6.9,0,11.4,1.1,14.6,3.6c2.9,2.3,4.4,5.7,4.4,9.9c0,5-2.9,8.7-6.3,10.7c2.6,2,3.7,5.2,4.4,7.6
+			c0.4,1.3,0.7,2.7,1.1,4c0.9,3.3,1.8,6.7,2.3,7.8l0.9,1.8H45.5z M37.2,36.5c4,0,6.4-1.8,6.4-4.9c0-3.1-2-4.6-5.9-4.7
+			c-1.2,0-2.2,0.1-3.1,0.1v9.4H37.2z"/>
+			<path fill="#B3FFC1" d="M36.7,18.5c6.3,0,10.8,1,13.8,3.4c2.5,2,3.9,5,3.9,8.9c0,5.4-3.9,9.2-7.5,10.5v0.2c3,1.2,4.6,4.1,5.7,8
+			c1.3,4.8,2.7,10.4,3.5,12h-9.9c-0.7-1.2-1.7-4.7-3-9.9c-1.1-5.3-3-6.8-6.9-6.8h-2.9v16.8h-9.6V19.4C27,18.9,31.6,18.5,36.7,18.5
+			 M33.4,37.8h3.8c4.8,0,7.7-2.4,7.7-6.1c0-3.9-2.7-5.9-7.1-6c-2.3,0-3.7,0.2-4.4,0.3V37.8 M36.7,16c-4.8,0-9.7,0.3-13.3,0.9
+			l-2.1,0.3v2.1v42.1V64h2.5h9.6h2.5v-2.5V47.2h0.4c2.3,0,3.5,0.3,4.5,4.9l0,0l0,0c1.8,7.6,2.7,9.7,3.2,10.6l0.7,1.2h1.4h9.9h4
+			l-1.8-3.6c-0.5-1-1.4-4.5-2.2-7.5c-0.4-1.3-0.7-2.7-1.1-4.1c-0.6-2.2-1.6-5-3.6-7.2c3.1-2.3,5.5-6.1,5.5-10.9
+			c0-4.6-1.7-8.3-4.9-10.9C48.7,17.2,44,16,36.7,16L36.7,16z M35.9,28.2c0.6,0,1.2,0,1.9,0c4.6,0.1,4.6,2.4,4.6,3.5
+			c0,3.2-3.2,3.6-5.2,3.6h-1.3V28.2L35.9,28.2z"/>`;
+		}
+		SVGString += '<path class="border" d="M80,80H0V0h80V80L80,80z M2.5,77.5h75v-75h-75V77.5L2.5,77.5z"/>';
+		
+		if (!(blockType === 'mine' && where === 'board')) {
+			SVGString += '<rect class="border2" x="2.5" y="2.5" fill="none" stroke-width="1.5" width="75" height="75"/>';
+		}
+		SVGString += '</svg>';
+	}
+	return SVGString;
+}
+
+function updateBlock (x, y, blockType, possessionDisplayName, moveNum, origin, color, duration, history, originColor, possession, possessionColorSpread) {
+    
+	var id = '#x' + x + 'y' + y;
+	if (blockType == "blank") {
+		$(id).empty().addClass('empty').css('background-color', '');
+	} else if (blockType == "blockade") {
+		$(id).empty().removeClass('empty').css('background-color', '#000000');
+		if (duration !== false) {
+			if (typeof moveNum !== 'undefined' && moveNum > 0) {
+				$(id).append('<span class="duration">' + (duration) + '</span>');
+			}
+		}
+	} else if (blockType != "blank") {
+		var SVGString = getSVG8by8(blockType, 'board');
+		
+		// newly added mine code.
+		if (blockType !== 'mine') {
+			$(id).html(SVGString).removeClass('empty');
+		} else {
+			$(id).html(SVGString).addClass('empty');
+		}
+		
+		if (blockType == 'ice') {
+			$(id).addClass('ice');
+		}
+		
+		/*
+		if (typeof color != 'undefined') {
+			if (color == emptyColor && blockType !== 'mine') {
+				$(id).css('background-color', ColorLuminance(color, 0.1));
+			} else {
+				$(id).css('background-color', '');
+			}
+		}*/
+		
+		if (typeof possession != 'undefined') {
+			if (possession.length == 0 && blockType !== 'mine') {
+				$(id).css('background-color', ColorLuminance(color, 0.1));
+			} else {
+				$(id).css('background-color', '');
+			}
+		}
+	}
+	
+	// set data attr
+	$(id).data("blockType", blockType); 
+	$(id).data("possession", possession); 
+	$(id).data("possessionDisplayName", possessionDisplayName); 
+	$(id).data("moveNum", moveNum); 
+	$(id).data("x", x); 
+	$(id).data("y", y); 
+	$(id).data("history", history); 
+	$(id).data("possessionColorSpread", possessionColorSpread);
+	
+	
+	// NEW COLOR ENGINE WIP
+	
+	/*
+	
+	if (typeof possession !== 'undefined') {
+		
+		$(id).data("possessionColor", color); 
+		
+		// remove any prior color class
+		$(id).removeClass('nocolor p1color p2color mixedcolor')
+		
+		if (typeof possessionColorSpread !== 'undefined') {
+			if (possessionColorSpread.length > 0) {
+				for (var i = 0; i < possessionColorSpread.length; i++) {
+					
+					var colorClass = 'color-' + possessionColorSpread[i].color.substr(1);
+					var tempColor = possessionColorSpread[i].color;
+					$(id).addClass('color-d5ccbd');
+					if (blockType !== 'blank') {
+						$(id).css('background-color', ColorLuminance(emptyColor, 0.1));
+					}
+					setTimeout(function(){ 
+						// add the new one
+						$(id).removeClass('color-d5ccbd');
+						var mixed = mix(emptyColor, tempColor, 60);
+						$(id).css('background-color', mixed); 
+						$(id).addClass(colorClass);
+						setTimeout(function() {
+							$(id).css('background-color', '');
+						}, 100);
+					}, ((possessionColorSpread[i].layer+1) * 100) + 100);
+				}
+			} else {
+				$(id).addClass('color-' + color.substr(1));
+			}
+		} else {
+			$(id).addClass('color-' + color.substr(1));
+		}
+		if ((moveNum == global_moveCount) && (global_moveCount > 0) && (showWinState == false)) {
+			if (origin == 'collision' || origin == 'collision fade') {
+				$(id).addClass("prior-collision");
+			} else {
+				$(id).addClass("prior-" + originColor.substr(1));
+			}
+		}
+	}
+	
+	*/
+	
+	
+	
+	
+	if (typeof color !== 'undefined') {
+		
+		$(id).data("possessionColor", color); 
+		// remove any prior color class
+		
+		$(id).removeClass('prior-collision');
+		$(id).removeClass(function (index, css) {
+			return (css.match (/\bcolor-\S+/g) || []).join(' ');
+		});
+		
+		if ($('#color-' + color.substr(1)).length < 1) {
+			addNewStyle(color);
+		}
+		
+		if (typeof possessionColorSpread !== 'undefined') {
+			if (possessionColorSpread.length > 0) {
+				for (var i = 0; i < possessionColorSpread.length; i++) {
+					
+					var colorClass = 'color-' + possessionColorSpread[i].color.substr(1);
+					var tempColor = possessionColorSpread[i].color;
+					$(id).addClass('color-d5ccbd');
+					if (blockType !== 'blank') {
+						$(id).css('background-color', ColorLuminance(emptyColor, 0.1));
+					}
+					setTimeout(function(){ 
+						// add the new one
+						$(id).removeClass('color-d5ccbd');
+						var mixed = mix(emptyColor, tempColor, 60);
+						$(id).css('background-color', mixed); 
+						$(id).addClass(colorClass);
+						setTimeout(function() {
+							$(id).css('background-color', '');
+						}, 100);
+					}, ((possessionColorSpread[i].layer+1) * 100) + 100);
+				}
+			} else {
+				$(id).addClass('color-' + color.substr(1));
+			}
+		} else {
+			$(id).addClass('color-' + color.substr(1));
+		}
+		
+		
+		if ((moveNum == global_moveCount) && (global_moveCount > 0) && (showWinState == false)) {
+			if (origin == 'collision' || origin == 'collision fade') {
+				//$(id).addClass("prior-" + collisionColor.substr(1));
+				$(id).addClass("prior-collision");
+				
+				
+				/*
+				$(id).addClass("newMove");
+				setTimeout(function(){ 
+					$(id).removeClass("newMove");
+				}, 1000);
+				*/
+			} else {
+				$(id).addClass("prior-" + originColor.substr(1));
+				/*
+				$(id).addClass("newMove");
+				setTimeout(function(){ 
+					$(id).removeClass("newMove");
+				}, 1000);
+				*/
+			}
+		}
+		
+		/*
+		if (typeof origin == 'string') {
+			if ((moveNum == global_moveCount) && (global_moveCount > 0) && (showWinState == false)) {
+				if (origin == 'collision') {
+					origin = collisionColor;
+				}
+				$(id).addClass("prior-" + origin.substr(1));
+			} else {
+				$(id).removeClass("prior-" + origin.substr(1));
+			}
+		}*/
+	}
+}
+function obtainID (object) {
+	//this gets the ID from the object. this is hard because x/y can be 1 or 2 characters long.
+	var id = $(object).attr('id');
+	var index = id.indexOf("y");  // breaks the ID into two sections at the "y" symbol
+	var x = parseInt(id.substr(1, index), 10); // Gets the first part as an int
+	var y = parseInt(id.substr(index + 1), 10);  // Gets the second part as an int
+	return [x,y];
+}
+function get_pos(x,y,cols) {
+	return (y - 1) * cols + x - 1;
+}
+function highlight(x,y, someType, rows, cols) {
+	var dir = [];
+	dir = getMoves(someType);
+	
+	// for each direction,
+	$.each(dir, function( index, value ) {
+		
+		//get the actual x/y coord from the relative position
+		var newX = x + value[0];
+		var newY = y + value[1];
+			
+		// if we're not out of bounds
+		if (((newX >= 1) && (newX <= cols)) && ((newY >= 1) && (newY <= rows))) {
+			$('#x' + newX + 'y' + newY).addClass('highlighted'); // highlight the block
+		}
+	});
+}
+function getMoves(blockType) { // used for highlighting blocks
+	var blockList = {
+		'base': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+		'star': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+		'ostar': function () { return [[-2,-2], [0,-2], [2,-2], [-2, 0], [2, 0], [-2, 2], [0, 2], [2, 2]]; },
+		'p1': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+		'p2': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+		'plus': function () { return [[0,-1], [-1, 0], [1, 0], [0, 1]]; },
+		'oplus': function () { return [[0,-2], [-2, 0], [2, 0], [0, 2]]; },
+		'cross': function () { return [[-1,-1], [1,-1], [-1, 1], [1, 1]]; },
+		'ocross': function () { return [[-2,-2], [2,-2], [-2, 2], [2, 2]]; },
+		'hbar': function () { return [[-1, 0], [1, 0]]; },
+		'ohbar': function () { return [[-2, 0], [2, 0]]; },
+		'vbar': function () { return [[0, -1], [0, 1]]; },
+		'ovbar': function () { return [[0, -2], [0, 2]]; },
+		'tlbr': function () { return [[-1, -1], [1, 1]]; },
+		'otlbr': function () { return [[-2, -2], [2, 2]]; },
+		'bltr': function () { return [[-1, 1], [1, -1]]; },
+		'obltr': function () { return [[-2, 2], [2, -2]]; },
+		'arrow1': function () { return [[-1, 1]]; },
+		'arrow11': function () { return [[-2, 2]]; },
+		'arrow2': function () { return [[0, 1]]; },
+		'arrow22': function () { return [[0, 2]]; },
+		'arrow3': function () { return [[1, 1]]; },
+		'arrow33': function () { return [[2, 2,]]; },
+		'arrow4': function () { return [[-1, 0]]; },
+		'arrow44': function () { return [[-2, 0]]; },
+		'arrow6': function () { return [[1, 0]]; },
+		'arrow66': function () { return [[2, 0]]; },
+		'arrow7': function () { return [[-1, -1]]; },
+		'arrow77': function () { return [[-2, -2]]; },
+		'arrow8': function () { return [[0, -1]]; },
+		'arrow88': function () { return [[0, -2]]; },
+		'arrow9': function () { return [[1, -1]]; },
+		'arrow99': function () { return [[2, -2,]]; },
+		'blockade': function () { return [[]]; },
+		'blank': function () { return [[]]; },
+		'ice': function () { return [[]]; },
+		'knight': function () { return [[1, 2], [2, 1], [-1, 2], [2, -1], [1, -2], [-2, 1], [-1, -2], [-2, -1]]; },
+		'mine': function () { return [[]]; },
+		'reclaim': function () { return [[]]; }
+	};
+
+	if (typeof blockList[blockType] !== 'function') {
+		console.log ("SHIT! SHIT!");
+		throw new Error('Invalid action.');
+	}
+
+	return blockList[blockType]();
+}
+function getCircleType (initialType) {
+	if (initialType == 'star') { return 'ostar'; }
+	else if (initialType == 'plus') { return 'oplus'; }
+	else if (initialType == 'cross') { return 'ocross'; }
+	else if (initialType == 'hbar') { return 'ohbar'; }
+	else if (initialType == 'vbar') { return 'ovbar'; }
+	else if (initialType == 'tlbr') { return 'otlbr'; }
+	else if (initialType == 'bltr') { return 'obltr'; }
+	else if (initialType == 'arrow1') { return 'arrow11'; }
+	else if (initialType == 'arrow2') { return 'arrow22'; }
+	else if (initialType == 'arrow3') { return 'arrow33'; }
+	else if (initialType == 'arrow4') { return 'arrow44'; }
+	else if (initialType == 'arrow6') { return 'arrow66'; }
+	else if (initialType == 'arrow7') { return 'arrow77'; }
+	else if (initialType == 'arrow8') { return 'arrow88'; }
+	else if (initialType == 'arrow9') { return 'arrow99'; }
+	else { return false; }
+}
+
+// joinGame sets things up for in-game play
+// only called from 'all players ready', so joining in-progress will not call this function.
+function joinGame(gameID, moveCount, timeLeft, players, rows, cols, board, gameType) {
+	$(".menu_block").removeClass('nohover');
+	function youArePlaying() {
+		for (var id in players) {
+			if (id == you) {
+				return true;
+			}
+		}
+		return false;
+	}
+	opponents = [];
+	if (youArePlaying()) {
+		$(".block").removeClass('nohover');
+		player = true;
+		for (var id in players) {
+			if (id != you) {
+				opponents.push(id);
+			}
+		}
+		
+		if (gameType === 'practice') {
+			if ($("#reset").length === 0) {
+				$("#gameButtons").prepend('<div class="buttonStyle" id="reset">Reset</div>');
+				$("#reset").on("click",function() {
+					if (global_moveCount > 1) {
+						socket.emit('practice reset');
+					}
+				});
+			}
+		} else {
+			$("#gameButtons").prepend('<div class="buttonStyle" id="forfeit">Forfeit</div>');
+			$("#forfeit").on("click",function() {
+				socket.emit('forfeit');
+			});
+		}
+		
+		/*
+		if (players[you].offeredDraw) {
+			$("#sidebar").prepend('<div id="offerDraw">Offered Draw</div>');
+		} else {
+			
+			for (var i = 0; i < opponents.length; i++) {
+				if (opponent[i].offeredDraw) {
+					$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
+					drawOffered(gameID);
+				}
+			}
+			
+			opponent(trackPlayerNum) == offeredDraw) {
+			$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
+			drawOffered(gameID);
+		} else {
+			$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
+			$("#offerDraw").on("click",function() {
+				socket.emit('offer draw', gameID);
+				$("#offerDraw").html('Offered Draw');
+				$("#offerDraw").removeClass('sideButton');
+				$("#offerDraw").off();
+			});
+		}
+		*/
+		//buildMenu();
+		
+		var x = false, y = false, xy = false, type, initialType = 'blank';
+		
+		$(document).off('click');
+		$(document).on("click", function(e) {
+			if ((standby == false) && (menuState == true)) {
+				if ($(e.target).closest(".block").length === 0) {
+					if ($(e.target).closest(".menu_block:not(.nohover)").length === 0) {
+						outsideClick();
+					}
+				}
+			}
+		});
+		
+		function outsideClick() {
+			$('#x' + x + 'y' + y).removeClass('prior-' + players[you].color.substr(1)).removeClass('highlighted');
+			$(".menu_block").addClass("disabled");
+			menuState = false;
+			//log('<span class="dimMsg">outside click</span>');
+		}
+		$('.block').off();
+		$('.block').on("click",function() {
+			//log(standby + " " + menuState + " " + players[you].color);
+			// if the game is active
+			if (standby == false) {
+				xy = obtainID($(this));
+				x = xy[0];
+				y = xy[1];
+				$(".highlighted").removeClass('highlighted');
+				$(this).addClass('highlighted');
+				//$('.prior-' + collisionColor.substr(1)).removeClass('prior-' + collisionColor.substr(1));
+				$('.prior-collision').removeClass('prior-collision');
+				
+				if ($(this).hasClass('prior-' + players[you].color.substr(1))) {
+				// if this block is already activated by you, deactivate it.
+				
+					$('.prior-' + players[you].color.substr(1)).removeClass('prior-' + players[you].color.substr(1)).removeClass('highlighted');
+					$(".menu_block").addClass("disabled");
+					menuState = false;
+					
+				} else {
+				// else, activate this block.
+				
+					$('.prior-' + players[you].color.substr(1)).removeClass('prior-' + players[you].color.substr(1));
+					$(this).addClass('prior-' + players[you].color.substr(1));
+					
+					if ($(this).hasClass('empty')) {
+						$(".menu_block:not(.nohover)").removeClass("disabled");
+						$("#circle").addClass("disabled");
+						$("#reclaim").addClass("disabled");
+						menuState = true;
+						//type = $(this).data('blockType');
+						//highlight(x, y, type, rows, cols);
+					} else {
+						initialType = $('#x' + x + 'y' + y).data('blockType');
+						$(".menu_block").addClass('disabled');
+						menuState = true;
+						if (getCircleType(initialType) != false) {
+							$("#circle:not(.nohover)").removeClass('disabled');
+						}
+						var possession = $('#x' + x + 'y' + y).data('possession');
+						if (possession.length == 1) {
+							if ((possession[0] == you) && (initialType !== 'base') && (initialType !== 'blockade')) {
+								$("#reclaim:not(.nohover)").removeClass('disabled');
+							}
+						}
+					}
+				}
+				for (var i = 0; i < opponents.length; i++) {
+					$('.prior-' + players[opponents[i]].color.substr(1)).removeClass('prior-' + players[opponents[i]].color.substr(1));
+					// this put undefined?? idk.
+				}
+			}
+		});
+		
+		$( ".block" ).hover(function() {
+			if (standby == false) {
+				let tempXY = obtainID($(this));
+				let tempX = tempXY[0];
+				let tempY = tempXY[1];
+				type = $(this).data('blockType');
+				highlight(tempX, tempY, type, rows, cols); // show what moves are possible from that block
+			}
+		}, function() {
+			if (standby == false) {
+				// remove prior highlight
+				$('.highlighted').removeClass('highlighted');
+			}
+		});
+		
+		//log("off2");
+		//$( ".menu_block" ).off(); // remove prior click handlers if needed....
+		
+		$("#menuContainer").on({
+			mouseenter: function () {
+				//stuff to do on mouse enter
+				if ($(this).hasClass('disabled') || (menuState == false)) {
+					//log ('hover failed');
+				} else {
+					type = $(this).attr('id');
+					initialType = $('#x' + x + 'y' + y).data('blockType');
+					var pos = get_pos(x, y, cols);
+					if (type == 'circle') {
+						type = getCircleType(initialType);
+					}
+					updateBlock (x,y,type);
+					highlight(x, y, type, rows, cols); // show what moves are possible from that block
+					var hoverAudio = new Audio("sfx/hover.ogg");
+					if (audioEnabled) {
+						hoverAudio.play(); // play audio
+					}
+				}
+			},
+			mouseleave: function () {
+				// this is a mouse out function for when the hover ends
+				if ($(this).hasClass('disabled') || (menuState == false)) {
+					// no hover.
+				} else {
+					updateBlock(x,y,initialType);
+					$(".highlighted").not('#x' + x + 'y' + y).removeClass("highlighted"); // remove the highlighted moves, keep the selected square highlighted though.
+				}
+			}
+		}, ".menu_block:not(.nohover)"); //pass the element as an argument to .on
+		
+		/*
+		// hover over a menu block
+		$("#menuContainer").on("mouseover", ".menu_block:not(.nohover)", function() {
+		//$( ".menu_block:not(.nohover)" ).hover(function() {
+			if ($(this).hasClass('disabled') || (menuState == false)) {
+				//log ('hover failed');
+			} else {
+				type = $(this).attr('id');
+				initialType = $('#x' + x + 'y' + y).data('blockType');
+				var pos = get_pos(x, y, cols);
+				if (type == 'circle') {
+					type = getCircleType(initialType);
+				}
+				updateBlock (x,y,type);
+				highlight(x, y, type, rows, cols); // show what moves are possible from that block
+				var hoverAudio = new Audio("sfx/hover.ogg");
+				if (audioEnabled) {
+					hoverAudio.play(); // play audio
+				}
+			}
+		}, function() {
+			// this is a mouse out function for when the hover ends
+			if ($(this).hasClass('disabled') || (menuState == false)) {
+				// no hover.
+			} else {
+				updateBlock(x,y,initialType);
+				$(".highlighted").not('#x' + x + 'y' + y).removeClass("highlighted"); // remove the highlighted moves, keep the selected square highlighted though.
+			}
+		});
+		*/
+		
+		// when a menu block is clicked
+		$('#menuContainer').on("click", ".menu_block:not(.nohover)", function() {
+		//$('.menu_block:not(.nohover)').on("click",function() {
+			if (menuState == true && standby == false) { // if menu and game are both active
+				if ($(this).hasClass('disabled')) {
+					outsideClick();
+				} else {
+					renderStandby();
+					type = $(this).attr('id');
+					if ($(this).find('.ammo').length != 0) {
+						var ammo = parseInt($('#' + type + '-ammo').html());
+						ammo--;
+						$('#' + type + '-ammo').html(ammo);
+						if (ammo == 0) {
+							$(this).addClass('nohover disabled noammo'); //.css('opacity', '0.5'); //.off();
+							// the css opacity 0.5 doesn't work anymore cause that's set in the disabled class now.
+							// off doesn't seem to matter bc i check for 0 ammo anyway, it only interferes w/ blockHoverData();
+						}
+					}
+					socket.emit('attempt move', x, y, type, global_moveCount); // moveCount to check if it was placed at the last split second before the turn: returns invalid move.
+				}
+			}
+		});
+		
+		var opponent = false;
+		
+		if (opponents.length < 1) {
+			// practice mode.
+			standby = false;
+		} else {
+			
+			// dunno if this chunk of code matters anymore, players cannot quit a game in progress anymore..?
+			if (players[you].onStandBy) {
+				standby = true;
+				//$('#x' + tempBlock[0] + 'y' + tempBlock[1]).removeClass('prior1').removeClass('prior2').removeClass('prior3').addClass('prior' + playerNum);
+				var pos = get_pos(tempBlock[0], tempBlock[1], numCols);
+				updateBlock(tempBlock[0],tempBlock[1],tempBlock[2], undefined, undefined, boardData[pos].randInt); // show what block you selected
+				renderStandby();
+			} else if (opponents[0].onStandBy) {
+				standby = true;
+				// really need to work in more than 2 players for this.
+				//waitMsg(opponent(trackPlayerNum));
+			} else {
+				standby = false;
+			}
+		}
+		
+	} else {
+		renderExitButton();
+		$(".block").addClass('nohover');
+	}
+	
+	menuState = false;
+	
+}
+
+/* function changeFavIcon(src) {
+	$('link[rel="shortcut icon"]').attr('href', src + '?v=' + Date.now());
+	//$('link[rel="shortcut icon"]').attr('href', src);
+}
+*/
+function timeLimitUpdate(timeLimit) {
+	if (timeLimit == false) {
+			$("#timeLimit").html('&infin;');
+		} else {
+			$("#timeLimit").html(timeLimit);
+		}
+	log ('<span class="dimMsg">time limit set to ' + ($('#timeLimit').html()));
+}
+function collisionUpdate(collisionMode) {
+	if (typeof collisionMode !== 'undefined') {
+		if (collisionMode.permanence === true) {
+			$("#collisionSetting").html('Permanent');
+			log('<span class="dimMsg">permanent collisions</span>');
+		} else {
+			var sString = 's';
+			if (collisionMode.permanence === 1) {
+				sString = '';
+			}
+			$("#collisionSetting").html('<span class="collisionTurnCount">' + collisionMode.permanence.toString() + '</span> Turn' + sString);
+			log('<span class="dimMsg">collisions last ' + collisionMode.permanence.toString() + ' turn' + sString);
+		}
+	}
+}
+function renderStandby() {
+	standby = true;
+	$("#container").removeClass("timeWarning");
+	$(".menu_block").addClass("disabled");
+	$(".block").addClass("nohover").removeClass('highlighted').addClass('disabled');
+	menuState = false; // disable the menu, because a move was made.
+}
+function drawOffered(gameID) {
+	$("#offerDraw").off(); // remove clickhandler from offerDraw
+	$("#offerDraw").addClass('offered');
+	$("#offerDraw").html('Accept Draw');
+	$("#offerDraw").on('click', function() {
+		cleanup(3, 'drawAccepted');
+		socket.emit('draw accepted', gameID); // let the other players know the draw was accepted.
+	});
+}
+function cleanup(winners, reason) {
+	//log('The game is over.');
+	$("#container").removeClass("timeWarning");
+	clearInterval(gameTimer);
+	
+	if (winners.length > 1) {
+		if (audioEnabled) {
+			drawgameAudio.play();
+		}
+	} else {
+		if (winners[0] == you) {
+			if (audioEnabled) {
+				youwinAudio.play();
+			}
+		} else {
+			if (audioEnabled) {
+				gameoverAudio.play();
+			}
+		}
+	}
+	
+	if (player) {
+		if (reason !== 'dc' && reason !== 'practice') {
+			$('<div class="buttonStyle" id="rematch"><span>Rematch</span></div>').insertBefore('#toggleAudio');
+			$("#rematch").on('click', function() {
+				socket.emit('yes rematch');
+				$("#rematch").off()
+				$("#rematch > span").text("Offered Rematch").addClass("blinkText");
+			});
+		}
+	}
+
+	$(".block", "#board").addClass('disabled').off();
+	for (var i = 0; i < priorColorList.length; i++) {
+		$(".block").removeClass(priorColorList[i]); // this is longer than it needs to be for each game, oh well maybe fix later.
+	}
+	$(".highlighted").removeClass('highlighted');
+	//$("#menu").css('opacity', '0.5'); // dim the menu
+	//$("#menuContainer").off();
+	$(".menu_block").addClass('disabled');
+	$("#offerDraw").remove();
+	$("#forfeit").remove();
+	$(".moveStatus").remove(); // remove the move status
+	$("#timer").remove();
+	$(".waitMsg").parent().remove();
+	//blockHoverData();
+	renderExitButton();
+	
+	debounce = Math.random();
+	var temp = debounce;
+	if (ghostFlow) {
+		setTimeout(function(){ 
+			if (debounce == temp) {
+				exitGame();
+			}
+		}, 60000);
+	}
+}
+
+function readableBlockName(blockType) { // returns blocknames for hover info that don't suck
+	var blockList = {
+		'base': 'source',
+		'ostar': 'jump star',
+		'plus': '+',
+		'oplus': 'jump +',
+		'cross': 'x',
+		'ocross': 'jump x',
+		'ohbar': 'jump hbar',
+		'ovbar': 'jump vbar',
+		'otlbr': 'jump tlbr',
+		'obltr': 'jump bltr',
+		'arrow1': 'arrow1',
+		'arrow11': 'jump arrow1',
+		'arrow2': 'arrow2',
+		'arrow22': 'jump arrow2',
+		'arrow3': 'arrow3',
+		'arrow33': 'jump arrow3',
+		'arrow4': 'arrow4',
+		'arrow44': 'jump arrow4',
+		'arrow6': 'arrow6',
+		'arrow66': 'jump arrow6',
+		'arrow7': 'arrow7',
+		'arrow77': 'jump arrow7',
+		'arrow8': 'arrow8',
+		'arrow88': 'jump arrow8',
+		'arrow9': 'arrow9',
+		'arrow99': 'jump arrow9',
+		'mine': 'stealthy mine'
+	}
+	
+	if (blockList.hasOwnProperty(blockType)) {
+		return blockList[blockType];
+	} else {
+		return blockType;
+	}
+}
+
+function blockHoverData() {
+	
+	$("#board").on({
+		mouseenter: function () {
+			//stuff to do on mouse enter
+			var blockType = ($(this).data('blockType'));
+			blockType = readableBlockName(blockType);
+			var history = $(this).data('history');
+			var possessionColor = $(this).data('possessionColor');
+			var xx = $(this).data('x'); //x pos
+			var yy = $(this).data('y'); //y pos
+			var showHistory = true;
+			
+			var possessionDisplayName = $(this).data('possessionDisplayName');
+			var possessionSpread = $(this).data('possessionColorSpread');
+
+			if (blockType == 'source') {
+				if (typeof history[0] !== 'undefined') {
+					blockType = '<span style="color: ' + history[0].playerColor + ';">' + history[0].playerDisplayName + '\'s source</span>';
+					showHistory = false;
+				} else {
+					blockType = 'unclaimed source';
+					showHistory = false;
+				}
+			}
+			
+			var appendString = '<div class="dimMsg">x: <b>' + xx + '</b>,&ensp;y: <b>' + yy + '</b></div>';
+			appendString += '<div style="font-weight: bold; color:white; font-size:15px;">' + blockType + '</div>';
+			
+			if (showHistory && possessionDisplayName !== false && blockType !== 'blockade') {
+				appendString += '<div>possessed by <b style="color: ' + possessionColor + '">' + possessionDisplayName + '</b></div>';
+			}
+			
+			if (showHistory) {
+				for (var i = 0; i < history.length; i++) {
+					
+					appendString += history[i];
+					
+					/*
+					appendString += '<div><b>' + readableBlockName(history[i].blockType) + '</b>';
+					if (history[i].cause == 'player') {
+						appendString += ' placed by <b style="color: ' + history[i].playerColor + '">' + history[i].playerDisplayName + '</b>';
+					} else {
+						appendString += ' caused by <b>' + history[i].cause + '</b>';
+					}
+					appendString += ' on turn <b>' + history[i].turn + '</b>.</div>'
+					*/
+				}
+			}
+			
+			$("#bottomInfo").append(appendString);
+		},
+		mouseleave: function () {
+			// this is a mouse out function for when the hover ends
+			$("#bottomInfo").html('');
+		}
+	}, ".block"); //pass the element as an argument to .on
+	
+	
+	$("#menuContainer").on({
+		mouseenter: function () {
+			//stuff to do on mouse enter
+			var type = $(this).attr('id');
+			var blockType = readableBlockName(type);
+			var appendString = '';
+			if (player) {
+				appendString += '<div>' + yourName + '\'s stockpile</div>';
+			} else {
+				appendString += '<div class="dimMsg">starting stockpile</div>';
+			}
+			appendString += '<div style="font-weight: bold; color:white; font-size:15px;">' + blockType + '</div>';
+			var ammo;
+			if ($(this).find('.ammo').length != 0) {
+				ammo = parseInt($('#' + type + '-ammo').html());
+				appendString += '<div><b>' + ammo + '</b> remaining</div>';
+			}
+			/*
+			if (type == 'star') {
+				appendString += `<div>a <i>star</i>, similar to the player's <i>source</i>, spreads color to all 8 adjacent squares.</div>`;
+			}
+			if (type == 'plus') {
+				appendString += `<div>a <i>+</i> is a basic block that spreads color to the 4 adjacent non-diagonal squares.</div>`;
+			}
+			if (type == 'cross') {
+				appendString += `<div>an <i>x</i> is a basic block that spreads color to the 4 adjacent diagonal squares.</div>`;
+			}
+			if (type == 'circle') {
+				appendString += `<div>a <i>circle</i> turns an uncircled block into a jump block. a circle may be placed on any uncircled block already on the board, 
+				including blocks placed by the opponent. you may not circle a <i>source</i>, however.</div>`;
+			}
+			if (type == 'reclaim') {
+				appendString += `<div>you may <i>reclaim</i> any block that you have sole possession over, including blocks placed by the opponent. 
+				a reclaimed block becomes a blank space on the board, and will add to your stockpile. you cannot reclaim your <i>source</i>.</div>`;
+			}
+			if (type == 'mine') {
+				appendString += `<div>a <i>stealthy mine</i> may be placed on any blank space. it is invisible to the opponent and spectators. 
+				attempting to place a block where a mine is will result in a blockade being formed. mines are un-reclaimable.</div>`;
+			}
+			*/
+			$("#bottomInfo").append(appendString);
+		},
+		mouseleave: function () {
+			// this is a mouse out function for when the hover ends
+			$("#bottomInfo").html('');
+		}
+	}, ".menu_block"); //pass the element as an argument to .on
+}
+
+function renderExitButton() {
+	if ($("#exit").length === 0) {
+		$("#gameButtons").prepend('<div id="exit" class="buttonStyle">Exit to Lobby</div>');
+		$("#exit").on('click', function() {
+			exitGame();
+		});
+	}
+}
+function exitGame() {
+	$("#sidebar").empty();
+	$("#container").removeClass("timeWarning");
+	clearInterval(gameTimer);
+	$(".waitMsg").parent().remove();
+	inGame = false;
+	showWinState = false;
+	socket.emit('exit to lobby');
+}
+function showPath(winPath, color) {
+	
+	var winAnimation1, winAnimation2;
+	
+	$.each(winPath, function( index, value ) {
+		$( '.block:eq(' + value + ')' ).removeClass('disabled').addClass('nohover');
+		winAnimation1 = setTimeout(function(){
+			if (showWinState == true) {
+				$( '.block:eq(' + value + ')' ).addClass('prior-' + color.substr(1));
+			} else {
+				$('.block').removeClass('prior' + color.substr(1));
+				clearTimeout(winAnimation1);
+				clearTimeout(winAnimation2);
+			}
+		}, 500 * index);
+		winAnimation2 = setTimeout(function(){
+			$( '.block:eq(' + value + ')' ).removeClass('prior-' + color.substr(1));
+			if (index == winPath.length - 1) {
+				if (showWinState == true) {
+					showPath(winPath, color);
+				} else {
+					clearTimeout(winAnimation1);
+					clearTimeout(winAnimation2);
+				}
+			}
+		}, 500 * (index + 1));
+	});
+}
+
+function ColorLuminance(hex, lum) { // thanks Craig Buckler for this function
+
+	//hex � a hex color value such as �#abc� or �#123456� (the hash is optional)
+	//lum � the luminosity factor, i.e. -0.1 is 10% darker, 0.2 is 20% lighter, etc.
+	
+	// validate hex string
+	hex = String(hex).replace(/[^0-9a-f]/gi, '');
+	if (hex.length < 6) {
+		hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+	}
+	lum = lum || 0;
+
+	// convert to decimal and change luminosity
+	var rgb = "#", c, i;
+	for (i = 0; i < 3; i++) {
+		c = parseInt(hex.substr(i*2,2), 16);
+		c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
+		rgb += ("00"+c).substr(c.length);
+	}
+
+	return rgb;
+}
+function mix (color_1, color_2, weight) {
+	color_1 = color_1.slice(1);
+	color_2 = color_2.slice(1);
+	function d2h(d) { return d.toString(16); }  // convert a decimal value to hex
+	function h2d(h) { return parseInt(h, 16); } // convert a hex value to decimal
+	weight = (typeof(weight) !== 'undefined') ? weight : 50; // set the weight to 50%, if that argument is omitted
+	var color = "#";
+	for(var i = 0; i <= 5; i += 2) { // loop through each of the 3 hex pairs�red, green, and blue
+		var v1 = h2d(color_1.substr(i, 2)), // extract the current pairs
+			v2 = h2d(color_2.substr(i, 2)),
+			// combine the current pairs from each source color, according to the specified weight
+			val = d2h(Math.floor(v2 + (v1 - v2) * (weight / 100.0)));
+		while(val.length < 2) { val = '0' + val; } // prepend a '0' if val results in a single digit
+		color += val; // concatenate val to our new color string
+	}
+	return color;
+};
+function updateStyles(p1hex, p2hex) {
+	// this will be called when a player joins a game or when you join a game,
+	// or when you click a button to swap to default/custom colors,
+	var mixed = mix(p1hex, p2hex, 50);
+	updateStyle('p1color', p1hex);
+	updateStyle('p2color', p2hex);
+	updateStyle('mixedcolor', mixed);
+}
+
+function updateStyle(styleID, color) {
+	// empty what was already there
+	$("#" + styleID).empty();
+	
+	// BLOCK
+	var rule = '.' + styleID + ' { background-color: ' + color + '; } ';
+	rule += '.' + styleID + ' svg .border { fill: '+ ColorLuminance(color, -0.65) +' }';
+	rule += '.' + styleID + '.empty svg .border { opacity: 0; }';
+	rule += '.' + styleID + ' svg .border2 { stroke: '+ ColorLuminance(color, 0.125) +' }';
+	
+	if (color !== emptyColor) {
+		// SVG OUTLINE
+		rule += '.' + styleID + ' svg .outline { fill: '+ ColorLuminance(color, 0.125) +'; }';
+
+		// SVG BASE JEWEL
+		rule += '.' + styleID + ' svg .jewel { fill: '+ color +'; animation: jewel-' + color.substr(1) +' 1s infinite alternate ease-in-out; }';
+		rule += '@keyframes jewel-'+ color.substr(1) +' { 0% { opacity: 0.2; } 100% { opacity: 1; } }';
+
+	}
+	
+	// EMPTY
+	var mixed = mix(color, emptyColor, 55); // old was 35
+	var mixed2 = ColorLuminance(color, -0.09);
+	rule += '.' + styleID + '.empty { background-color: ' + mixed + '; box-shadow: inset 0 0 0 1px '+ mixed2 +';  }';
+
+	// HOVER
+	rule += '.' + styleID + ':hover:not(.nohover):not(.disabled), .' + styleID + '.highlighted { background-color: ' + ColorLuminance(mixed, 0.125) +'; cursor:pointer; }';
+	
+	// PRIOR
+	rule += '.prior-' + color.substr(1) + '::before { animation: origin-' + color.substr(1) + ' 0.25s infinite alternate; content:""; display: block; height: 100%; width: 100%; position: absolute; left: 0; top: 0; background-color: '+ hex2rgba(mix(color, '#ffffff', 50), 50) +'; box-shadow: inset 0 0 0 1px '+ ColorLuminance(color,-0.3) +', inset 0 0 0 3px '+ color +'; }';
+	priorColorList.push('prior-' + color.substr(1)); // global var holds all prior classes.
+	
+	// ANIMATION
+	rule += '@keyframes origin-' + color.substr(1) +' { 0% { opacity: 0.2; } 40% { opacity: 0.25; } 60% { opacity: 0.95; } 100% { opacity: 1 } }';
+	
+	// append
+	$("#" + styleID).append(rule);
+}
+
+
+
+function addNewStyle(color) {
+	
+	// I will sometimes call this not just when setting up the page
+	// but also when a new color mix is found on a block.
+	// because I don't want to pre-generate those
+	// I'll do it on the spot.
+	// in the updateBlock() function.
+	
+	var styleID = "color-" + color.substr(1);
+	$("head").append('<style class="dynamicStyle" id="' + styleID + '"></style>');
+	var rule = ''
+	
+	// BLOCK
+	rule += '.' + styleID + ' { background-color: ' + color + '; } ';
+	
+	/*box-shadow: inset 0 0 0 1px '+ ColorLuminance(color, -0.3) +', inset 0 0 0 2px '+ ColorLuminance(color, -0.01) +', inset 0 0 0 4px '+ ColorLuminance(color, -0.05) + ';}';*/
+	
+	// SVG BORDER
+	//rule += '.' + styleID + ' svg .border { stroke: '+ ColorLuminance(color, 0.25) +'; fill: '+ ColorLuminance(color, -0.45) + ' }';
+	
+	rule += '.' + styleID + ' svg .border { fill: '+ ColorLuminance(color, -0.65) +' }';
+	rule += '.' + styleID + '.empty svg .border { opacity: 0; }';
+	rule += '.' + styleID + ' svg .border2 { stroke: '+ ColorLuminance(color, 0.125) +' }';
+	
+	if (color !== emptyColor) {
+		// SVG OUTLINE
+		rule += '.' + styleID + ' svg .outline { fill: '+ ColorLuminance(color, 0.125) +'; }';
+		//rule += '.' + styleID + ' svg .circleoutline { stroke: '+ ColorLuminance(color, 0.25) +'; }';
+		
+		// SVG BASE JEWEL
+		rule += '.' + styleID + ' svg .jewel { fill: '+ color +'; animation: jewel-' + color.substr(1) +' 1s infinite alternate ease-in-out; }';
+		rule += '@keyframes jewel-'+ color.substr(1) +' { 0% { opacity: 0.2; } 100% { opacity: 1; } }';
+
+	}
+	
+	// EMPTY
+	var mixed = mix(color, emptyColor, 55); // old was 35
+	//var mixed2 = mix(color, emptyColor, 50);
+	//mixed2 = ColorLuminance(mixed2, -0.09);
+	var mixed2 = ColorLuminance(color, -0.09);
+	rule += '.' + styleID + '.empty { background-color: ' + mixed + '; box-shadow: inset 0 0 0 1px '+ mixed2 +';  }';
+	//rule += '.' + styleID + '.empty { box-shadow: inset 0 0 0 1px '+ mixed2 +'; }';
+	
+	// HOVER
+	rule += '.' + styleID + ':hover:not(.nohover):not(.disabled), .' + styleID + '.highlighted { background-color: ' + ColorLuminance(mixed, 0.125) +'; cursor:pointer; }';
+	
+	// PRIOR
+	//rule += '.prior-' + color.substr(1) + ' {  }';
+	rule += '.prior-' + color.substr(1) + '::before { animation: origin-' + color.substr(1) + ' 0.25s infinite alternate; content:""; display: block; height: 100%; width: 100%; position: absolute; left: 0; top: 0; background-color: '+ hex2rgba(mix(color, '#ffffff', 50), 50) +'; box-shadow: inset 0 0 0 1px '+ ColorLuminance(color,-0.3) +', inset 0 0 0 3px '+ color +'; }';
+	priorColorList.push('prior-' + color.substr(1)); // global var holds all prior classes.
+	
+	// ANIMATION
+	rule += '@keyframes origin-' + color.substr(1) +' { 0% { opacity: 0.2; } 40% { opacity: 0.25; } 60% { opacity: 0.95; } 100% { opacity: 1 } }';
+	
+	$("#" + styleID).append(rule);
+}
+function hex2rgba(hex,opacity){
+ hex = hex.replace('#','');
+ var r = parseInt(hex.substring(0,2), 16);
+ var g = parseInt(hex.substring(2,4), 16);
+ var b = parseInt(hex.substring(4,6), 16);
+
+ var result = 'rgba('+r+','+g+','+b+','+opacity/100+')';
+ return result;
+}
+
+function renderRoomTitle(title) {
+	$("#sidebar").prepend('<div id="roomTitle"><span>' + title + '</span></div>');
+	$("body").append('<span id="titleWidth">'+ title +'</span>')
+	let width = $("#titleWidth").width();
+	$("#titleWidth").remove();
+	let maxwidth = 211; // sidebar width minus margin... minus one.
+	let ratio = maxwidth / width;
+	if (ratio <= 1) {
+		$("#roomTitle > span").css('transform', 'scale(' + ratio +',1)');
+	}
+}
+
+function addHeadingOld (user, name, color, x) {
+	var blockWidth = $('.block').width();
+	var marginLeft = blockWidth * (x - 1);
+	$("#gameHead").append('<div class="heading-'+user+'" style="left: '+ marginLeft +'px; color: ' + color + ';">' + name + '</div>');
+	var textWidth = $('.heading-' + user).width() + 40; // 40 for the padding;
+	var difference = textWidth - $('.block').width();
+	var marginLeft = marginLeft - (difference / 2);
+	$('.heading-' + user).css('left', marginLeft);
+}
+
+function addHeading (user, name, color, elo) {
+	var headingLocation = '#playerRight';
+	if ($('#playerLeft').is(':empty')){
+		headingLocation = '#playerLeft';
+	}
+	var appendString = '<div class="heading-'+user+'" style="color: ' + color + ';">' + name + ' <span style="font-weight:normal; color:white;">';
+	if (elo > 0) {
+		appendString += '(' + elo + ')';
+	}
+	appendString += '</span></div>';
+	$(headingLocation).append(appendString);
+}
+
+function menuBlockEnableDisable() {
+	$(".menu_block:not(.nohover)").on('click', function() {
+		if ($(this).hasClass('disabled')) {
+			$(this).removeClass('disabled');
+			socket.emit('blocklist update', this.id, true);
+		} else {
+			$(this).addClass('disabled');
+			socket.emit('blocklist update', this.id, false);
+		}
+	});
+}
+
+function renderLeaderboard(leaderData) {
+	for (var i = 0; i < leaderData.length; i++) {
+		$("#eloRank").append('<tr><td>'+ (i+1) +'</td><td style="color:'+ leaderData[i].color + '">' + leaderData[i].displayName + '</td><td class="alignRight">' + leaderData[i].elo + '</td></tr>');
+	}
+}
+
+function renderGames(lobbyData) {
+	
+	console.log('lobbyData', lobbyData)
+	
+	// RENDER GAMES!
+	for (var i = 0; i < lobbyData.length; i++) {
+		var gameLocation = '#' + lobbyData[i].gameState;
+		var appendString = '<div class="lobbyGame" style="border: 2px ' + lobbyData[i].creatorColor + ' solid" data-gameid=' + lobbyData[i].id + '>';
+		appendString += '<span class="WhoVsWho"><b>' + lobbyData[i].creator + '</b>';
+		if (lobbyData[i].creatorElo > 0) {
+			appendString += '&ensp;(' + lobbyData[i].creatorElo + ')';
+		}
+		
+		if (lobbyData[i].gameType === 'practice') {
+			appendString += '&emsp;<span class="dimMsg">[practice room]</span>';
+		} else if (lobbyData[i].full) {
+			appendString += '&emsp;<span class="dimMsg">vs</span>&emsp;<b>' + lobbyData[i].opponent + '</b>';
+			if (lobbyData[i].opponentElo > 0) {
+				appendString += '&ensp;(' + lobbyData[i].opponentElo + ')';
+			}
+		}
+		appendString += '</span>'
+
+		
+		if (lobbyData[i].gameType === 'random') {
+			appendString += '<span class="gameSettings">Random</span>';
+		}
+		
+		appendString += '<div class="lobbyButtons"><span class="lobbyButton spectateGameButton">Spectate</span>';
+		if (isGhost == false) {
+			if ((lobbyData[i].gameState !== 'inprogress') && (lobbyData[i].full == false)) {
+				appendString += '<span class="lobbyButton joinGameButton">Play</span>';
+			}
+		}
+		appendString += '</div></div>';
+		$(gameLocation).append(appendString);
+	}
+	
+	$("#open").prepend('<div class="lobbyLabel">open games:</div>');
+	$("#inprogress").prepend('<div class="lobbyLabel">in progress:</div>');
+	
+	if (isGhost == false) {
+		$(".joinGameButton").on('click', function () {
+			var tempID = $(this).parent().parent().data("gameid");
+			socket.emit('join game', tempID);
+			// should remove click handlers here or somethin.
+		});
+	}
+		
+	$(".spectateGameButton").on('click', function() {
+		var tempID = $(this).parent().parent().data("gameid");
+		socket.emit('join game', tempID, 'spec');
+	});
+	
+	debounce = Math.random();
+	var temp = debounce;
+	if (ghostFlow) {
+		setTimeout(function(){ 
+			var enticingGame = 'none';
+			var combinedElo = -9999999;
+			for (var i = 0; i < lobbyData.length; i++) {
+				if ((lobbyData[i].gameState == 'open') || (lobbyData[i].gameState == 'inprogress')) {
+					if ((lobbyData[i].full) && (lobbyData[i].creatorElo + lobbyData[i].opponentElo > combinedElo)) {
+						if (lobbyData[i].creatorElo + lobbyData[i].opponentElo > combinedElo) {
+							if (lobbyData[i].gameType !== 'practice') {
+								combinedElo = lobbyData[i].creatorElo + lobbyData[i].opponentElo;
+								enticingGame = i;
+							}
+						}
+					}
+				}
+			}
+			if (enticingGame !== 'none') {
+				if (debounce = temp) {
+					socket.emit('join game', lobbyData[enticingGame].id, 'spec');
+				}
+			}
+		}, 3000);
+	}
+}
+
+function toggleAudioButton() {
+	if (audioEnabled == false) {
+		$(".audioOn").hide();
+		$(".audioOff").show();
+	}
+	
+	$("#toggleAudio").on("click",function() {
+		if (audioEnabled) {
+			audioEnabled = false;
+			log('<span class="dimMsg">Audio disabled.</span>');
+			//$("#toggleAudio > span").html("OFF");
+			$(".audioOn").hide();
+			$(".audioOff").show();
+		} else {
+			audioEnabled = true;
+			log('<span class="dimMsg">Audio enabled.</span>');
+			moveAudio.play();
+			//$("#toggleAudio > span").html("ON");
+			$(".audioOn").show();
+			$(".audioOff").hide();
+		}
+	});
+}
+
+function updateTimer(timerValue, turnCount) {
+	$("#container").removeClass("timeWarning");
+	if (timerValue == false) {
+		$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>&infin;</b>');
+	} else {
+		$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>' + timerValue + '</b>');
+		
+		clearInterval(gameTimer);
+		// set global "gameTimer" to a setInterval.
+		gameTimer = setInterval( function () { 
+			timerValue--;
+			if (timerValue == 0) {
+				clearInterval(gameTimer);
+			} else if ((timerValue <= 10) && (standby == false)) {
+				$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b class="redMsg">' + timerValue + '</b>');
+				if (timerValue == 10) {
+					 $("#container").addClass("timeWarning");
+				}
+				if (audioEnabled) {
+					var timeRunningOutAudio = new Audio("sfx/beep.ogg");
+					timeRunningOutAudio.volume = 1 - (timerValue / 15); // set volume
+					timeRunningOutAudio.play(); // play audio
+				}
+			} else {
+				$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>' + timerValue + '</b>');
+			}
+		}, 1000);
+	}
+}
+
+function onlinePlay() {  // hooray! hooray! for online play!
+	socket = io();
+	
+	console.log('socket', socket)
+	
+	// debugger
+	
+	socket.on("connect_error", function(err) {
+		console.log('connection error', err)
+	})
+	
+	socket.on('connect', function() {
+		console.log('socket connected')
+		//log('<span class="greenMsg" style="font-weight:bold">Connected</span>');
+		//$("#disconnected").remove();
+	});
+	socket.on('disconnect', function() {
+		log('<b class="redMsg">Disconnected</b>');
+		$("#username").remove();
+		$(".dynamicStyle").remove();
+		inGame = false;
+		showWinState = false;
+		$("#sidebar").empty();
+		$("#container").empty();
+		if (audioEnabled) {
+			disconnectedAudio.play();
+		}
+		//changeFavIcon('img/favico.png');
+		//location.reload();
+		socket = false;
+	});
+	socket.on('update user count', function(totalusers){
+		if (totalusers == 1) {
+			log('<span class="greenMsg">1 user online.</span>');
+		} else {
+			log('<span class="greenMsg">' + totalusers + ' users online.</span>');
+		}
+		
+	});
+	/* unused
+	socket.on('choose name', function(userID) {
+		$("#flexcontainer").append('<div style="color:white; margin: auto auto;">What is your name?<div id="nameEntry"><form id="nameform"><input id="ne" type="text" maxlength="16" value="' + userID + '" autocomplete="off" /><button id="sendName">Send</button></form></span></div>');
+		$("#ne").mousedown('mousedown', function() {
+			$("#ne").off('mousedown').val(''); // first time you click, empty the default name.
+		});
+		
+		let name = $("#ne").val();
+		$("#ne").keyup(function() {
+			keyPress();
+		});
+		$("#ne").keypress(function() {
+			keyPress();
+		});
+		function keyPress() {
+			if (name != $("#ne").val()) { // if the name has been updated
+				name = $("#ne").val(); // set it
+				name = name.replace(/\s+/g, ' '); // remove multi spaces
+				if (name.charAt(0) == ' ') {
+					name = name.substr(1); // remove initial space
+				}
+				$("#ne").val(name); // update input value
+			}
+		}
+		
+		// when the button is clicked, say if it is a valid name or not!
+		$("#sendName").on('click', function(e) {
+			e.preventDefault();
+			name = $("#ne").val();
+			name = $.trim(name); // for remove trailing spaces.
+			name = name.replace(/\s+/g, ' ');
+			$("#ne").val(name);
+			
+			if (name.search(/^[\w\-\s]+$/) == -1) {
+				log('<span class="redMsg">invalid name</span>');
+			} else {
+				//log('valid name "' + name + '"');
+				$("#flexcontainer").empty();
+				socket.emit('name chosen', name);
+				$("#container").append('<div id="username">' + name + '</div>');
+			}
+		});
+	});
+	*/
+	socket.on('make chat available', function(username) {
+		$("#chat").remove();
+		$("#chatPanel").append('<div id="chat"><input id="chatInput" type="text" maxlength="140" value="" autocomplete="off" /></div>');
+		$("#chatInput").on('keydown', function (e) {
+			if (e.keyCode == 13) {
+				let chatMessage = $("#chatInput").val();
+				$("#chatInput").val('');
+				if (!$.trim(chatMessage)) {
+					// no msg
+				} else {
+					socket.emit('send chat message', chatMessage);
+				}
+			}
+		});
+	});
+	socket.on('update lobby', function(lobbyData, leaderData) {
+		$("#open").empty();
+		$("#inprogress").empty();
+		
+		$("#eloRank").empty();
+		
+		renderLeaderboard(leaderData);
+		renderGames(lobbyData);
+	});
+	
+	socket.on('render lobby', function(lobbyData, leaderData, lobbyUserData) {
+		player = false;
+		$("#lobby").remove();
+		$("#leaderboard").remove();
+		$("#headBoardContainer").remove();
+
+		var appendString = '<div id="lobby"><h1><span style="color:' + lobbyUserData.color + '">' + lobbyUserData.username + '</span>, ';
+		appendString += "welcome to Cosmic Blocks!";
+		appendString += '</h1><div style="padding:20px;"><div id="optionButtons">';
+		if (!isGhost) {
+			appendString += '<div id="newgame" class="buttonStyle">Create Game</div><div id="randgame" class="buttonStyle">Random Game</div><div id="practice" class="buttonStyle">Practice Mode</div>';
+		}
+		appendString += '<a id="howToPlay" class="buttonStyle" href="https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit" target="_blank">How to Play</a><a class="buttonStyle" href="https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" target="_blank">Documentation</a><div id="toggleAudio" class="buttonStyle">' + audioButtonSVG() +'</div></div>';
+		if (!isGhost) {
+			appendString += '<div id="playerStats"></div>';
+		}
+		appendString += '<div id="gameTypes"><div id="open"></div><div id="inprogress"></div></div></div></div>	<div id="leaderboard"><h1>World Ranking</h1><div id="rankingContainer"><table id="eloRank"></table></div></div>'
+		$("#container").append(appendString);
+				
+		$('#newgame').on("click",function() {
+			socket.emit('new game'); // send the server new game command
+		});
+		$('#randgame').on("click",function() {
+			socket.emit('new game', 'random'); // send the server new game [random board] command
+		});
+		$('#practice').on("click",function() {
+			socket.emit('practice mode');
+		});	
+		
+		
+		toggleAudioButton();
+		
+		// RENDER LEADERBOARD!
+		renderLeaderboard(leaderData);
+		
+		// RENDER GAMES!
+		renderGames(lobbyData);
+		
+		// RENDER PLAYER STATS (not a separate function because it is only called within renderLobby();
+		if (!isGhost) {
+			if (lobbyUserData.gamesPlayed !== 0) {
+				var appendString = '<ul id="lobbyUserData">';
+				appendString += '<li>Games Played<span class="stat">' + lobbyUserData.gamesPlayed + '</span></li>';
+				
+				if (lobbyUserData.wins !== 0) {
+					appendString += '<li>Games Won<span class="stat">' + lobbyUserData.wins + '</span></li>';
+				}
+				
+				if (lobbyUserData.draws !== 0) {
+					appendString += '<li>Games Drawn<span class="stat">' + lobbyUserData.draws + '</span></li>';
+				}
+				
+				if (lobbyUserData.losses !== 0) {
+					appendString += '<li>Games Lost<span class="stat">' + lobbyUserData.losses + '</span></li>';
+				}
+				
+				if (lobbyUserData.displayElo > 0) {
+					appendString += '<li>Points<span class="stat">' + lobbyUserData.displayElo + '</span></li>';
+				}
+				appendString += '</ul>';
+				$("#playerStats").append(appendString);
+			}
+			if (lobbyUserData.remainingRerolls !== 0) {
+				$("#optionButtons").append('<div class="buttonStyle" id="rerollColor">New Color</div>');
+				$("#rerollColor").on('click', function() {
+					socket.emit('attempt color reroll');
+				});
+			}
+		}
+		resizeFunction(); // visually shows the resize, would be ideal to not have it be visible
+	});
+/*
+	socket.on('render lobby user data', function(lobbyUserData) {
+		//$("#container").css('background-color', lobbyUserData.color); //experimental
+		var appendString = '<div class="lobbyName" style="color: ' + lobbyUserData.color + '">'+ lobbyUserData.username +'</div>';
+		if (lobbyUserData.gamesPlayed !== 0) {
+			appendString += '<ul id="lobbyUserData">';
+			appendString += '<li>Games Played<span class="stat">' + lobbyUserData.gamesPlayed + '</span></li>';
+			
+			if (lobbyUserData.wins !== 0) {
+				appendString += '<li>Games Won<span class="stat">' + lobbyUserData.wins + '</span></li>';
+			}
+			
+			if (lobbyUserData.draws !== 0) {
+				appendString += '<li>Games Drawn<span class="stat">' + lobbyUserData.draws + '</span></li>';
+			}
+			
+			if (lobbyUserData.losses !== 0) {
+				appendString += '<li>Games Lost<span class="stat">' + lobbyUserData.losses + '</span></li>';
+			}
+			
+			if (lobbyUserData.elo != -99999) {
+				appendString += '<li>Elo<span class="stat">' + Math.round(lobbyUserData.elo) + '</span></li>';
+			}
+			appendString += '</ul>';
+		}
+		$("#sidebar").prepend(appendString);
+		if (lobbyUserData.remainingRerolls !== 0) {
+			$("#sidebar").append('<div class="sideButton" id="rerollColor">New Color</div>');
+			$("#rerollColor").on('click', function() {
+				socket.emit('attempt color reroll');
+			});
+		}
+	});
+	*/
+	socket.on('ran out of rerolls', function (color) {
+		$("#rerollColor").remove();
+	});
+	socket.on('update lobby name color', function(color) {
+		$(".lobbyName").css('color', color);
+	});
+	socket.on('remove player heading', function() {
+		$("#playerRight").empty();
+	});
+	socket.on('setup game', function(gameID, joinStatus, title, rows, cols, board, players, gameState, blockList, timeLimit, collisionMode, moveCount, timerValue, gameType) {
+		// this runs when:
+		// - a game is started
+		// - a game is joined in progress.
+		
+		inGame = true;
+		
+		setupGame(); // why is this a function? 
+		function setupGame() {
+			$("#lobby").remove();
+			$("#leaderboard").remove();
+			$("#container").append(`
+				<div id="headBoardContainer">
+					<div id="gameHead">
+						<div id="playerLeft"></div>
+						<div id="timeRemaining"></div>
+						<div id="playerRight"></div>
+					</div>
+					<div id="board"></div>
+					<div id="menuContainer">
+						<div id="menuRightContainer">
+							<div id="gameButtons"></div>
+							<div id="bottomInfo"></div>
+						</div>
+					</div>
+				</div>`);
+			buildMenu(blockList);
+			$(".winState").remove(); // ??
+			buildBoard(rows, cols);
+			renderBoard(board);
+			$(".block").addClass('nohover');
+			blockHoverData();
+			renderExitButton();
+			//renderRoomTitle(title);
+			for (var playerID in players) {
+				addHeading(playerID, players[playerID].username, players[playerID].color, players[playerID].displayElo);
+			}
+			
+			// IF THE GAME IS OPEN, AND HAS NOT STARTED YET:
+			if (gameState == 'open') {
+				if (gameType === 'practice') {
+					socket.emit('ready');
+				} else if (joinStatus !== 'spectator') {
+					// you are a player in the game
+					$("#gameButtons").append('<div class="buttonStyle notready" id="ready">Ready Up</div>');
+					$("#ready").on('click', function() {
+						if ($(this).hasClass("unbound")) {
+							log('<span class="redMsg">cannot ready as spectator</span>');
+						} else {
+							if ($(this).hasClass("notready")) {
+								socket.emit('ready');
+								$(this).html('Unready').removeClass('notready');
+							} else {
+								socket.emit('not ready');
+								$(this).html('Ready Up').addClass('notready');
+							}
+						}
+					});
+				}
+				
+				/*
+				// TIME LIMIT
+				if (timeLimit == false) { timeLimit = '&infin;'}
+				//$("#sidebar").append('<div id="timeLimitContainer">Time Limit: <span id="timeLimit">' + timeLimit + '</span></div>');
+				
+				// COLLISION MODE
+				var collisionString = '<div id="collisionContainer">Collisions: <span id="collisionSetting">';
+				if (collisionMode.permanence === true) {
+					collisionString += 'Permanent';
+				} else {
+					collisionString += '<span class="collisionTurnCount">' + collisionMode.permanence.toString() + '</span> Turn';
+				}
+				collisionString += '</span></div>';
+				//$("#gameButtons").append(collisionString);
+				*/
+				
+				
+				// CREATOR SETTINGS:
+				
+				function creatorSettings() {
+				
+					if (joinStatus == 'creator') {
+						
+						// TIME LIMIT
+						$("#timeLimit").addClass('creatorHighlight');
+						$("#timeLimit").on('click', function() {
+							socket.emit('time limit setting', 'infin');
+						});
+						$("#timeLimitContainer").append('<div class="plusMinusButtons"><span id="moreTime" class="greenMsg">[+]</span><span id="lessTime" class="redMsg">[&minus;]</span></div>');
+						$('#moreTime').on('click', function() {
+							socket.emit('time limit setting', 'more');
+						});
+						$('#lessTime').on('click', function() {
+							socket.emit('time limit setting', 'less');
+						});
+						
+						// COLLISION PERMANENCE
+						$("#collisionSetting").addClass('creatorHighlight');
+						$("#collisionSetting").on('click', function() {
+							if ($(this).html() == 'Permanent') {
+								socket.emit('collision setting', 5);
+							} else {
+								var collisionTurnCount = parseInt($(".collisionTurnCount").html());
+								if (collisionTurnCount == 5) {
+									socket.emit('collision setting', 'Permanent');
+								}
+								//else {
+								//	socket.emit('collision setting', collisionTurnCount + 1);
+								//}
+							}
+						});
+						
+						// CLASSIC
+						//$("#sidebar").append('<div class="sideButton" id="classic">Classic</div>');
+						$("#classic").on('click', function() {
+							socket.emit('classic mode');
+						});
+						
+						// ADVANCED
+						//$("#sidebar").append('<div class="sideButton" id="circlemode">Advanced</div>');
+						$("#circlemode").on('click', function() {
+							socket.emit('advanced mode');
+						});
+						
+						// RANDOMIZE
+						//$("#sidebar").append('<div class="sideButton" id="randomize">Randomize</div>');
+						$("#randomize").on('click', function (){
+							socket.emit('randomize');
+						});
+						
+						// BOARD EDITOR
+						//$("#sidebar").append('<div class="sideButton" id="boardEditor">Board Editor</div>');
+						$("#boardEditor").on('click', function() {
+							$("#sidebar > *:not('#roomTitle')").remove();
+							//$("#sidebar > *:not('#roomTitle')").css('display','none');
+							$("#sidebar").append('<div class="sideButton" id="doneEditingBlockList">Done Editing</div>');
+							/*
+							$("#sidebar").append('<div>Cols: <span id="numCols">' + cols + '</span><div class="rowcolButtons"><span id="moreCols" class="greenMsg">[+]</span><span id="lessCols" class="redMsg">[&minus;]</span></div>');
+							$("#sidebar").append('<div>Rows: <span id="numRows">' + rows + '</span><div class="rowcolButtons"><span id="moreRows" class="greenMsg">[+]</span><span id="lessRows" class="redMsg">[&minus;]</span></div>');
+							let minRows = 5;  // I suppose these should have come from the server
+							let maxRows = 20; // cause I'll wanna validate their legitness later on server.
+							let minCols = 7;
+							let maxCols = 30;
+							let greyOut = "#888";
+							
+							$("#lessRows").on("click",function() {
+								if (rows > minRows) {
+									rows--;
+									customUpdate();
+									if (rows == minRows) { $("#lessRows").css('color', greyOut); }
+									if (rows == maxRows - 1) { $("#moreRows").css('color', ''); }
+								}
+							});
+							
+							$("#moreRows").on("click",function() {
+								if (rows < maxRows) {
+									rows++;
+									customUpdate();
+									if (rows == minRows + 1) { $("#lessRows").css('color', ''); }
+									if (rows == maxRows) { $("#moreRows").css('color', greyOut); }
+								}
+							});
+							
+							$("#lessCols").on("click",function() {
+								if (cols > minCols) {
+									cols--;
+									customUpdate();
+									if (cols == minCols) { $("#lessCols").css('color', greyOut); }
+									if (cols == maxCols - 1) { $("#moreCols").css('color', ''); }
+								}
+							});
+							
+							$("#moreCols").on("click",function() {
+								if (cols < maxCols) {
+									cols++;
+									customUpdate();
+									if (cols == minCols + 1) { $("#lessCols").css('color', ''); }
+									if (cols == maxCols) { $("#moreCols").css('color', greyOut); }
+								}
+							});
+							
+							function customUpdate() {
+								$("#numRows").html(rows);
+								$("#numCols").html(cols);
+								rebuildBoard(rows, cols);
+								socket.emit('update board size', rows, cols);
+							}
+							*/
+							
+							
+							$("#doneEditingBlockList").on('click', function() {
+								//$("blockListEditor").remove();
+								$(".block").off();
+								$(".menu_block").off();
+								socket.emit('done editing');
+							});
+							
+							let boardEditorBlockList = {
+								'blank' : { ammo: false },
+								'blockade' : { ammo: false },
+								'ice' : { ammo: false }
+							};
+							
+							buildMenu(boardEditorBlockList);
+							var currentType = 'blank';
+							
+							$("#blank").addClass('active');
+							$("#blockade").css('background', '#000');
+							
+							$("#menu").on('click', '.menu_block', function() {
+								if (!($(this).hasClass('active'))) {
+									$('.active').removeClass('active');
+									$(this).addClass('active');
+									currentType = $(this).attr('id');
+									log ('now painting with ' + currentType);
+								}
+							});
+							$("#board").on('click', '.block', function () {
+								let xy = obtainID($(this));
+								let x = xy[0];
+								let y = xy[1];
+								let blockType = $(this).data("blockType");
+								if (blockType != currentType && (blockType != 'base')) {
+									updateBlock(x,y,currentType);
+									socket.emit('board edit', x, y, currentType);
+								}
+							});
+						});
+						
+						// BLOCKLIST EDITOR
+						//$("#sidebar").append('<div class="sideButton" id="blockListEditorBtn">BlockList Editor</div>');
+						$("#blockListEditorBtn").on('click', function() {
+							$("#sidebar > *:not('#roomTitle')").remove();
+							//$("#sidebar > *:not('#roomTitle')").css('display','none');
+							$("#sidebar").append('<div class="sideButton" id="doneEditingBlockList">Done Editing</div>');
+							$("#doneEditingBlockList").on('click', function() {
+								//$("blockListEditor").remove();
+								socket.emit('done editing');
+							});
+							//$("#headBoardContainer").remove();
+							$("#headBoardContainer").css('display','none');
+							let hWidth = hSpace();
+							$("#container").append('<div id="blockListEditor" style="width: '+ hWidth +'px"></div>');
+							
+							let fullSet = [
+								'plus',
+								'oplus',
+								'cross',
+								'ocross',
+								'arrow1',
+								'arrow2',
+								'arrow3',
+								'arrow4',
+								'arrow6',
+								'arrow7',
+								'arrow8',
+								'arrow9',
+								'arrow11',
+								'arrow22',
+								'arrow33',
+								'arrow44',
+								'arrow66',
+								'arrow77',
+								'arrow88',
+								'arrow99',
+								'hbar',
+								'vbar',
+								'tlbr',
+								'bltr',
+								'ohbar',
+								'ovbar',
+								'otlbr',
+								'obltr',
+								'star',
+								'ostar',
+								'ice',
+								'knight',
+								'circle'
+							];
+							
+							let blockListForEditor = {};
+							for (var i = 0; i < fullSet.length; i++) {
+								let block = fullSet[i];
+								if (typeof blockList[block] === 'undefined') {
+									blockListForEditor[block] = false;
+								} else {
+									if (blockList[block].ammo == false) { // if ammo is unlimited
+										blockListForEditor[block] = true; // set true in the list
+										// I know this is kinda wonky, w/e.
+									} else {
+										blockListForEditor[block] = blockList[block].ammo;
+									}
+								}
+							}
+							
+							/*
+							for (block in blockList) {
+								if (!(fullSet.indexOf(block) > -1)) {
+								// if it doesn't exist
+									blockListForEditor[block] = false;
+								} else {
+									if (blockList[block].ammo == false) { // if ammo is unlimited
+										blockListForEditor[block] = true; // set true in the list
+										// I know this is kinda wonky, could fix this mess later.
+									} else {
+										blockListForEditor[block] = blockList[block].ammo;
+									}
+								}
+							}
+							*/
+							
+							/*
+							let blockListForEditor = {
+								//'blank' : false,
+								//'blockade' : false,
+								//'base' : false,
+								'ice' : false,
+								'circle' : false,
+								'knight' : false,
+								'star' : false,
+								'ostar' : false,
+								'plus' : true,
+								'oplus' : true,
+								'cross' : true,
+								'ocross' : true,
+								'hbar': false,
+								'ohbar': false,
+								'vbar' : false,
+								'ovbar' : false,
+								'tlbr' : false,
+								'otlbr' : false,
+								'bltr' : false,
+								'obltr' : false,
+								'arrow1' : true,
+								'arrow11' : false,
+								'arrow2' : true,
+								'arrow22' : false,
+								'arrow3' : true,
+								'arrow33' : false,
+								'arrow4' : true,
+								'arrow44' : false,
+								'arrow6' : true,
+								'arrow66' : false,
+								'arrow7' : true,
+								'arrow77' : false,
+								'arrow8' : true,
+								'arrow88' : false,
+								'arrow9' : true,
+								'arrow99' : false
+							};
+							*/
+							
+							for (block in blockListForEditor) {
+								let blockSVGString = getSVG8by8(block);
+								let appendString = '<div class="blockInfoContainer"><div class="blockInList';
+								if (blockListForEditor[block] === false) {
+									appendString += ' disabled';
+								}
+								if (block === 'blockade') {
+									appendString += '" style="background-color:#000';
+								}
+								appendString += '" data-blockType="'+ block +'">' + blockSVGString + '</div><br/><span data-blockType="'+ block +'">&minus;</span><span ';
+								
+								if (blockListForEditor[block] === false) {
+									appendString += 'style="color:#777">0';
+								} else if (blockListForEditor[block] === true) {
+									appendString += '>&infin;';
+								} else {
+									appendString += '>' + blockListForEditor[block];
+								}
+								
+								appendString += '</span><span data-blockType="'+ block +'">+</span></div>';
+								$("#blockListEditor").append(appendString);
+							}
+							
+							$(".blockInList").on('click', function(evt) {
+								blockType = ($(this).attr('data-blockType'));
+								let blockDisabled = false;
+								if ($(this).hasClass('disabled')) {
+									blockDisabled = true;
+								}
+								socket.emit('blocklist update', blockType, blockDisabled);
+								blockDisabled = !blockDisabled;
+								if (blockDisabled) {
+									$(this).addClass('disabled');
+									$(this).siblings("span:nth-of-type(2)").html('0').css('color', '#777');
+								} else {
+									$(this).removeClass('disabled');
+									$(this).siblings("span:nth-of-type(2)").html('&infin;').css('color', '');
+								}
+							});
+							
+							var maxAmmo = 20;
+							$(".blockInfoContainer > span:nth-of-type(1)").on('click', function(evt) {
+								// subtracting
+								let value = $(this).siblings("span:nth-of-type(2)").html();
+								if (parseInt(value) !== 0) {
+									let blockType = $(this).attr("data-blockType");
+									if (value == '\u221E') { // if &infin;
+										value = maxAmmo;
+									} else {
+										if (parseInt(value) === 1) {
+											value = '&infin;';
+										} else {
+											value = (parseInt(value) - 1);
+										}
+									}
+									$(this).siblings("span:nth-of-type(2)").html(value);
+									socket.emit('ammo update', blockType, value);
+								}
+							});
+							$(".blockInfoContainer > span:nth-of-type(3)").on('click', function(evt) {
+								// adding
+								let value = $(this).siblings("span:nth-of-type(2)").html();
+								if (parseInt(value) !== 0) {
+									let blockType = $(this).attr("data-blockType");
+									if (value == '\u221E') { //if &infin;
+										value = 1;
+									} else {
+										if (parseInt(value) === maxAmmo) {
+											value = '&infin;';
+										} else {
+											value = (parseInt(value) + 1);
+										}
+									}
+									$(this).siblings("span:nth-of-type(2)").html(value);
+									socket.emit('ammo update', blockType, value);
+								}
+							});
+							
+							/*
+							$("#blockListEditor").on('click', function(evt) {
+								if (evt.target === document.getElementById("blockListEditor")) {
+									// didn't click relevant area
+								} else {
+									let parentElement = evt.target.parentNode;
+									while (!$(parentElement).hasClass("blockInList")) {
+										parentElement = parentElement.parentNode;
+									}
+									let blockType = ($(parentElement).attr('data-blockType'));
+									let blockDisabled = false;
+									if ($(parentElement).hasClass('disabled')) {
+										blockDisabled = true;
+									}
+									socket.emit('blocklist update', blockType, blockDisabled);
+									blockDisabled = !blockDisabled;
+									if (blockDisabled) {
+										$(parentElement).addClass('disabled');
+										$(parentElement).siblings("span:nth-of-type(2)").html('0').css('color', '#777');
+									} else {
+										$(parentElement).removeClass('disabled');
+										$(parentElement).siblings("span:nth-of-type(2)").html('&infin;').css('color', '');
+									}
+								}
+							});
+							*/
+						});
+						
+						/*
+						//$("#sidebar").append('<div class="sideButton" id="customize">Customize</div>');
+						$("#customize").on('click', function (){
+							$("#customize").off();
+							
+							// change board size (rows/cols)
+							$("#sidebar").append('<div>Cols: <span id="numCols">' + cols + '</span><div class="rowcolButtons"><span id="moreCols" class="greenMsg">[+]</span><span id="lessCols" class="redMsg">[&minus;]</span></div>');
+							$("#sidebar").append('<div>Rows: <span id="numRows">' + rows + '</span><div class="rowcolButtons"><span id="moreRows" class="greenMsg">[+]</span><span id="lessRows" class="redMsg">[&minus;]</span></div>');
+							let minRows = 5;  // I suppose these should have come from the server
+							let maxRows = 20; // cause I'll wanna validate their legitness later on server.
+							let minCols = 7;
+							let maxCols = 30;
+							let greyOut = "#888";
+							
+							$("#lessRows").on("click",function() {
+								if (rows > minRows) {
+									rows--;
+									customUpdate();
+									if (rows == minRows) { $("#lessRows").css('color', greyOut); }
+									if (rows == maxRows - 1) { $("#moreRows").css('color', ''); }
+								}
+							});
+							
+							$("#moreRows").on("click",function() {
+								if (rows < maxRows) {
+									rows++;
+									customUpdate();
+									if (rows == minRows + 1) { $("#lessRows").css('color', ''); }
+									if (rows == maxRows) { $("#moreRows").css('color', greyOut); }
+								}
+							});
+							
+							$("#lessCols").on("click",function() {
+								if (cols > minCols) {
+									cols--;
+									customUpdate();
+									if (cols == minCols) { $("#lessCols").css('color', greyOut); }
+									if (cols == maxCols - 1) { $("#moreCols").css('color', ''); }
+								}
+							});
+							
+							$("#moreCols").on("click",function() {
+								if (cols < maxCols) {
+									cols++;
+									customUpdate();
+									if (cols == minCols + 1) { $("#lessCols").css('color', ''); }
+									if (cols == maxCols) { $("#moreCols").css('color', greyOut); }
+								}
+							});
+							
+							function customUpdate() {
+								$("#numRows").html(rows);
+								$("#numCols").html(cols);
+								rebuildBoard(rows, cols);
+								socket.emit('update board size', rows, cols);
+							}
+						
+						});
+						 */
+						 
+						//$(".menu_block").removeClass('disabled');
+						
+						// UPDATE BLOCKLIST:
+						//menuBlockEnableDisable();
+						
+						// change blocklist, and ammo
+						// change start position
+						// change time limit (inc. infinite)
+						// change start positions and terrain
+						// choose to spectate or play
+						// choose color
+						// ready up
+						
+						// when you edit anything
+						// it sends the change to the server
+						// and updates it on everyone else in the room
+						// and maybe unreadies them, like worms
+					}
+				
+				}
+			} else if (gameState == 'inprogress') {
+				global_moveCount = moveCount;
+				$("#timeRemaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
+				updateTimer(timerValue, moveCount);
+			}
+			$("#gameButtons").append('<div id="toggleAudio" class="buttonStyle">' + audioButtonSVG() + '</div>');
+			toggleAudioButton();
+			$(".menu_block").addClass('nohover disabled');
+			//menuHideBlocksAndResize();
+		}
+	});
+	socket.on('detonate', function() {
+		if (audioEnabled) {
+			detonateAudio.play(); // play the audio for placing a block onto the board.
+		}
+	});
+	socket.on('time limit update', function(timeLimit) {
+		timeLimitUpdate(timeLimit);
+	});
+	socket.on('collision update', function(collisionMode) {
+		collisionUpdate(collisionMode);
+	});
+	socket.on('game preset', function(board, timeLimit, rows, cols, blockList, creator, collisionMode) {
+		timeLimitUpdate(timeLimit);
+		collisionUpdate(collisionMode);
+		buildBoard(rows, cols);
+		renderBoard(board);
+		buildMenu(blockList);
+		$(".block").addClass('nohover');
+		if (you == creator) {
+			menuBlockEnableDisable();
+		} else {
+			$("#menu").css('opacity', '0.5'); // dim the menu
+		}
+	});
+	socket.on('blocklist updated', function(blockType, active, ammo) {
+		if (active) {
+			$("#" + blockType).removeClass('disabled');
+		} else {
+			$("#" + blockType).addClass('disabled');
+		}
+	});
+	socket.on('rebuild board', function(rows, cols) {
+		rebuildBoard(rows, cols);
+	});
+	function rebuildBoard(rows, cols) {
+		buildBoard(rows, cols);
+		log('<span class="dimMsg">New dimensions: ' + cols + ' x ' + rows + '</span>');
+		$(".block").addClass('nohover');
+	}
+	socket.on('kill game', function() {
+		exitGame();
+	});
+
+	socket.on('build menu', function(blockList) {
+		buildMenu(blockList);
+	});
+	
+	/*	function baseChosen(gameID, pnum) {
+		// this is a waiting function
+		$(".p1base").off();
+		$(".p2base").off();
+		$("#chooseBase").remove();
+		console.log ("player chose base " + pnum);
+		socket.emit('base chosen', gameID, pnum);
+	}
+	*/
+	socket.on('add to heading', function(id, username, color, elo) {
+		addHeading(id, username, color, elo);
+	});
+	socket.on('remove from heading', function(user) {
+		$(".heading-" + user).remove();
+		$("#ready").html('[ ] Ready').addClass('notready');
+	});
+	socket.on('update lobby welcome name color', function(color) {
+		$("#lobby > h1 > span").css('color', color);
+	});
+	socket.on('all players ready', function(gameID, timeLimit, players, rows, cols, board, gameType) {
+		$(".block", "#board").off(); // for joinGame();
+		$("#menuContainer").off(); // for joinGame() && blockHoverData();
+		$("#board").off(); // for blockHoverData(); I could combine (".block, #board") and ("#board") together.
+		blockHoverData();
+		if (gameType !== 'practice') {
+			$("#gameButtons > *:not('#toggleAudio')").remove();
+		} else {
+			// practice mode reset cleanup:
+			for (var i = 0; i < priorColorList.length; i++) {
+				$(".block").removeClass(priorColorList[i]); // this is longer than it needs to be for each game, oh well maybe fix later.
+			}
+			$(".highlighted").removeClass('highlighted');
+			//$("#menu").css('opacity', '0.5'); // dim the menu
+			$(".menu_block").addClass('disabled');
+		}
+		if (timeLimit == false) {
+			timeLimit = '&infin;';
+		}
+		if ($("#timer").length === 0) {
+			$("#timeRemaining").append('<div id="timer">Turn <b>1</b>, Time <b>' + timeLimit + '</b></div>');
+		}
+		global_moveCount = 1;
+		$("#menu").css('opacity', '1'); // dim the menu
+		if (audioEnabled) {
+			newgameAudio.play();
+		}
+		joinGame(gameID, global_moveCount, timeLimit, players, rows, cols, board, gameType);
+	});
+	socket.on('new move', function(board, noMove, blockList) {
+		global_moveCount++;
+		$(".waitMsg").parent().remove();
+		$(".block").removeClass("nohover").removeClass('disabled');
+		if (typeof blockList !== 'undefined') {
+			buildMenu(blockList);
+		}
+		$(".menu_block").addClass('disabled');
+		menuState = false; // disable the menu, because a move was made.
+		/*
+		//$(".block").removeClass(function (index, css) {
+		//	return (css.match (/\bprior-\S+/g) || []).join(' ');
+		//
+		*/
+		$(".highlighted").removeClass("highlighted"); // remove the highlighted moves
+		if (noMove == false) {
+			if (audioEnabled) {
+				moveAudio.play(); // play the audio for placing a block onto the board.
+			}
+		}
+		renderBoard(board);
+		standby = false;
+		//checkForVictory(players);
+	});
+	socket.on('victory', function(winners, winPaths, color, gameType) {
+		if (showWinState == false) {
+			cleanup(winners, gameType);
+			showWinState = true;
+			for (var i = 0; i < winners.length; i++) {
+				showPath(winPaths[i], color);
+			}
+		}
+	});
+	socket.on('log', function(msg, special) {
+		log(msg, special); // special messages don't have padding built in so I can alter BGcolor without it looking bad lol
+	});
+	socket.on('store id', function(id, displayName, ghost) {
+		you = id;
+		yourName = displayName;
+		isGhost = ghost;
+		ghostFlow = isGhost;
+	});
+	socket.on('connect audio', function() {
+		if (audioEnabled) {
+			connectAudio.play();
+		}
+	});
+/*	socket.on('opponent disconnected', function() {
+		log('<span style="color:red">opponent disconnected</span>');
+		opponentdisconnectedAudio.play();
+	});
+	*/
+	socket.on('remove rematch button', function(){
+		//log('<span class="dimMsg">remove rematch button</span>');
+		$("#rematch").remove();
+		if (ghostFlow) {
+			setTimeout(function(){ 
+				exitGame();
+			}, 3000);
+		}
+	});
+	socket.on('render board', function(data) {
+		renderBoard(data);
+	});
+	socket.on('collision', function() {
+		//log('<span style="dimMsg">collision</span>');
+		if (audioEnabled) {
+			collisionAudio.play();
+		}
+	});
+	socket.on('update timer', function(timerValue, turnCount) {
+		updateTimer(timerValue, turnCount);
+	});
+	socket.on('time out', function(playerWhoMoved) {
+		log('<span class="dimMsg">time out</span>');
+		// we're passing in the player who moved
+		// ideally this would only send to the player who disconnected but this was an easy hacky way
+		// of getting it to work quickly. by sending to all players. and checking ID.
+		//log (playerWhoMoved);
+		if (you != playerWhoMoved) {
+			// opponent function gets opposite player.
+			if (audioEnabled) {
+				timeoutAudio.play(); // play audio
+			}
+		}
+	});
+	/*
+	socket.on('game over', function(winner, reason) {
+		log(winner + ' wins because of ' + reason + '.');
+		cleanup(winner, reason);
+	});
+	*/
+	socket.on('rematch offered', function() {
+		$("#rematch > span").text("Accept Rematch").addClass("blinkText");
+	});
+	socket.on('setup rematch', function(blockList, creatorElo, playerElo) {
+		debounce = Math.random();
+		$(".block").removeClass('nohover disabled ice');
+		buildMenu(blockList);
+		showWinState = false;
+		if ((typeof creatorElo !== 'undefined') && (creatorElo > 0)) {
+			$("#playerLeft > div > span").html('(' + creatorElo + ')');
+		}
+		if ((typeof playerElo !== 'undefined') && (playerElo > 0)) {
+			$("#playerRight > div > span").html('(' + playerElo + ')');
+		}
+	});
+	socket.on('draw offered', function(gameID) {
+		log('Draw Offered');
+		drawOffered(gameID);
+	});
+	socket.on('console log', function(data) {
+		console.log(data);
+	});
+}
+
+
+$( document ).ready(function() {
+	// any preloading I want to do, I should do here.
+});
+
+
+$( window ).on("load", function() {
+	$("#container").append(`
+		<h1 id="chatToggle">&laquo;</h1>
+		<div id="chatPanel">
+			<h1>Chat</h1>
+			<div id="logContainer">
+				<div id="log"></div>
+			</div>
+		</div> `);
+	sidebarsResize();
+	updateStyle('nocolor', "#d5ccbd");
+	$( window ).resize(function() {
+		resizeFunction();
+	});
+	$("#chatToggle").on('click', function() {
+		if ($("#chatPanel").is(":visible")) {
+			$("#chatPanel").hide();
+			$("#chatToggle").html('&raquo;');
+			resizeFunction();
+		} else {
+			$("#chatPanel").show();
+			$("#chatToggle").html('&laquo;');
+			resizeFunction();
+		}
+	});
+	onlinePlay();
+});
+
+
+function log(str, special) {
+	if ($(".logLine").length >= 500) {
+		// don't let the DOM get out of control.
+		$(".logLine").first().remove();
+	}
+	if (special) {
+		$("#log").append('<div class="logLine special">' + str + '</div>');
+	} else {
+		$("#log").append('<div class="logLine">' + str + '</div>');
+	}
+	
+	const logEl = $('#log')[0]
+	if(logEl != null) {
+		$("#logContainer").scrollTop(logEl.scrollHeight);
+	}
+	
+}
+
+
+function audioButtonSVG() {
+	var SVGString = '<svg version="1.2" baseProfile="tiny" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 400 400" overflow="scroll" xml:space="preserve">';
+	
+	SVGString += '<path d="M159,226.5c0,11-9,20-20,20H71c-11,0-20-9-20-20V174c0-11,9-20,20-20h68c11,0,20,9,20,20V226.5z"/><path d="M75.3,189.3c-9.3,5.9-9.3,15.7,0,21.6l126.8,81.5c9.3,5.9,16.8,1.8,16.8-9.2V117c0-11-7.6-15.1-16.8-9.2L75.3,189.3z"/>'; // speaker icon
+	
+	SVGString += '<path class="audioOn" fill="none" stroke="#2652AA" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" d="M314,126c0,0,90,74,0,148" /><circle class="audioOn" fill="#061059" cx="254" cy="200" r="21"/><path class="audioOn" fill="none" stroke="#123A89" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" d="M279,153c0,0,70,47,0,94"/>'; // audio ON
+	
+	SVGString += '<line class="audioOff" fill="none" stroke="#890303" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" x1="249" y1="166" x2="318" y2="235"/><line class="audioOff" fill="none" stroke="#890303" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" x1="318" y1="166" x2="249" y2="235"/>'; // audio OFF
+
+    SVGString += '</svg>';
+	
+	return SVGString;
+}
+
+// eof

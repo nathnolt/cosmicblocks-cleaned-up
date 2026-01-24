@@ -13,15 +13,24 @@ var startTime = start.getTime();
 var express = require('express'); // this is an express application
 // var signature = require('cookie-signature');
 // var cookie = require('cookie');
+
+const db = require('better-sqlite3')('main.db', {verbose: console.log})
+
+//
+// requires
+//
 var crypto = require('crypto');
 // var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var https = require('https');
+// var https = require('https');
 var http = require('http');
 var path = require('path');
 var fs = require('fs'); // this enables reading files I guess.
 var app = express();
 const CREDENTIALS = require('./credentials.js');
+
+
+
 const command_line_args = process.argv.slice(2)
 
 
@@ -34,16 +43,19 @@ var https_options = {
 	// cert: fs.readFileSync('ssl/cert.pem')
 };
 
+let saveData
+
 // process.env.NODE_ENV is set via the scripts in package.json
 // there are two scripts: start, and test.
 // each listens on a different port. test will not save data to the database (except login/new user).
 const environment = command_line_args[0] || process.env.NODE_ENV
 if (environment === 'start') {
-	var port = 8888;
-	var saveData = true;
+	// var port = 8888;
+	var port = 9001;
+	saveData = true;
 	
 	
-	fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
+	// fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
 	
 	/* don't use compressor for now, and just do what the test one is doing
 	compressor.minify({
@@ -62,8 +74,8 @@ if (environment === 'start') {
 	
 } else if (environment === 'test') {
 	var port = 9001;
-	var saveData = false;
-	fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
+	saveData = false;
+	// fs.createReadStream('./cosmicblocks/client.js').pipe(fs.createWriteStream('./cosmicblocks/client/client.js'));
 } else {
 	console.log("NODE_ENV is not set correctly.");
 }
@@ -72,22 +84,24 @@ if (environment === 'start') {
 console.log("NODE_ENV: " + environment);
 console.log("PORT: " + port);
 
-var handleDBResult = function(err, User, db) {
-	if (err) {
-		console.log("handleDBResult err", err);
-		return;
-	}
-	// no error
-
+var handleDBResult = function() {
+	
+	const User = null // will eventually be removed when db code is updated to use better-sqlite3
+	
 	// create the server.
-	var server = https.createServer(https_options, app, function (req, res) {
+	var server = http.createServer(https_options, app, function (req, res) {
 		res.end();
 	}).listen(port);
-	console.log("Started server: https://cuddle.zone:" + port);
+	
+	console.log("Started server: localhost:" + port);
 	
 	// passport is used for logging in with twitter.
-	var passport = require('passport');
-	var TwitterStrategy = require('passport-twitter').Strategy;
+	// 
+	// Maybe we'll worry about this later.
+	// we could always just use username / password authentication, and add more complexity later.
+	// 
+	// var passport = require('passport');
+	// var TwitterStrategy = require('passport-twitter').Strategy;
 
 	// it uses sessions. at the moment they are just stored in memory using session-memory-store.
 	// i may move that to the database later?
@@ -96,38 +110,51 @@ var handleDBResult = function(err, User, db) {
 	var sessionStore = new MemoryStore();
 
 	// i think the secret and the key can just be whatever, as long as they match between the app and io.
-	app.use(expressSession({
-		secret: CREDENTIALS.sessionSecret, 
-		key: CREDENTIALS.sessionKey, 
-		store: sessionStore,
-		resave: false, 
-		saveUninitialized: false,
-		cookie: {
-			secure: false
-		}
-	}));
-	app.use(passport.initialize());
-	app.use(passport.session());
-	var passportSocketIo = require("passport.socketio");
+	// app.use(expressSession({
+	// 	secret: CREDENTIALS.sessionSecret, 
+	// 	key: CREDENTIALS.sessionKey, 
+	// 	store: sessionStore,
+	// 	resave: false, 
+	// 	saveUninitialized: false,
+	// 	cookie: {
+	// 		secure: false
+	// 	}
+	// }));
+	
+
+	
+	// app.use(passport.initialize());
+	// app.use(passport.session());
+	
+	// var passportSocketIo = require("passport.socketio");
 
 	// socket.io is used for having a realtime application.
 	// all of the game-related stuff is passed between client and server via socket.io.
 	var io = require('socket.io')(server);
 	{
+		const sessionMiddleware = expressSession({
+			secret: "changeit",
+			resave: true,
+			saveUninitialized: true,
+		})
+		
 		// @TODO check if this will work.
 		const wrap = middleware => (socket, next) => middleware(socket.request, {}, next)
 		io.use(wrap(sessionMiddleware))
-		io.use(wrap(passport.initialize()))
-		io.use(wrap(passport.session()))
+		// io.use(wrap(passport.initialize()))
+		// io.use(wrap(passport.session()))
 		
 		io.use((socket, next) => {
-			if (socket.request.user) {
-				next();
-			} else {
-				next(new Error('unauthorized'))
-			}
+			//console.log('yes', socket.request)
+			next()
+			// if (socket.request.user) {
+			// 	next();
+			// } else {
+			// 	next(new Error('unauthorized'))
+			// }
 		});
 	}
+	
 	// instead of this:
 	// io.use(passportSocketIo.authorize({
 	//   cookieParser: cookieParser, 
@@ -136,26 +163,26 @@ var handleDBResult = function(err, User, db) {
 	//   store: sessionStore 
 	// }));
 
-	passport.use('twitter', new TwitterStrategy({
-		// this key/secret is from the Twitter App page that has Cosmic Blocks.
-		consumerKey: CREDENTIALS.twitterConsumerKey,
-		consumerSecret: CREDENTIALS.twitterConsumerSecret,
-		callbackURL: "https://cuddle.zone:" + port + "/login/twitter/callback"
-	}, 
-	function(token, tokenSecret, profile, done) {
-		process.nextTick(function() { 
-			// process.nextTick used to wait til the data arrives (??)
-			if (typeof profile !== 'undefined') {
-				// the profile may be undefined if you just try to connect to the success url...
-				userInfo = {
-					twitterid: profile.id,
-					username: profile.username,
-					displayName: profile.displayName,
-				};
-				return done(null, userInfo);
-			}
-		});
-	}));
+	// passport.use('twitter', new TwitterStrategy({
+	// 	// this key/secret is from the Twitter App page that has Cosmic Blocks.
+	// 	consumerKey: CREDENTIALS.twitterConsumerKey,
+	// 	consumerSecret: CREDENTIALS.twitterConsumerSecret,
+	// 	callbackURL: "https://cuddle.zone:" + port + "/login/twitter/callback"
+	// }, 
+	// function(token, tokenSecret, profile, done) {
+	// 	process.nextTick(function() { 
+	// 		// process.nextTick used to wait til the data arrives (??)
+	// 		if (typeof profile !== 'undefined') {
+	// 			// the profile may be undefined if you just try to connect to the success url...
+	// 			userInfo = {
+	// 				twitterid: profile.id,
+	// 				username: profile.username,
+	// 				displayName: profile.displayName,
+	// 			};
+	// 			return done(null, userInfo);
+	// 		}
+	// 	});
+	// }));
 						
 						/*
 						
@@ -224,38 +251,70 @@ var handleDBResult = function(err, User, db) {
 									};
 									*/
 								
-	passport.serializeUser(function(user, done) {
-		//place user's id in cookie
-		done(null, user);
-	});
-	passport.deserializeUser(function(user, done) {
-		//retrieve user from db
-		done(null, user);
-	});
+	// passport.serializeUser(function(user, done) {
+	// 	//place user's id in cookie
+	// 	done(null, user);
+	// });
+	// passport.deserializeUser(function(user, done) {
+	// 	//retrieve user from db
+	// 	done(null, user);
+	// });
 
 	// on the landing page just immediately perform a twitter autheticate.
-	app.get('/', passport.authenticate('twitter'));
+	// app.get('/', passport.authenticate('twitter'));
+	app.get('/', function(req, res) {
+		res.send('home')
+	})
 
 	// alternative login url:
-	app.get('/login/twitter', passport.authenticate('twitter'));
+	// app.get('/login/twitter', passport.authenticate('twitter'));
+	app.get('/login/twitter', function(req, res) {
+		res.send('login twitter')
+	});
 
 	// handle the callback after twitter has authenticated the user
+	/*
 	app.get('/login/twitter/callback', 
 		passport.authenticate('twitter', { failureRedirect: '/failure' }),
 		function(req, res) {
 			// Successful authentication
 			//console.log(req.session.passport.user);
 			res.redirect('/success');
-	});
+	});*/
+	
+	app.get('/login/twitter/callback', function(req, res) {
+		res.send('login twitter callback')
+	})
+	
+	
+	// app.get('/success', function(req, res){
+	// 	if (typeof req.user === 'undefined') {
+	// 		res.redirect('/failure');
+	// 	} else {
+	// 		//app.use(express.static(path.join(__dirname, '../cuddle.zone/public/')));
+	// 		app.use(express.static(path.join(__dirname, '/client/')));
+	// 		res.sendFile(path.join(__dirname + '/client/'));
+	// 	}
+	// });
+	
 	app.get('/success', function(req, res){
-		if (typeof req.user === 'undefined') {
-			res.redirect('/failure');
-		} else {
-			//app.use(express.static(path.join(__dirname, '../cuddle.zone/public/')));
-			app.use(express.static(path.join(__dirname, '/client/')));
-			res.sendFile(path.join(__dirname + '/client/'));
+		// console.log('__dirname', __dirname)
+		// console.log('full path', path.join(__dirname, '/client/'))
+		
+		const clientBase = path.join(__dirname, '/client/')
+		try {
+			const express_static = express.static(clientBase)
+			// console.log(express_static)
+			// console.log(app)
+			app.use(express_static);
+			res.sendFile(clientBase + 'index.html');
+		} catch(err) {
+			console.log('error', err)
 		}
+		
 	});
+	
+	
 	app.get('/failure', function(req, res){
 		app.use(express.static(path.join(__dirname, '/client/')));
 		res.sendFile(path.join(__dirname + '/client/failure.html'));
@@ -279,94 +338,117 @@ var handleDBResult = function(err, User, db) {
 	
 	const emptyColor = '#d5ccbd'; // try to remove this...
 	
+	global.count = 1
+	
 	// New Connection!
-	io.on('connection', function(socket){
-		var duplicate = false;	
-		for (key in userData) {
-			if (userData[key].twitterid == socket.request.user.twitterid) {
-				duplicate = true;
-				console.log('dupe found in userData: ' + userData[key].username);
-				// userData keeps the socket ids in memory.
-				// so if it already finds a matching twitterID then it knows
-				// that you already have it open in another tab or w/e
-			}
+	io.on('connection', function(socket) {
+		console.log('new connection')
+		// console.log('connection', socket)
+		
+		// we can use this maybe? idk.
+  		const session = socket.request.session;
+		
+		var randomHexColor = hslToHex(Math.trunc(Math.random() * 360), 100, 50)
+		var duplicate = false;
+		userData[socket.id] = {
+			elo: 100,
+			username: 'username ' + global.count++,
+			// username: socket.request.user.displayName + ' (g)',
+			room: false,
+			gamesPlayed: 0,
+			color: randomHexColor,
+			// ghost:true
+			ghost: false,
 		}
-		if (duplicate) {
-			userData[socket.id] = {
-				username: socket.request.user.displayName + ' (g)',
-				room: false,
-				color: '#808080',
-				ghost:true
-			}
-			welcome(socket.id);
-		} else {
-			// if we are recording stats, increment connections.
-			if (saveData) {
-				db.sync(function(err) {
+		
+		welcome(socket.id);
+		
+		// 
+		// @TODO: The original codebase has a ghost version for users, 
+		// so that when you open another tab with ghost view, you can do stuff also.
+		// maybe we want this?
+		// 
+		
+		// for (key in userData) {
+		// 	if (userData[key].twitterid == socket.request.user.twitterid) {
+		// 		duplicate = true;
+		// 		console.log('dupe found in userData: ' + userData[key].username);
+		// 		// userData keeps the socket ids in memory.
+		// 		// so if it already finds a matching twitterID then it knows
+		// 		// that you already have it open in another tab or w/e
+		// 	}
+		// }
+		
+		// if we are recording stats, increment connections.
+		// if (saveData) {
+		console.log('@TODO handle database stuffs')
+		if (saveData) {
+			// @TODO change this into new DB format
+			
+			db.sync(function(err) {
+				if (err) throw err;
+				User.find({ twitterID: socket.request.user.twitterid }, function (err, users){
 					if (err) throw err;
-					User.find({ twitterID: socket.request.user.twitterid }, function (err, users){
-						if (err) throw err;
-						if (users.length === 0) {
-							// no user, so we must create it.
-							var passedColor = assignColor();
-							userData[socket.id] = {
-								twitterid: socket.request.user.twitterid,
-								username: socket.request.user.displayName,
-								room: false,
-								color: passedColor,
-								gamesPlayed: 0,
-								timePlayed: 0,
-								wins: 0,
-								draws: 0,
-								losses: 0,
-								remainingRerolls: 0,
-								elo: -99999,
-								ghost: false
-							};
+					if (users.length === 0) {
+						// no user, so we must create it.
+						var passedColor = assignColor();
+						userData[socket.id] = {
+							twitterid: socket.request.user.twitterid,
+							username: socket.request.user.displayName,
+							room: false,
+							color: passedColor,
+							gamesPlayed: 0,
+							timePlayed: 0,
+							wins: 0,
+							draws: 0,
+							losses: 0,
+							remainingRerolls: 0,
+							elo: -99999,
+							ghost: false
+						};
+						
+						User.create({ 
+							displayName: encodeURI(socket.request.user.displayName), 
+							wins: 0,
+							draws: 0,
+							losses: 0,
+							elo: -99999,
+							color: passedColor,
+							twitterID: socket.request.user.twitterid,
+							gamesPlayed: 0,
+							twitterHandle: socket.request.user.username,
+							forfeits: 0,
+							avgMoveCount: 0,
+							connections: 1,
+							timePlayed: 0
+						}, function(err) {
+							if (err) throw err;
+						});
+						console.log ('@' + socket.request.user.username + ' created.');
+					} else {
+						users[0].connections++;
+						userData[socket.id] = {
+							twitterid: socket.request.user.twitterid,
+							username: socket.request.user.displayName,
+							room: false,
+							color: users[0].color,
+							gamesPlayed: users[0].gamesPlayed,
+							timePlayed: users[0].timePlayed,
+							wins: users[0].wins,
+							draws: users[0].draws,
+							losses: users[0].losses,
+							remainingRerolls: 0,
+							elo: users[0].elo,
+							ghost: false
+						};
 							
-							User.create({ 
-								displayName: encodeURI(socket.request.user.displayName), 
-								wins: 0,
-								draws: 0,
-								losses: 0,
-								elo: -99999,
-								color: passedColor,
-								twitterID: socket.request.user.twitterid,
-								gamesPlayed: 0,
-								twitterHandle: socket.request.user.username,
-								forfeits: 0,
-								avgMoveCount: 0,
-								connections: 1,
-								timePlayed: 0
-							}, function(err) {
-								if (err) throw err;
-							});
-							console.log ('@' + socket.request.user.username + ' created.');
-						} else {
-							users[0].connections++;
-							userData[socket.id] = {
-								twitterid: socket.request.user.twitterid,
-								username: socket.request.user.displayName,
-								room: false,
-								color: users[0].color,
-								gamesPlayed: users[0].gamesPlayed,
-								timePlayed: users[0].timePlayed,
-								wins: users[0].wins,
-								draws: users[0].draws,
-								losses: users[0].losses,
-								remainingRerolls: 0,
-								elo: users[0].elo,
-								ghost: false
-							};
-								
-							users[0].save(function (err) {
-								if (err) throw err;
-							});
-						}
-						welcome(socket.id);
-					});
+						users[0].save(function (err) {
+							if (err) throw err;
+						});
+					}
+					welcome(socket.id);
 				});
-			}
+			});
 		}
 		
 		function welcome(socketID) {
@@ -391,6 +473,9 @@ var handleDBResult = function(err, User, db) {
 			socket.emit('log', '<span class="redMsg">socket error</span>')
 		});	
 		socket.on('disconnect', function(){ 
+			console.log('userdata', userData)
+			console.log('socket_id', socket.id)
+			
 			if (userData[socket.id].room !== false) { 
 				io.emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' disconnected.</span><span class="redMsg" style="float:right">' + (Object.keys(userData).length - 1) + '</span>');
 				var gameID = userData[socket.id].room;
@@ -582,6 +667,8 @@ var handleDBResult = function(err, User, db) {
 							permanence: true
 						}
 					};
+					
+					console.log('gameData', gameData)
 					
 					// the way I set up games right now, has the client pass in a special word "random" to determine what kind of game it should be (in this case, the only two options are standard and random.
 					
@@ -2976,37 +3063,78 @@ var handleDBResult = function(err, User, db) {
 	}
 
 	function leaderData(callback) {
-		db.driver.execQuery("SELECT * FROM users ORDER BY elo DESC LIMIT 100", function (err, data) {
-			if (err) {
-				return callback(err);
-			}
+		
+		console.log('@TODO: implement leader data...')
+		if(false) {
 			
-			var leaderData = [];
-			for (var i = 0; i < data.length; i++) {
-				if ((data[i].gamesPlayed >= 10) && (Math.round(data[i].elo) > 1000)) {
-					leaderData.push({
-						displayName: decodeURI(data[i].displayName),
-						color: data[i].color,
-						gamesPlayed: data[i].gamesPlayed,
-						wins: data[i].wins,
-						draws: data[i].draws,
-						losses: data[i].losses,
-						elo: (Math.round(data[i].elo) - 1000)
-					});
+			db.driver.execQuery("SELECT * FROM users ORDER BY elo DESC LIMIT 100", function (err, data) {
+				if (err) {
+					return callback(err);
 				}
-			}
-			return callback(null, leaderData);
-		});
+				
+				var leaderData = [];
+				for (var i = 0; i < data.length; i++) {
+					if ((data[i].gamesPlayed >= 10) && (Math.round(data[i].elo) > 1000)) {
+						leaderData.push({
+							displayName: decodeURI(data[i].displayName),
+							color: data[i].color,
+							gamesPlayed: data[i].gamesPlayed,
+							wins: data[i].wins,
+							draws: data[i].draws,
+							losses: data[i].losses,
+							elo: (Math.round(data[i].elo) - 1000)
+						});
+					}
+				}
+				return callback(null, leaderData);
+			});
+			
+		}
+		
+		var randomHexColor = hslToHex(Math.trunc(Math.random() * 360), 100, 50)
+		
+		return callback(null, [
+			{displayName: 'testName', color: randomHexColor, gamesPlayed: 10, wins: 10, draws: 0, losses: 0, elo: 250}
+		]);
+		
 	}
 } // end of game logic.
 
-connectToDB(handleDBResult);
-function connectToDB(callback) {
+connectToDB();
+function connectToDB() {
 	console.log('credentials', CREDENTIALS)
 	
 	// time to connect to the database:
 	var User = undefined;
-	var orm = require("orm");
+	
+	// var orm = require("orm");
+	try {
+		db.exec(
+			`CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY,
+			displayName TEXT,
+			wins INTEGER,
+			draws INTEGER,
+			losses INTEGER,
+			elo INTEGER,
+			color TEXT,
+			gamesPlayed INTEGER,
+			
+			twitterHandle TEXT,
+			twitterID TEXT,
+			
+			forfeits INTEGER,
+			avgMoveCount INTEGER,
+			connections INTEGER,
+			timePlayed INTEGER
+		)`)
+	} catch(err) {
+		console.log(err)
+	}
+	
+	handleDBResult()
+	
+	/*
 	var db = orm.connect(CREDENTIALS.database, function (err, _db) {
 		if (err) {
 			return callback(err);
@@ -3031,6 +3159,7 @@ function connectToDB(callback) {
 		console.log("Connected to DB.");
 		return callback(null, User, db);
 	});
+	*/
 }
 
 
