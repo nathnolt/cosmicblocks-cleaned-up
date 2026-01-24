@@ -186,8 +186,6 @@ function mix(color_1, color_2, weight) {
 }
 
 
-
-
 module.exports = {
 	hslToHex,
 	assignColor,

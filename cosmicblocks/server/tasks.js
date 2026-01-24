@@ -1,21 +1,18 @@
 const fs = require('fs')
 const sass = require('sass')
+const path = require('path')
 
-// ---------------
-// static tasks to run 
-// Convert the SASS into CSS
-function runTasks() {
-	sass_to_css()
-}
-
-
-function sass_to_css() {
-	const sass_compile_result = sass.compile('./cosmicblocks/client/style.css')
+function convert_client_sass_to_css() {
+	const folder = path.join(__dirname, '../')
+	const scssPath = folder + 'style.scss'
+	const sass_compile_result = sass.compile(scssPath)
 	const minified_css_string = sass_compile_result.css
-	fs.writeFileSync('./cosmicblocks/client/style.css', minified_css_string)
-	console.log('written output css to /client/style.css')
+	fs.writeFileSync(folder + 'client/style.css', minified_css_string)
+	// console.log('written output css to /client/style.css')
 }
+
+// @TODO, maybe minify client.js to save some bandwidth optionally later.
 
 module.exports = {
-	runTasks,
+	convert_client_sass_to_css,
 }

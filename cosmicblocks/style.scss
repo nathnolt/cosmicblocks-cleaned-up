@@ -1,15 +1,21 @@
 // Cosmic Blocks
 // by Narcissa Wright
 
-$greenMsg: #61ce69;
-$redMsg: #ff525e;
-$dimMsg: #8474a4;
-$darkGrey: #0f0d12;
-$zebra1: #232127;
-$zebra2: #1f1d22;
-$sidebarBG: #1d1a20;
-$containerBG: #afa6c2;
-$borderColor: #4a4a4a;
+$greenMsg: rgb(97, 206, 105);
+$redMsg: rgb(255, 82, 94);
+$dimMsg: rgb(132, 116, 164);
+$darkGrey: rgb(15, 13, 18);
+$zebra1: rgb(35, 33, 39);
+$zebra2: rgb(31, 29, 34);
+$sidebarBG: rgb(29, 26, 32);
+$containerBG: rgb(175, 166, 194);
+$borderColor: rgb(74, 74, 74);
+
+$greenMsgLighter: rgb(139, 248, 147); /* $greenMsg + 42 (clamped to 255) */
+
+$greenMsgLighter2: rgb(148, 255, 156); /* $greenMsg + 51 (clamped to 255) */
+
+$redMsgLighter: rgb(255, 133, 145); /* $redmsg + 51 (clamped to 255) */
 
 @mixin bgstyle {
 	background-size: contain;
@@ -440,8 +446,18 @@ h1 {
 			float:right;
 			& > span {
 				cursor:pointer;
+				/* 
+				I believe that the original intent of the code was to lighten these elements. 
+				But as using plus does not work anymore, we're gonna set the raw output value
+				*/
+				&.greenMsg:hover { color: $greenMsgLighter }
+				&.redMsg:hover { color: $redMsgLighter }
+				
+				/*
+				original code
 				&.greenMsg:hover { color: $greenMsg + #2a2a2a; }
 				&.redMsg:hover { color: $redMsg + #333333; }
+				*/
 			}
 			& > span:last-child {
 				margin-left:3px;
@@ -892,7 +908,7 @@ svg {
 			}
 		}
 		&:hover {
-			color: $redMsg + #333;
+			color: $redMsgLighter;
 			cursor: pointer;
 		}
 	}
@@ -912,7 +928,7 @@ svg {
 			}
 		}
 		&:hover {
-			color: $greenMsg + #333;
+			color: greenMsgLighter2;
 			cursor: pointer;
 		}
 	}
@@ -958,4 +974,8 @@ svg {
 	100% {
 		opacity:0.55;
 	}
+}
+
+.inline-block {
+	display: inline-block;
 }

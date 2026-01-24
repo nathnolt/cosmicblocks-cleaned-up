@@ -3,19 +3,17 @@
 	"version": "5.0.0",
 	"description": "online game",
 	"dependencies": {
+		"@fastify/static": "^9.0.0",
 		"bcrypt": "^6.0.0",
 		"better-sqlite3": "^12.6.2",
-		"express": "^5.2.1",
-		"express-session": "^1.19.0",
-		"express-sslify": "^1.1.0",
-		"orm": "^8.0.1",
+		"eta": "^4.5.0",
+		"fastify": "^5.7.1",
 		"sass": "^1.97.3",
-		"session-memory-store": "^1.0.0",
 		"socket.io": "^4.8.3"
 	},
 	"private": true,
 	"scripts": {
-		"test": "node cosmicblocks\\server\\server.js test",
-		"start": "node cosmicblocks\\server\\server.js start"
+		"dev": "npx nodemon cosmicblocks\\server\\server.js",
+		"start": "node cosmicblocks\\server\\server.js"
 	}
 }

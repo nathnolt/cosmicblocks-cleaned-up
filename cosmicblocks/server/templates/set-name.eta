@@ -1,0 +1,10 @@
+<% layout("./base.eta") %>
+
+<h1>Choose a user name</h1>
+
+
+<form>
+	<label for="choose-name">user name</label>
+	<input type="text" id="choose-name">
+	<button class="buttonStyle inline-block">Choose</button>
+</form>
