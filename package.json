@@ -3,6 +3,7 @@
 	"version": "5.0.0",
 	"description": "online game",
 	"dependencies": {
+		"bcrypt": "^6.0.0",
 		"better-sqlite3": "^12.6.2",
 		"express": "^5.2.1",
 		"express-session": "^1.19.0",
@@ -14,7 +15,7 @@
 	},
 	"private": true,
 	"scripts": {
-		"test": "node cosmicblocks/server.js test",
-		"start": "node cosmicblocks/server.js start"
+		"test": "node cosmicblocks\\server\\server.js test",
+		"start": "node cosmicblocks\\server\\server.js start"
 	}
 }
