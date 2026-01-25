@@ -979,3 +979,10 @@ svg {
 .inline-block {
 	display: inline-block;
 }
+.error-line {
+	color: $redMsgLighter;
+	font-size: 700;
+	background: $darkGrey;
+	border-bottom: 1px $borderColor solid;
+	padding: 4px;
+}

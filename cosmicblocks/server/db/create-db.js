@@ -1,42 +1,3 @@
-/* manages everything having to do with the db */
-const Database = require('better-sqlite3')
-const { resolve } = require('path')
-const { existsSync } = require('node:fs')
-
-let db
-const DEBUG = true
-function errorLog() {
-	if(DEBUG) {
-		console.error(arguments)
-	}
-}
-const DB_path = 'main.db'
-
-
-// https://www.npmjs.com/package/better-sqlite3
-// https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/api.md
-function getDB() {
-	
-	if(db != null) {
-		return db
-	}
-	
-	const resolvedDatabasePath = resolve(DB_path)
-	let createDB = false
-	if(!existsSync(resolvedDatabasePath)) {
-		errorLog(resolvedDatabasePath, 'nope')
-		createDB = true
-	}
-	
-	db = new Database(resolvedDatabasePath)
-	
-	if(createDB) {
-		createTheDBTables(db)
-	}
-	
-	return db
-}
-
 function createTheDBTables(db) {
 	const userQueries = userQueries()
 	db.exec(userQueries.table)
@@ -62,7 +23,8 @@ function userQueries() {
 		forfeits INTEGER,
 		avgMoveCount INTEGER,
 		connections INTEGER,
-		timePlayed INTEGER
+		timePlayed INTEGER,
+		last_action TEXT NOT NULL DEFAULT current_timestamp
 	)`
 	
 	const index1 = `CREATE INDEX idx__user__username ON user (username)`
@@ -79,6 +41,11 @@ function userAuthQueries() {
 	
 	return {table}
 }
+
+module.exports = {
+	createTheDBTables
+}
+
 
 /*
 var db = orm.connect(CREDENTIALS.database, function (err, _db) {
@@ -106,5 +73,3 @@ var db = orm.connect(CREDENTIALS.database, function (err, _db) {
 	return callback(null, User, db);
 });
 */
-
-module.exports = { getDB }

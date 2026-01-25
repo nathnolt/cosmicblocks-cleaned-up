@@ -1,10 +1,14 @@
+<% it.title = 'Set name' %>
 <% layout("./base.eta") %>
 
+
 <h1>Choose a user name</h1>
+<form method="post">
 
-
-<form>
-	<label for="choose-name">user name</label>
-	<input type="text" id="choose-name">
+	<% if (it.error) { %>
+	<div class="error-line"><%= it.error %></div>
+	<% } %>
+	<label for="choose-name">User name</label>
+	<input type="text" id="choose-name" name="chosen-username">
 	<button class="buttonStyle inline-block">Choose</button>
 </form>

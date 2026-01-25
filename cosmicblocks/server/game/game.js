@@ -7,13 +7,16 @@ const {
 	hexColorDelta,
 	increase_brightness,
 	mix
-} = require('./color-util.js')
+} = require('../color-util.js')
 
 const {
 	random_inclusive_int,
-} = require('./util.js')
+} = require('../util.js')
 
-const { saveData } = require('./settings.js')
+const { saveData } = require('../settings.js')
+
+
+// @TODO: Split this file out further
 
 //   ****  ****   **      ***   ** **  //
 //  **     ** **  **     ** **   ***   //

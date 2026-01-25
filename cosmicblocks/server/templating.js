@@ -6,4 +6,9 @@ const eta = new Eta({
 	views: path.join(__dirname, 'templates')
 })
 
-module.exports = { eta }
+function eta_render(template, vars) {
+	const renderVars = Object.assign({}, vars)
+	return eta.render(template, renderVars)
+}
+
+module.exports = { eta_render }
