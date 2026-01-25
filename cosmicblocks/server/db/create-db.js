@@ -5,6 +5,9 @@ function createTheDBTables(db) {
 	
 	const authQueries = userAuthQueries()
 	db.exec(authQueries.table)
+	
+	// set journal_mode to write ahead logging.
+	db.exec('PRAGMA journal_mode=WAL')
 }
 
 function userQueries() {
