@@ -1,17 +1,24 @@
 function createTheDBTables(db) {
-	const userQueries = userQueries()
-	db.exec(userQueries.table)
-	db.exec(userQueries.index1)
+	const {
+		user_table,
+		user_index1,
+		userpassauth_table,
+		pragma_wal,
+	} = getCreationQueries()
 	
-	const authQueries = userAuthQueries()
-	db.exec(authQueries.table)
+	
+	db.exec(user_table)
+	db.exec(user_index1)
+	
+	db.exec(userpassauth_table)
 	
 	// set journal_mode to write ahead logging.
-	db.exec('PRAGMA journal_mode=WAL')
+	db.exec(pragma_wal)
 }
 
-function userQueries() {
-	const table = /*sql*/`
+function getCreationQueries() {
+	// 1. table user
+	const user_table = /*sql*/`
 	CREATE TABLE IF NOT EXISTS user (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT,
@@ -21,33 +28,42 @@ function userQueries() {
 		losses INTEGER,
 		elo INTEGER,
 		color TEXT,
-		gamesPlayed INTEGER,
+		games_played INTEGER,
 		
 		forfeits INTEGER,
-		avgMoveCount INTEGER,
+		avg_move_count INTEGER,
 		connections INTEGER,
-		timePlayed INTEGER,
+		time_played INTEGER,
 		last_action TEXT NOT NULL DEFAULT current_timestamp
 	)`
 	
-	const index1 = `CREATE INDEX idx__user__username ON user (username)`
+	const user_index1 = `CREATE INDEX idx__user__username ON user (username)`
 	
-	return {table, index1}
-}
-
-function userAuthQueries() {
-	const table = /*sql*/`
+	// 2. table userpassauth
+	const userpassauth_table = /*sql*/`
 	CREATE TABLE IF NOT EXISTS userpassauth (
 		userid INTEGER PRIMARY KEY,
 		password TEXT NOT NULL
 	)`
 	
-	return {table}
+	
+	// 3. pragma wal
+	const pragma_wal = `PRAGMA journal_mode=WAL`
+	
+	return {
+		user_table,
+		user_index1,
+		userpassauth_table,
+		pragma_wal
+	}
+	
 }
 
 module.exports = {
 	createTheDBTables
 }
+
+
 
 
 /*

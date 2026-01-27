@@ -120,6 +120,7 @@ function handleConnection(socket) {
 		// 
 		const User = {}
 		console.log('@TODO: Find / restore a user...')
+		console.log(socket.request)
 		function findRestoreUser() {
 			
 			User.find({ twitterID: socket.request.user.twitterid }, function (err, users){
