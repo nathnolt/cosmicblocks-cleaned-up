@@ -1,15 +1,22 @@
 const { getDB } = require('./get-db.js')
 const { assignColor } = require('../color-util.js')
 const {
+	// user
 	create_user_stmt,
 	get_user_by_name_stmt,
+	get_user_by_id_stmt,
+	update_user_color_stmt,
+	
+	// session
+	link_session_stmt,
+	get_userid_from_session_stmt,
 } = require('./statements.js')
 
 let db = getDB()
 
 // console.log('db', db)
 
-function createUser(username) {
+function db_createUser(username) {
 	
 	let stmtResult
 	const randomColor = assignColor()
@@ -21,14 +28,9 @@ function createUser(username) {
 			elo: startingElo,
 		})
 		
-		const createdUser = {
-			id: stmtResult.lastInsertRowid,
-			elo: startingElo,
-			username: username,
-			color: randomColor,
-		}
+		const userId = stmtResult.lastInsertRowid
 		
-		return {value: createdUser}
+		return {value: userId}
 	} catch(err) {
 		return {error: err}
 	}
@@ -52,23 +54,62 @@ function createUser(username) {
 	 */
 }
 
-function getUserByUsername(username) {
+function db_linkSessionToUserid(sessionValue, userid) {
+	link_session_stmt.run({
+		session: sessionValue,
+		userid: userid
+	})
+}
+function db_getUseridFromSession(sessionValue) {
+	const row = get_userid_from_session_stmt.get({
+		session: sessionValue
+	})
+	
+	if(row != undefined) {
+		return row.userid
+	}
+	return undefined
+}
+
+function db_getUserById(userid) {
+	return get_user_by_id_stmt.get({
+		id: userid
+	})
+}
+
+function db_updateColor(userid, color) {
+	update_user_color_stmt.run({
+		id: userid,
+		color: color
+	})
+}
+
+function db_getUserByUsername(username) {
 	return get_user_by_name_stmt.get({
 		username: username
 	})
 }
 
-function validateUser() {
-	
+function db_validateUser() {
+	console.log('@TODO: implement validateUser')
 }
 
-function updateUserWithGameResults() {
-	
+function db_updateUserWithGameResults() {
+	console.log('@TODO: implement updateUserWithGameResults')
 }
 
 module.exports = {
-	createUser,
-	getUserByUsername,
-	validateUser,
-	updateUserWithGameResults,
+	// user
+	db_createUser,
+	db_getUserByUsername,
+	db_getUserById,
+	db_updateColor,
+	
+	// session
+	db_linkSessionToUserid,
+	db_getUseridFromSession,
+	
+	// other stuff
+	db_validateUser,
+	db_updateUserWithGameResults,
 }

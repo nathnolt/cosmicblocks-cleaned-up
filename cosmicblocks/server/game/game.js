@@ -1,5 +1,16 @@
 var SocketIO = require('socket.io')
-var crypto = require('crypto');
+var crypto = require('crypto')
+
+const {
+	getSessionValue
+} = require('../cookie/session.js')
+
+const {
+	// session
+	db_getUseridFromSession,
+	db_getUserById,
+	db_updateColor,
+} = require('../db/db.js')
 
 const {
 	hslToHex,
@@ -25,8 +36,8 @@ const { saveData } = require('../settings.js')
 //   ****  ****   *****   ***   ** **  //
 
 // server variables
-var userData = {}; // socket id is the key, contains username, wins, losses, draws, room.
-var gameData = {}; // board data, creator, title, players, timer, timelimit, timevalue,
+var userData = {} // socket id is the key, contains username, wins, losses, draws, room.
+var gameData = {} // board data, creator, title, players, timer, timelimit, timevalue,
 
 const emptyColor = '#d5ccbd'; // try to remove this...
 
@@ -37,29 +48,6 @@ function startIO(server) {
 	// socket.io is used for having a realtime application.
 	// all of the game-related stuff is passed between client and server via socket.io.
 	io = SocketIO(server);
-	{
-		// const sessionMiddleware = expressSession({
-		// 	secret: "changeit",
-		// 	resave: true,
-		// 	saveUninitialized: true,
-		// })
-		
-		// @TODO check if this will work.
-		// const wrap = middleware => (socket, next) => middleware(socket.request, {}, next)
-		// io.use(wrap(sessionMiddleware))
-		// io.use(wrap(passport.initialize()))
-		// io.use(wrap(passport.session()))
-		
-		io.use((socket, next) => {
-			//console.log('yes', socket.request)
-			next()
-			// if (socket.request.user) {
-			// 	next();
-			// } else {
-			// 	next(new Error('unauthorized'))
-			// }
-		});
-	}
 	
 	// New Connection!
 	io.on('connection', handleConnection)
@@ -69,130 +57,55 @@ function startIO(server) {
 // 
 function handleConnection(socket) {
 	console.log('new connection')
-	// console.log('connection', socket)
 	
-	// we can use this maybe? idk.
-	const session = socket.request.session;
-	
-	var randomHexColor = hslToHex(Math.trunc(Math.random() * 360), 100, 50)
-	var duplicate = false;
-	userData[socket.id] = {
-		elo: 100,
-		username: 'username ' + global.count++,
-		// username: socket.request.user.displayName + ' (g)',
-		room: false,
-		gamesPlayed: 0,
-		color: randomHexColor,
-		// ghost:true
-		ghost: false,
+	const sessionValue = getSessionValue(socket.request)
+	if(sessionValue == undefined) {
+		return
+	}
+	const userId = db_getUseridFromSession(sessionValue)
+	if(userId == undefined) {
+		return
 	}
 	
-	user_welcome(socket);
-	
+	console.log('@TODO: do something to implement ghosts.')
 	// 
 	// @TODO: The original codebase has a ghost version for users, 
 	// so that when you open another tab with ghost view, you can do stuff also.
 	// maybe we want this?
 	// 
+	const isGhost = false
 	
-	// for (key in userData) {
-	// 	if (userData[key].twitterid == socket.request.user.twitterid) {
-	// 		duplicate = true;
-	// 		console.log('dupe found in userData: ' + userData[key].username);
-	// 		// userData keeps the socket ids in memory.
-	// 		// so if it already finds a matching twitterID then it knows
-	// 		// that you already have it open in another tab or w/e
-	// 	}
-	// }
+	const user = db_getUserById(userId)
 	
-	// if we are recording stats, increment connections.
-	// if (saveData) {
-	console.log('@TODO handle database stuffs')
-	if (saveData) {
-		// @TODO change this into new DB format
-		// debugger
+	console.log('Set the user on the socket.')
+	
+	userData[socket.id] = {
+		// twitterid: socket.request.user.twitterid,
+		id: user.id,
+		username: user.username,
+		room: false,
+		color: user.color,
+		gamesPlayed: user.games_played,
+		timePlayed: user.time_played,
+		wins: user.wins,
+		draws: user.draws,
+		losses: user.losses,
 		
-		// So, the intent of the original code: we had a twitter handle, that was put on the socket,
-		// and using this code, we restored a user with a matching twitterID.
-		// 
-		// But as we removed this code, we don't have any authentication yet.
-		// so ideally, we handle authentication in a different way somehow.
-		// 
-		const User = {}
-		console.log('@TODO: Find / restore a user...')
-		console.log(socket.request)
-		function findRestoreUser() {
-			
-			User.find({ twitterID: socket.request.user.twitterid }, function (err, users){
-				if (err) throw err;
-				if (users.length === 0) {
-					// no user, so we must create it.
-					var passedColor = assignColor();
-					userData[socket.id] = {
-						twitterid: socket.request.user.twitterid,
-						username: socket.request.user.displayName,
-						room: false,
-						color: passedColor,
-						gamesPlayed: 0,
-						timePlayed: 0,
-						wins: 0,
-						draws: 0,
-						losses: 0,
-						remainingRerolls: 0,
-						elo: -99999,
-						ghost: false
-					};
-					
-					User.create({ 
-						displayName: encodeURI(socket.request.user.displayName), 
-						wins: 0,
-						draws: 0,
-						losses: 0,
-						elo: -99999,
-						color: passedColor,
-						twitterID: socket.request.user.twitterid,
-						gamesPlayed: 0,
-						twitterHandle: socket.request.user.username,
-						forfeits: 0,
-						avgMoveCount: 0,
-						connections: 1,
-						timePlayed: 0
-					}, function(err) {
-						if (err) throw err;
-					});
-					console.log ('@' + socket.request.user.username + ' created.');
-				} else {
-					users[0].connections++;
-					userData[socket.id] = {
-						twitterid: socket.request.user.twitterid,
-						username: socket.request.user.displayName,
-						room: false,
-						color: users[0].color,
-						gamesPlayed: users[0].gamesPlayed,
-						timePlayed: users[0].timePlayed,
-						wins: users[0].wins,
-						draws: users[0].draws,
-						losses: users[0].losses,
-						remainingRerolls: 0,
-						elo: users[0].elo,
-						ghost: false
-					};
-						
-					users[0].save(function (err) {
-						if (err) throw err;
-					});
-				}
-				user_welcome(socket);
-			});
-			
-		}
+		// I'm not sure about why I would limit this?
+		remainingRerolls: 99999,
 		
+		elo: user.elo,
+		
+		// @TODO handle this
+		ghost: isGhost
 	}
+	user_welcome(socket)
 	
 	socket.on('error', function (err) { 
-		console.error(err.stack);
+		console.error(err.stack)
 		socket.emit('log', '<span class="redMsg">socket error</span>')
-	});	
+	});
+	
 	socket.on('disconnect', function(){ 
 		console.log('userdata', userData)
 		console.log('socket_id', socket.id)
@@ -206,6 +119,7 @@ function handleConnection(socket) {
 		}
 		delete userData[socket.id];
 	});
+	
 /*	socket.on('name chosen', function (name) { 
 		userData[socket.id].username = name;
 		userData[socket.id].color = assignColor();
@@ -288,27 +202,19 @@ function handleConnection(socket) {
 		}
 	});
 	function newColor() {
-		userData[socket.id].color = assignColor();
+		const newColor = assignColor()
+		userData[socket.id].color = newColor;
 		var room = userData[socket.id].room;
 		io.to(room).emit('log', '<span style="color: ' + userData[socket.id].color + ';"><b>' + userData[socket.id].username + '</b> has a new color.</span>');
 		socket.emit('update lobby welcome name color', userData[socket.id].color);
 		
 		if (saveData) {
-			db.sync(function(err) {
-				if (err) throw err;
-				User.find({ twitterID: userData[socket.id].twitterid }, function (err, users){
-					if (err) throw err;
-					if (users.length === 0) {
-						console.log (userData[winner].username + ' not found in  newColor().');
-					} else {
-						users[0].color = userData[socket.id].color;
-						users[0].save(function (err) {
-							if (err) throw err;
-							updateLobby(); // render lobby cause leaderboard name color.. wow maybe I need a better way of coding this.
-						});
-					}
-				});
-			});
+			
+			console.log('@TODO, set the color.')
+			const user = userData[socket.id]
+			db_updateColor(user.id, newColor)
+			updateLobby() // render lobby cause leaderboard name color.. wow maybe I need a better way of coding this.
+			
 		}
 
 		socket.emit('update lobby name color', userData[socket.id].color);

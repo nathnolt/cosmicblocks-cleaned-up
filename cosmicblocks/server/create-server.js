@@ -1,64 +1,20 @@
-const Fastify = require('fastify')
-const fastifySession = require('@fastify/session')
-const fastifyCookie = require('@fastify/cookie')
-const fastifyFormbody = require('@fastify/formbody')
-const FastifyStatic = require('@fastify/static')
-const { getCookieSignerSecret } = require('./util.js')
-
-
-const http = require('http')
-const path = require('path')
+const { port } = require('./settings.js')
+const { serve } = require('@hono/node-server')
+const { Hono } = require('hono')
 
 const { startIO } = require('./game/game.js')
-const { port } = require('./settings.js')
 
-// 3. server stuff
-let server
-function serverFactory(handler, opts) {
-	server = http.createServer(function(req, res) {
-		handler(req, res)
-	})
-	
-	return server
-}
+const app = new Hono()
 
-const fastify = Fastify({
-	//logger: true,
-	serverFactory: serverFactory
+const server = serve({
+  fetch: app.fetch,
+  port: port,
 })
 
-fastify.register(fastifyCookie)
-fastify.register(fastifySession, {
-	secret: getCookieSignerSecret(),
-	cookie: {
-		secure: 'auto',
-	}
-})
-fastify.register(fastifyFormbody)
-
-// register plugins on fastify
-const clientPath = path.join(__dirname, '../client')
-fastify.register(FastifyStatic, {
-  root: clientPath,
-  prefix: '/',
-  // prefix: '/public/', // optional: default '/'
-  // constraints: { host: 'example.com' } // optional: default {}
-})
-
-
-
-
-// start the server
-fastify.ready(function() {
-	server.listen({port: port})
-	console.log("Started server on port " + port)
-})
-
-
-
+console.log('running on port ' + port)
 
 startIO(server)
 
 module.exports = {
-	fastify
+	app
 }

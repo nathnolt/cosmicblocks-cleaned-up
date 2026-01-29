@@ -1,12 +1,15 @@
 function createTheDBTables(db) {
 	const {
+		session_table,
+		session_index1,
 		user_table,
 		user_index1,
 		userpassauth_table,
 		pragma_wal,
 	} = getCreationQueries()
 	
-	
+	db.exec(session_table)
+	db.exec(session_index1)
 	db.exec(user_table)
 	db.exec(user_index1)
 	
@@ -17,7 +20,17 @@ function createTheDBTables(db) {
 }
 
 function getCreationQueries() {
-	// 1. table user
+	// 1. table session
+	const session_table = /*sql*/`
+	CREATE TABLE IF NOT EXISTS session (
+		session TEXT PRIMARY KEY,
+		userid INTEGER,
+		created TEXT NOT NULL DEFAULT current_timestamp
+	)
+	`
+	const session_index1 = `CREATE INDEX idx__session__userid ON session (userid)`
+	
+	// 2. Table user
 	const user_table = /*sql*/`
 	CREATE TABLE IF NOT EXISTS user (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +52,7 @@ function getCreationQueries() {
 	
 	const user_index1 = `CREATE INDEX idx__user__username ON user (username)`
 	
-	// 2. table userpassauth
+	// 3. table userpassauth
 	const userpassauth_table = /*sql*/`
 	CREATE TABLE IF NOT EXISTS userpassauth (
 		userid INTEGER PRIMARY KEY,
@@ -51,6 +64,8 @@ function getCreationQueries() {
 	const pragma_wal = `PRAGMA journal_mode=WAL`
 	
 	return {
+		session_table,
+		session_index1,
 		user_table,
 		user_index1,
 		userpassauth_table,

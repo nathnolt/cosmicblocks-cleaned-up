@@ -1,14 +1,72 @@
-<% it.title = 'Set name' %>
+<% it.title = 'Home' %>
 <% layout("./base.eta") %>
 
 
-<h1>Choose a user name</h1>
-<form method="post">
+<h1>COSMIC BLOCKS | Home</h1>
 
+<form class="home-form" method="post">
+	<h2>New User</h2>
 	<% if (it.error) { %>
 	<div class="error-line"><%= it.error %></div>
 	<% } %>
-	<label for="choose-name">User name</label>
-	<input type="text" id="choose-name" name="chosen-username">
-	<button class="buttonStyle inline-block">Choose</button>
+	<div class="home-form__content">
+		<input type="hidden" name="form" value="new-user">
+		<label for="new-user-username">User name</label>
+		<input type="text" id="new-user-username" name="username">
+		<button class="buttonStyle inline-block">Choose</button>
+	</div>
 </form>
+
+
+<form class="home-form" method="post">
+	<h2>Log In</h2>
+	<p>
+		Handle login with username / password or social media or something?
+		Note, I do not know how to log in with social media at all. I would have to learn how to do this.
+	</p>
+	<button>Username / password</button>
+	
+	<button>Social media</button>
+	<p>Google / whatever?</p>
+	
+	<!-- 
+	<div class="home-form__content">
+		<input type="hidden" name="form" value="log-in">
+		
+		<button>Username password</button>
+		
+		<div>
+			<label for="login-username">User name</label>
+			<input type="text" id="login-username" name="username">
+		</div>
+		
+		<div>
+			<label for="login-password">Password</label>
+			<input type="text" id="login-username" name="login-password">
+		</div>
+	</div>
+	-->
+</form>
+
+<style>
+.home-form {
+	display: inline-block;
+	vertical-align: top;
+	border: 1px solid #888;
+	background: black;
+	color: white;
+	border-radius: 8px;
+	margin: .25rem;
+}
+.home-form h2 {
+	color:white;
+	margin: 0;
+	border-bottom: 1px solid #888;
+	border-radius: 8px 8px 0 0;
+	padding: .25rem .5rem;
+	text-align: center;
+}
+.home-form__content {
+	padding: .5rem;
+}
+</style>
