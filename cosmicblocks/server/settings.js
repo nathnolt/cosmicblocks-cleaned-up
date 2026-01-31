@@ -22,5 +22,9 @@ module.exports = {
 		
 		// age in milliseconds
 		maxAge: 1 * month
-	}
+	},
+	
+	adminUsernames: [
+		'nathan2'
+	],
 }

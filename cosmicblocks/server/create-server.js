@@ -2,7 +2,7 @@ const { port } = require('./settings.js')
 const { serve } = require('@hono/node-server')
 const { Hono } = require('hono')
 
-const { startIO } = require('./game/game.js')
+const { startIO } = require('./game/socket.js')
 
 const app = new Hono()
 

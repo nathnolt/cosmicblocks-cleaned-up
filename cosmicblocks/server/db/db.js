@@ -1,18 +1,22 @@
-const { getDB } = require('./get-db.js')
+// const { getDB } = require('./get-db.js')
 const { assignColor } = require('../color-util.js')
 const {
 	// user
 	create_user_stmt,
 	get_user_by_name_stmt,
 	get_user_by_id_stmt,
+	get_leader_data_stmt,
+	
+	// user update
 	update_user_color_stmt,
+	update_last_action_stmt,
 	
 	// session
 	link_session_stmt,
 	get_userid_from_session_stmt,
 } = require('./statements.js')
 
-let db = getDB()
+// let db = getDB()
 
 // console.log('db', db)
 
@@ -55,10 +59,15 @@ function db_createUser(username) {
 }
 
 function db_linkSessionToUserid(sessionValue, userid) {
-	link_session_stmt.run({
-		session: sessionValue,
-		userid: userid
-	})
+	try {
+		link_session_stmt.run({
+			session: sessionValue,
+			userid: userid
+		})
+	} catch(err) {
+		console.error(err)
+	}
+	
 }
 function db_getUseridFromSession(sessionValue) {
 	const row = get_userid_from_session_stmt.get({
@@ -77,12 +86,6 @@ function db_getUserById(userid) {
 	})
 }
 
-function db_updateColor(userid, color) {
-	update_user_color_stmt.run({
-		id: userid,
-		color: color
-	})
-}
 
 function db_getUserByUsername(username) {
 	return get_user_by_name_stmt.get({
@@ -90,6 +93,33 @@ function db_getUserByUsername(username) {
 	})
 }
 
+function db_getUsersSortedByElo() {
+	return get_leader_data_stmt.all()
+}
+
+// user update
+function db_updateColor(userid, color) {
+	try {	
+		update_user_color_stmt.run({
+			id: userid,
+			color: color
+		})
+	} catch(err) {
+		console.error(err)
+	}
+}
+
+function db_updateLastAction(userid) {
+	try {
+		update_last_action_stmt.run({id:userid})
+	} catch(err) {
+		console.error(err)
+	}
+	
+}
+
+
+// other stuff
 function db_validateUser() {
 	console.log('@TODO: implement validateUser')
 }
@@ -103,7 +133,11 @@ module.exports = {
 	db_createUser,
 	db_getUserByUsername,
 	db_getUserById,
+	db_getUsersSortedByElo,
+	
+	// user update
 	db_updateColor,
+	db_updateLastAction,
 	
 	// session
 	db_linkSessionToUserid,

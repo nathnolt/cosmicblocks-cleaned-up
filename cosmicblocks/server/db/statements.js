@@ -7,6 +7,9 @@
 const { getDB } = require('./get-db.js')
 let db = getDB()
 
+// Define this as a little string so we can add this
+const sla = /*sql*/`, last_action = current_timestamp`
+
 const create_user_stmt = db.prepare(/*sql */`
 INSERT INTO user (
 	username,
@@ -44,11 +47,19 @@ const get_user_by_id_stmt = db.prepare(
 	/*sql*/`SELECT * FROM user WHERE id = :id`
 )
 
+const get_leader_data_stmt = db.prepare(
+	/*sql*/`SELECT * FROM user ORDER BY elo DESC LIMIT 100`
+)
+
 
 // update functions
 const update_user_color_stmt = db.prepare(
-	/*sql*/`UPDATE user SET color = :color WHERE id = :id`
+	/*sql*/`UPDATE user SET color = :color ${sla} WHERE id = :id`
 )
+const update_last_action_stmt = db.prepare(
+	/*sql*/`UPDATE user SET last_action = current_timestamp WHERE id = :id`
+)
+
 
 
 // session stuff
@@ -60,13 +71,18 @@ const get_userid_from_session_stmt = db.prepare(
 )
 
 module.exports = {
-	// User
+	// user
 	create_user_stmt,
 	get_user_by_name_stmt,
 	get_user_by_id_stmt,
-	update_user_color_stmt,
+	get_leader_data_stmt,
 	
-	// Session
+	// user update
+	update_user_color_stmt,
+	update_last_action_stmt,
+	
+	
+	// session
 	link_session_stmt,
 	get_userid_from_session_stmt,
 }
