@@ -31,7 +31,7 @@ const {
 	// hexColorDelta,
 	// increase_brightness,
 	mix
-} = require('../../color-util.js')
+} = require('../../util/color.js')
 
 const {
 	random_inclusive_int,

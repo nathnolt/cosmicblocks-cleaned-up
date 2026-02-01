@@ -1,5 +1,5 @@
 // const { getDB } = require('./get-db.js')
-const { assignColor } = require('../color-util.js')
+const { assignColor } = require('../util/color.js')
 const {
 	// user
 	create_user_stmt,

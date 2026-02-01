@@ -1,5 +1,6 @@
 const {
-	adminUsernames
+	adminUsernames,
+	saveData
 } = require('../settings.js')
 
 const {
@@ -7,6 +8,14 @@ const {
 	redMsg,
 	htmlEntities,
 } = require('../util/html.js')
+
+const {
+	assignColor
+} = require('../util/color.js')
+
+const {
+	db_updateColor
+} = require('../db/db.js')
 
 const {
 	userData,
@@ -95,6 +104,7 @@ function socket_sendChatMessage(chatMessage) {
 }
 
 function socket_attemptColorReroll() {
+	const socket = this
 	if (userData[socket.id].remainingRerolls > 0) {
 		userData[socket.id].remainingRerolls--;
 		updateUserColor(socket);

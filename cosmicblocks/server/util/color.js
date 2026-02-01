@@ -1,6 +1,6 @@
 const {
 	random_inclusive_int,
-} = require('./util/util.js')
+} = require('./util.js')
 
 // 
 // Putting small requires flattened out here, 
