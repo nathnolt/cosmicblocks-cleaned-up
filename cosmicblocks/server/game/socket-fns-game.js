@@ -22,7 +22,7 @@ const {
 	wipePossession,
 	get_linearBoardArrayPos_from_xyPos,
 	checkForPlayerExit,
-	getColor,
+	getBoardCellColor,
 	updateBlock,
 	gameOver,
 } = require('./gameplay/gameplay.js')
@@ -157,16 +157,16 @@ function socket_practiceMode() {
 	const socket = this
 	if (userData[socket.id].room !== 'lobby') {
 		socket.emit('log', redMsg('cannot create practice room unless in lobby.'));
-	} else {
-		const gameID = getGameID()
-		gameData[gameID] = getEmptyGameDataObject(socket, 'practice')
-		setupgame_practiceMode(gameID)
-		
-		//socket.broadcast.to('lobby').emit('log', '<span style="color: ' + userData[socket.id].color + '";>' + userData[socket.id].username + '</span> created a game.');
-		socket.broadcast.to('lobby').emit('log', dimMsg(userData[socket.id].username + ' created a practice room.'));
-		setupGame(socket, gameID);
-		sub_updateLobby();
+		return
 	}
+	
+	const gameID = getGameID()
+	gameData[gameID] = getEmptyGameDataObject(socket, 'practice')
+	setupgame_practiceMode(gameID)
+	
+	socket.broadcast.to('lobby').emit('log', dimMsg(userData[socket.id].username + ' created a practice room.'));
+	setupGame(socket, gameID);
+	sub_updateLobby();
 }
 
 function socket_newGame(special) {
@@ -174,44 +174,45 @@ function socket_newGame(special) {
 	
 	if (userData[socket.id].room !== 'lobby') {
 		socket.emit('log', redMsg('cannot create new game unless in lobby.'))
-	} else {
-		if (userData[socket.id].ghost) {
-			socket.emit('log', redMsg('ghost cannot create game.'))
-		} else {
-			const gameID = getGameID()
-			gameData[gameID] = getEmptyGameDataObject(socket, 'game')
-			
-			// the way I set up games right now, has the client pass in a special word "random" to determine what kind of game it should be 
-			// (in this case, the only two options are standard and random.
-			//
-			// standard (or exMode) here, sets up a board with no real terrain, in a specific configuration.
-			// it includes 3 mines, 1 reclaim, a standardized sort of block loadout for each player.
-			//
-			//random mode gives randomized terrain, start positions, and blocklist, within some limitations.
-			//rematches in random mode will not shuffle the board, so a new game has to be created for a new board.
-			//
-			// the issue is that...
-			// there should be only one new game button
-			// which leads to a screen DIFFERENT from how it is now,
-			// a screen with options and settings, a game setup page
-			if (special !== 'random') {
-				// now with mines and reclaim!
-				setupgame_exMode(gameID)
-			} else {
-				// random board;
-				setupgame_randomMode(gameID)
-			}
-			
-			
-			// I used to use this for connect but I'm using it for new game now.
-			io.emit('connect audio'); 
-			io.emit('log', dimMsg(userData[socket.id].username + ' created a game.'));
-			
-			
-			setupGame(socket, gameID);
-			sub_updateLobby();
-		}
+		return
 	}
+	
+	if (userData[socket.id].ghost) {
+		socket.emit('log', redMsg('ghost cannot create game.'))
+		return
+	}
+	
+	const gameID = getGameID()
+	gameData[gameID] = getEmptyGameDataObject(socket, 'game')
+	
+	// the way I set up games right now, has the client pass in a special word "random" to 
+	// determine what kind of game it should be 
+	// (in this case, the only two options are standard and random.
+	//
+	// standard (or exMode) here, sets up a board with no real terrain, in a specific configuration.
+	// it includes 3 mines, 1 reclaim, a standardized sort of block loadout for each player.
+	//
+	//random mode gives randomized terrain, start positions, and blocklist, within some limitations.
+	//rematches in random mode will not shuffle the board, so a new game has to be created for a new board.
+	//
+	// the issue is that...
+	// there should be only one new game button
+	// which leads to a screen DIFFERENT from how it is now,
+	// a screen with options and settings, a game setup page
+	if (special !== 'random') {
+		// now with mines and reclaim!
+		setupgame_exMode(gameID)
+	} else {
+		// random board;
+		setupgame_randomMode(gameID)
+	}
+	
+	// I used to use this for connect but I'm using it for new game now.
+	io.emit('connect audio')
+	io.emit('log', dimMsg(userData[socket.id].username + ' created a game.'))
+	
+	setupGame(socket, gameID)
+	sub_updateLobby()
 }
 
 function socket_joinGame(gameID, joinStatus) {
@@ -276,10 +277,10 @@ function socket_handleGameReady() {
 	}
 	
 	
-	
 	if (gameObj.gameType !== 'practice') {
 		io.to(gameID).emit('log', '<span style="color: '+ playerObj.color +';">' + user.username + ' is ready!</span>')
 	}
+	
 	playerObj.ready = true
 	
 	optionsDetection2(gameID, playerObj.baseX, playerObj.baseY, socket.id)
@@ -287,24 +288,32 @@ function socket_handleGameReady() {
 	//io.to(gameID).emit('add to heading', socket.id, user.username, playerObj.color, x)
 	io.to(gameID).emit('render board', gameObj.board)
 	
-	if (allPlayersReady(gameID)) {
-		// clone object... dangerous if the obj has methods or date, etc. but it works here imo
+	if(allPlayersReady(gameID)) {
 		gameObj.initialBoard = deepClone(gameObj.board)
 		startGame(gameID)
 	}
 	
 }
 
-// executed when you press unready
+// Executed when you press unready
 function socket_handleGameUnready() {
 	const socket = this
-	var gameID = userData[socket.id].room;
-	if ((typeof gameData[gameID] !== 'undefined') && (typeof gameData[gameID].players[socket.id] !== 'undefined')) {
-		if (unready(gameID, socket.id)) {
-			io.to(gameID).emit('render board', gameData[gameID].board);
-		}
-	} else {
-		socket.emit('log', redMsg('undefined in <i>unready</i>'))
+	const gameID = userData[socket.id].room
+	
+	if(!gameExists(gameID)) {
+		log_invalidGame(socket)
+		return
+	}
+	
+	const gameObj = gameData[gameID]
+	
+	if(!socket_isPlayer_in_game(gameObj, socket)) {
+		log_notInGame(socket)
+		return
+	}
+	
+	if(unready(gameID, socket.id)) {
+		io.to(gameID).emit('render board', gameObj.board);
 	}
 }
 
@@ -855,22 +864,30 @@ function setPlayer(socket, gameID, playerID) {
 	
 }
 
-function unready (gameID, playerID) {
-	if (gameData[gameID].players[playerID].ready) {
-		io.to(gameID).emit('log', dimMsg(userData[playerID].username + ' isn\'t ready.'));
-		gameData[gameID].players[playerID].ready = false;
-		wipePossession(gameID, playerID); 
-		
-		var pos = get_linearBoardArrayPos_from_xyPos(gameID, gameData[gameID].players[playerID].baseX , gameData[gameID].players[playerID].baseY)
-		gameData[gameID].board[pos].possession.push(playerID); // ??
-		gameData[gameID].board[pos].possessionDisplayName = userData[playerID].username;
-		gameData[gameID].board[pos].color = gameData[gameID].players[playerID].color;
-		
-		//io.to(gameID).emit('remove from heading', playerID);
-		return true;
-	} else {
-		return false;
+
+
+
+function unready(gameID, playerID) {
+	const gameObj = gameData[gameID]
+	const playerObj = gameObj.players[playerID]
+	const username = userData[playerID].username
+	if(!playerObj.ready) {
+		return false
 	}
+	
+	io.to(gameID).emit('log', dimMsg(username + ' isn\'t ready.'))
+	playerObj.ready = false
+	
+	wipePossession(gameID, playerID)
+	
+	var pos = get_linearBoardArrayPos_from_xyPos(gameID, playerObj.baseX , playerObj.baseY)
+	gameObj.board[pos].possession.push(playerID) // ??
+	gameObj.board[pos].possessionDisplayName = username
+	gameObj.board[pos].color = gameData[gameID].players[playerID].color
+	
+	//io.to(gameID).emit('remove from heading', playerID)
+	return true
+	
 }
 
 
@@ -1164,7 +1181,7 @@ function wipeAndDetect(gameID) {
 			var y = gameData[gameID].players[playerID].baseY;
 			var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
 			gameData[gameID].board[pos].possession.push(playerID);
-			gameData[gameID].board[pos].color = getColor(gameID, gameData[gameID].board[pos].possession);
+			gameData[gameID].board[pos].color = getBoardCellColor(gameID, gameData[gameID].board[pos].possession);
 			optionsDetection2(gameID, x, y, playerID);
 		}
 	}
@@ -1178,7 +1195,7 @@ function wipeAndDetect(gameID) {
 			// along with the player color.
 			
 			for (playerID in gameData[gameID].board[i].possessionSpread) {
-				var passedColor = getColor(gameID, [playerID]);
+				var passedColor = getBoardCellColor(gameID, [playerID]);
 				var passedLayer = gameData[gameID].board[i].possessionSpread[playerID];	
 				gameData[gameID].board[i].possessionColorSpread = [{
 					color: passedColor,
@@ -1193,18 +1210,18 @@ function wipeAndDetect(gameID) {
 			var collection = [];
 			var players = [];
 			for (playerID in gameData[gameID].board[i].possessionSpread) {
-				var passedColor = getColor(gameID, [playerID]);
+				var passedColor = getBoardCellColor(gameID, [playerID]);
 				var passedLayer = gameData[gameID].board[i].possessionSpread[playerID];
 				collection.push({
 					color: passedColor,
 					layer: passedLayer
 				});
-				players.push(playerID); // push playerIDs into an array for use in getColor (for mixed colors)
+				players.push(playerID); // push playerIDs into an array for use in getBoardCellColor (for mixed colors)
 			}
 			if (collection[0].layer == collection[1].layer) {
 				// both player spread hit at the same time so just add the mixed color for that layer.
 				gameData[gameID].board[i].possessionColorSpread = [{
-					color: getColor(gameID, players),
+					color: getBoardCellColor(gameID, players),
 					layer: collection[0].layer
 				}];
 			} else if (collection[0].layer < collection[1].layer) {
@@ -1214,7 +1231,7 @@ function wipeAndDetect(gameID) {
 					layer: collection[0].layer
 				});
 				gameData[gameID].board[i].possessionColorSpread.push({
-					color: getColor(gameID, players),
+					color: getBoardCellColor(gameID, players),
 					layer: collection[1].layer
 				});
 			} else if (collection[0].layer > collection[1].layer) {
@@ -1224,7 +1241,7 @@ function wipeAndDetect(gameID) {
 					layer: collection[1].layer
 				});
 				gameData[gameID].board[i].possessionColorSpread.push({
-					color: getColor(gameID, players),
+					color: getBoardCellColor(gameID, players),
 					layer: collection[0].layer
 				});
 			}

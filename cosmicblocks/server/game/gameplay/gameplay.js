@@ -210,7 +210,8 @@ function optionsDetection2(gameID, x, y, playerID) {
 
 // 
 // Only used from optionsDetection2
-//
+// This function looks complicated.
+// It will get cleaned up eventually
 function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, iceDir) {
 	var collection = [];
 	var pos = get_linearBoardArrayPos_from_xyPos(gameID, x,y);
@@ -265,7 +266,7 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 				} else {
 					gameData[gameID].board[newPos].possessionDisplayName = userData[gameData[gameID].board[newPos].possession[0]].username;
 				}
-				gameData[gameID].board[newPos].color = getColor(gameID, gameData[gameID].board[newPos].possession);
+				gameData[gameID].board[newPos].color = getBoardCellColor(gameID, gameData[gameID].board[newPos].possession);
 			} else if (someType === 'knight' && newType === 'ice') {
 				// knights may not jump on ice.
 				run = false;
@@ -299,7 +300,7 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 	return collection;
 }
 
-function getColor(gameID, possession) {
+function getBoardCellColor(gameID, possession) {
 	// send a possession array here after splicing or adding to return the color the block should be.
 	
 	if (possession.length == 0) {
@@ -323,20 +324,35 @@ function getColor(gameID, possession) {
 }
 
 
+/** 
+* removes all possessions from the board of a certain socketID (user)
+*/
 function wipePossession(gameID, socketID) {
-	for (var i = 0; i < gameData[gameID].board.length; i++) {
-		for (var j = 0; j < gameData[gameID].board[i].possession.length; j++) {
-			if (gameData[gameID].board[i].possession[j] == socketID) {
-				gameData[gameID].board[i].possession.splice(j,1);
-				if (gameData[gameID].board[i].possession.length == 0) {
-					gameData[gameID].board[i].possessionDisplayName = false;
+	const gameObj = gameData[gameID]
+	
+	// loop through every cell (or tile) within the gameBoard
+	for(const tileObj of gameObj.board) {
+		// and for every cell:
+		// 1. go through the posessions
+		// 2. check if a tile is posessed by socketID
+		// 3. if it is, remove the posession
+		// 4. and set the displayname and color
+		for (var j = 0; j < tileObj.possession.length; j++) {
+			
+			if (tileObj.possession[j] == socketID) {
+				tileObj.possession.splice(j, 1)
+				
+				if (tileObj.possession.length == 0) {
+					tileObj.possessionDisplayName = false
 				} else {
 					// assuming only 1 name then
-					gameData[gameID].board[i].possessionDisplayName = userData[gameData[gameID].board[i].possession[0]].username;
+					tileObj.possessionDisplayName = userData[tileObj.possession[0]].username
 				}
-				gameData[gameID].board[i].color = getColor(gameID, gameData[gameID].board[i].possession);
+				
+				tileObj.color = getBoardCellColor(gameID, tileObj.possession)
 			}
 		}
+		
 	}
 }
 
@@ -644,7 +660,7 @@ module.exports = {
 	get_linearBoardArrayPos_from_xyPos,
 	optionsDetection2,
 	gameplay_setio,
-	getColor,
+	getBoardCellColor,
 	
 	wipePossession,
 	checkForPlayerExit,
