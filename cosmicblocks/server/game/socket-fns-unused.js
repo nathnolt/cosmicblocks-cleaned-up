@@ -94,11 +94,11 @@ function updateName(socketID, name) {
 		gameData[gameID].board[i].possession = 0;
 	}
 	if (gameData[gameID].player1 != false) {
-		var pos = get_pos(gameID, gameData[gameID].p1x, gameData[gameID].p1y);
+		var pos = get_linearBoardArrayPos_from_xyPos(gameID, gameData[gameID].p1x, gameData[gameID].p1y);
 		gameData[gameID].board[pos].possession = 1;
 	}
 	if (gameData[gameID].player2 != false) {
-		var pos = get_pos(gameID, gameData[gameID].p2x, gameData[gameID].p2y);
+		var pos = get_linearBoardArrayPos_from_xyPos(gameID, gameData[gameID].p2x, gameData[gameID].p2y);
 		gameData[gameID].board[pos].possession = 2;
 	}
 } */

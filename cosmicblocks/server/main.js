@@ -21,22 +21,16 @@ const { eta_render } = require('./templating.js')
 const {
 	db_createUser,
 	db_getUserByUsername,
-	
 	// session
 	db_linkSessionToUserid,
 	db_getUseridFromSession,
-	
-	validateUser,
-	updateUserWithGameResults,
 } = require('./db/db.js')
-
-
-
 
 
 // 4. define the routes
 app.get('/', handleRootRoute)
 app.post('/', handleRootRoute)
+
 function handleRootRoute(c) {
 	const {request, reply} = getRequestReply(c)
 	const sessionValue = getSetSessionValue(request, reply)
@@ -45,6 +39,8 @@ function handleRootRoute(c) {
 	console.log('userId', userId)
 	
 	if(userId == undefined) {
+		// @TODO: when we will add a login thingy here, this will need to become more complicated.
+		// So I think I want to split it out, within whatever function we will call here.
 		return setNameFlow(c, sessionValue)
 	} else {
 		return renderGameTemplate(c)

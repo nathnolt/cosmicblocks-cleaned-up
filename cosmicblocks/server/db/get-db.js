@@ -6,7 +6,7 @@ const { createTheDBTables } = require('./create-db')
 
 let db
 
-const DB_path = path.join(__dirname, 'main.db')
+const DB_path = path.join(__dirname, '../dynamic/main.db')
 
 // https://www.npmjs.com/package/better-sqlite3
 // https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/api.md

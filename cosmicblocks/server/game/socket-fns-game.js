@@ -1,5 +1,3 @@
-const crypto = require('crypto')
-
 const {
 	userData,
 	gameData
@@ -12,21 +10,27 @@ const {
 } = require('./subs.js')
 
 const {
-	exMode,
-	practiceMode,
-	randomMode
+	setupgame_exMode,
+	setupgame_practiceMode,
+	setupgame_randomMode
 } = require('./gameplay/game-modes.js')
 
 
 const {
+	getGameID,
 	optionsDetection2,
 	wipePossession,
-	get_pos,
+	get_linearBoardArrayPos_from_xyPos,
 	checkForPlayerExit,
 	getColor,
 	updateBlock,
 	gameOver,
 } = require('./gameplay/gameplay.js')
+
+const { 
+	redMsg,
+	dimMsg
+} = require('../util/util.js')
 
 let io
 
@@ -34,43 +38,127 @@ function socketGame_setIo(ioValue) {
 	io = ioValue
 }
 
+
+
+function getEmptyGameDataObject(socket, type) {
+	const gameObj = {
+		// who made the game?
+		creator: socket.id,
+		
+		// what's the name of the game?
+		title: null,
+		
+		// start with 1, up to 4 or maybe more later.
+		maxPlayers: null,
+		
+		// how many rounds were played?
+		totalGames: 0, 
+		
+		// @TODO: What is this?
+		remainingPlayers: false,
+		
+		// the board data, very important.
+		board: [], 
+		
+		// need to make this
+		// @TODO: is this used?
+		initialBoard: [], 
+		
+		// need to make this
+		moveList: [], 
+		
+		// default number
+		rows: 11, 
+		
+		// default number
+		cols: 20, 
+		
+		// player data in the game (key is socket.id)
+		players: {}, 
+		
+		// array of socket.ids
+		// this is for the spectators
+		specsList: [], 
+		
+		// number of turns
+		moveCount: 0, 
+		
+		// amount of seconds per turn. 'false' for no time limit.
+		timeLimit: false, 
+		
+		// figure out what this is for.
+		timerValue: null,
+		
+		// this will be a function later on.
+		gameTimer: false, 
+		
+		// figure out what this is for
+		gameType: null,
+		 
+		// true when finished calculating (W/D/L and rating)
+		ratingsCalculated: false, 
+		
+		// figure out what this is for. this is only set in the game case.
+		// noRematch: false,
+		
+		// 'open', 'inprogress', 'gameover'
+		gameState: 'open', 
+		
+		// what is this?
+		tempBlock: 'pass',
+		
+		// what is this?
+		blockList: {},
+		
+		// this is for when collisions occur?
+		collisionMode: { 
+			permanence: true
+		}
+	}
+	
+	
+	if(type == 'practice') {
+		gameObj.title = userData[socket.id].username + '\'s practice'
+		gameObj.maxPlayers = 1
+		
+		// timer
+		gameObj.timeLimit = false
+		gameObj.timerValue = false
+		
+		
+		gameObj.gameType = 'practice'
+		
+	} else 
+	if(type == 'game') {
+		gameObj.title = userData[socket.id].username + '\'s game'
+		gameObj.maxPlayers = 2
+		
+		// timer
+		gameObj.timeLimit = 30
+		gameObj.timerValue = 30
+		
+		
+		gameObj.gameType = 'new'
+		
+		gameObj.noRematch = false
+		
+	}
+	
+	return gameObj
+}
+
+
 function socket_practiceMode() {
 	const socket = this
 	if (userData[socket.id].room !== 'lobby') {
 		socket.emit('log', redMsg('cannot create practice room unless in lobby.'));
 	} else {
-		var gameID = 'game-' + crypto.randomBytes(8).toString('hex'); // randomly generate ID
-		gameData[gameID] = {
-			creator: socket.id, // who made the game?
-			title: userData[socket.id].username + '\'s practice', // what's the name of the game?
-			maxPlayers: 1, // start with 1, up to 4 or maybe more later.
-			totalGames: 0, // how many rounds were played?
-			remainingPlayers: false,
-			board: [], // the board data, very important.
-			initialBoard: [], // need to make this
-			moveList: [], // need to make this
-			rows: 11, // default number
-			cols: 20, // default number
-			players: {}, // player data in the game (key is socket.id)
-			specsList: [], // array of socket.ids
-			moveCount: 0, // number of turns
-			timeLimit: false, // default 1min. maybe use 'false' for no time limit.
-			timerValue: false,
-			gameTimer: false, // this will be a function later on.
-			gameType: 'practice', // dunno if needed rn
-			ratingsCalculated: false, // true when finished calculating (W/D/L and rating)
-			gameState: 'open', // 'open', 'inprogress', 'gameover'
-			tempBlock: 'pass',
-			blockList: {},
-			collisionMode: { 
-				permanence: true
-			}
-		};
-		
-		practiceMode(gameID);
+		const gameID = getGameID()
+		gameData[gameID] = getEmptyGameDataObject(socket, 'practice')
+		setupgame_practiceMode(gameID)
 		
 		//socket.broadcast.to('lobby').emit('log', '<span style="color: ' + userData[socket.id].color + '";>' + userData[socket.id].username + '</span> created a game.');
-		socket.broadcast.to('lobby').emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' created a practice room.</span>');
+		socket.broadcast.to('lobby').emit('log', dimMsg(userData[socket.id].username + ' created a practice room.'));
 		setupGame(socket, gameID);
 		sub_updateLobby();
 	}
@@ -80,63 +168,41 @@ function socket_newGame(special) {
 	const socket = this
 	
 	if (userData[socket.id].room !== 'lobby') {
-		socket.emit('log', '<span class="redMsg">cannot create new game unless in lobby.</span>');
+		socket.emit('log', redMsg('cannot create new game unless in lobby.'))
 	} else {
 		if (userData[socket.id].ghost) {
-			socket.emit('log', '<span class="redMsg">ghost cannot create game.</span>');
+			socket.emit('log', redMsg('ghost cannot create game.'))
 		} else {
-			var gameID = 'game-' + crypto.randomBytes(8).toString('hex'); // randomly generate ID
-			gameData[gameID] = {
-				creator: socket.id, // who made the game?
-				title: userData[socket.id].username + '\'s game', // what's the name of the game?
-				maxPlayers: 2, // start with 2, up to 4 or maybe more later.
-				totalGames: 0, // how many rounds were played?
-				remainingPlayers: false,
-				board: [], // the board data, very important.
-				initialBoard: [], // need to make this
-				moveList: [], // need to make this
-				rows: 11, // default number
-				cols: 20, // default number
-				players: {}, // player data in the game (key is socket.id)
-				specsList: [], // array of socket.ids
-				moveCount: 0, // number of turns
-				timeLimit: 30, // default 1min. maybe use 'false' for no time limit.
-				timerValue: 30,
-				gameTimer: false, // this will be a function later on.
-				gameType: 'new', // dunno if needed rn
-				ratingsCalculated: false, // true when finished calculating (W/D/L and rating)
-				noRematch: false,
-				gameState: 'open', // 'open', 'inprogress', 'gameover'
-				tempBlock: 'pass',
-				blockList: {},
-				collisionMode: { 
-					permanence: true
-				}
-			};
+			const gameID = getGameID()
+			gameData[gameID] = getEmptyGameDataObject(socket, 'game')
 			
-			console.log('gameData', gameData)
-			
-			// the way I set up games right now, has the client pass in a special word "random" to determine what kind of game it should be (in this case, the only two options are standard and random.
-			
-			//standard (or exMode) here, sets up a board with no real terrain, in a specific configuration.
+			// the way I set up games right now, has the client pass in a special word "random" to determine what kind of game it should be 
+			// (in this case, the only two options are standard and random.
+			//
+			// standard (or exMode) here, sets up a board with no real terrain, in a specific configuration.
 			// it includes 3 mines, 1 reclaim, a standardized sort of block loadout for each player.
-			
+			//
 			//random mode gives randomized terrain, start positions, and blocklist, within some limitations.
 			//rematches in random mode will not shuffle the board, so a new game has to be created for a new board.
-			
+			//
 			// the issue is that...
 			// there should be only one new game button
 			// which leads to a screen DIFFERENT from how it is now,
 			// a screen with options and settings, a game setup page
-			
 			if (special !== 'random') {
-				exMode(gameID); // now with mines and reclaim!
+				// now with mines and reclaim!
+				setupgame_exMode(gameID)
 			} else {
-				randomMode(gameID); // random board;
+				// random board;
+				setupgame_randomMode(gameID)
 			}
 			
-			io.emit('connect audio'); // I used to use this for connect but I'm using it for new game now.
-			io.emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' created a game.</span>');
+			
+			// I used to use this for connect but I'm using it for new game now.
+			io.emit('connect audio'); 
+			io.emit('log', dimMsg(userData[socket.id].username + ' created a game.'));
+			
+			
 			setupGame(socket, gameID);
 			sub_updateLobby();
 		}
@@ -207,7 +273,7 @@ function socket_handleGameUnready() {
 			io.to(gameID).emit('render board', gameData[gameID].board);
 		}
 	} else {
-		socket.emit('log', '<span class="redMsg">undefined in <i>unready</i></span>');
+		socket.emit('log', redMsg('undefined in <i>unready</i>'))
 	}
 }
 
@@ -274,7 +340,7 @@ function socket_attemptMove(x, y, blockType, moveCount) {
 		if ((youArePlaying(gameData[gameID].players, socket.id)) && (gameData[gameID].gameState == 'inprogress')) {
 		// if you are playing, and the game is in progress
 		
-			var pos = get_pos(gameID, x, y);
+			var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
 			// get move position for the board array
 			
 			try {
@@ -314,13 +380,13 @@ function socket_attemptMove(x, y, blockType, moveCount) {
 				}
 			} else {
 				// invalid move.
-				socket.emit('log', '<span class="redMsg">invalid move</span>')
+				socket.emit('log', redMsg('invalid move'))
 			}
 		} else {
-			socket.emit('log', '<span class="redMsg">spectator cannot make moves</span>');
+			socket.emit('log', redMsg('spectator cannot make moves'));
 		}
 	} else {
-		socket.emit('log', '<span class="redMsg">undefined game in <i>attempt move</i></span>');
+		socket.emit('log', redMsg('undefined game in <i>attempt move</i>'));
 	}
 }
 
@@ -331,15 +397,15 @@ function socket_exitGameToLobby() {
 	var gameID = userData[socket.id].room;
 	if (gameID !== 'lobby') {
 		socket.leave(gameID);
-		io.to('lobby').emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' joined lobby.');
+		io.to('lobby').emit('log', dimMsg(userData[socket.id].username + ' joined lobby.'));
 		socket.emit('log', '<div class="roomChange">joining lobby</div>', true);
 		socket.join('lobby');
 		userData[socket.id].room = 'lobby';
-		io.to(gameID).emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' left.</span>' );
+		io.to(gameID).emit('log', dimMsg(userData[socket.id].username + ' left.') );
 		checkForPlayerExit(gameID, socket);
 		sub_renderLobby(socket);
 	} else {
-		socket.emit('log', '<span class="redMsg">already in lobby!</span>');
+		socket.emit('log', redMsg('already in lobby!'));
 	}
 }
 
@@ -361,7 +427,7 @@ function socket_practiceGameReset() {
 				gameData[gameID].players[player].forfeit = false;
 			}
 			io.to(gameID).emit('setup rematch', gameData[gameID].blockList);
-			io.to(gameID).emit('log', '<span class="dimMsg">Reset.</span>');
+			io.to(gameID).emit('log', dimMsg('Reset.'));
 			io.to(gameID).emit('render board', gameData[gameID].board);
 			startGame(gameID);
 		}
@@ -393,7 +459,7 @@ function socket_yesRematch() {
 				}
 				if (numPlayers !== numYesRematch) {
 					socket.broadcast.to(gameID).emit('rematch offered');
-					io.to(gameID).emit('log', '<span class="dimMsg">'+ userData[socket.id].username +' offered a rematch.</span>');
+					io.to(gameID).emit('log', dimMsg(userData[socket.id].username +' offered a rematch.'));
 				} else {
 					// REMATCH INITIATED!!
 					gameData[gameID].board = JSON.parse(JSON.stringify(gameData[gameID].initialBoard));
@@ -464,7 +530,7 @@ function socket_yesRematch() {
 					*/
 					
 					io.to(gameID).emit('setup rematch', gameData[gameID].blockList, creatorElo, playerElo);
-					io.to(gameID).emit('log', '<span class="dimMsg">Rematch initiated</span>');
+					io.to(gameID).emit('log', dimMsg('Rematch initiated'));
 					if (iceBoard) {
 						io.to(gameID).emit('log', '<span class="coldWeather">Cold weather!</span>');
 					}
@@ -472,10 +538,10 @@ function socket_yesRematch() {
 					startGame(gameID);
 				}
 			} else {
-				socket.emit('log', '<span class="redMsg">No hacking!</span>');
+				socket.emit('log', redMsg('No hacking!'));
 			}
 		} else {
-			socket.emit('log', '<span class="redMsg">rematch not possible in <i>offer rematch</i>!</span>');
+			socket.emit('log', redMsg('rematch not possible in <i>offer rematch</i>!'));
 		}
 	}
 }
@@ -504,7 +570,7 @@ function socket_forfeit() {
 				gameOver(gameID);
 			}
 		} else {
-			socket.emit('log', '<span class="redMsg">spectator cannot forfeit</span>');	
+			socket.emit('log', redMsg('spectator cannot forfeit'));	
 		}
 	}
 }
@@ -522,14 +588,14 @@ function gameExists(socket, client, gameID) {
 			if (gameData[gameID].creator === socket.id) {
 				return true;
 			} else {
-				socket.emit('log', '<span class="redMsg">not the creator</span>');
+				socket.emit('log', redMsg('not the creator'));
 				return false;
 			}
 		} else {
 			return true;
 		}
 	} else {
-		socket.emit('log', '<span class="redMsg">not in a valid game</span>');
+		socket.emit('log', redMsg('not in a valid game'));
 		return false;
 	}
 }
@@ -545,98 +611,106 @@ function youArePlaying(players, socketID) {
 
 
 function setupGame(socket, gameID, passedStatus) {
-	if (typeof gameData[gameID] !== 'undefined') {
-		socket.leave('lobby');
-		if (passedStatus === 'spec') {
-			socket.emit('log', '<div class="roomChange">spectating game</div>', true);
-		} else {
-			if (gameData[gameID].creator == socket.id) {
-				socket.emit('log', '<div class="roomChange">creating game</div>', true);
-			} else {
-				socket.emit('log', '<div class="roomChange">joining game</div>', true);
-			}
-		}
-		
-		var joinStatus = 'spectator'; // by default you're a specatator
-		var displayBoard = gameData[gameID].board;
-		
-		if (passedStatus !== 'spec') {
-			if (gameData[gameID].gameState == 'open') {
-				
-				// if the game is open, check if there are vacant slots
-				var playerCount = Object.keys(gameData[gameID].players).length;
-				if (playerCount < gameData[gameID].maxPlayers) {
-					setPlayer(socket, gameID, socket.id);
-					
-					// check if this is the creator of the game
-					if (gameData[gameID].creator == socket.id) {
-						joinStatus = 'creator';
-					} else {
-						joinStatus = 'player';
-						var playerCount = Object.keys(gameData[gameID].players).length;
-						if (playerCount < gameData[gameID].maxPlayers) {
-							//gameData[gameID].gameState == 'full';
-						}
-					}
-				}
-			}
-			
-			// log
-			if (joinStatus !== 'creator') {
-				io.to('lobby').emit('log', '<span style="color:' + userData[socket.id].color + ';">' + userData[socket.id].username + '</span> joined ' + gameData[gameID].title + '.');
-			}
-		} else {
-			gameData[gameID].specsList.push(socket.id);
-			if (gameData[gameID].gameState == 'inprogress') {
-				// spec board.
-				displayBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
-				for (var i = 0; i < displayBoard.length; i++) {
-					if (displayBoard[i].type == 'mine') {
-						hiddenInformation(displayBoard[i]);
-					}
-				}
-			}
-		}
-		
-		var color = "#8474a4"
-		if (typeof gameData[gameID].players[socket.id] != 'undefined') {
-			color = gameData[gameID].players[socket.id].color;
-		}
-		joinMsg(joinStatus, color, userData[socket.id].username);
-		
-		function joinMsg ( joinStatus, color, username) {
-			io.to(gameID).emit('log', '<span style="color: ' + color + '">' + username + ' joined as ' +  joinStatus + '.</span>');
-			if (joinStatus !== 'spectator') {
-				io.to(gameID).emit('add to heading', socket.id, userData[socket.id].username, gameData[gameID].players[socket.id].color, gameData[gameID].players[socket.id].elo);
-				io.to(gameID).emit('render board', gameData[gameID].board);
-			}
-		}
-		
-		socket.join(gameID);
-		userData[socket.id].room = gameID;
-		
-		socket.emit('setup game', 
-			gameID,
-			joinStatus,
-			gameData[gameID].title,
-			gameData[gameID].rows, 
-			gameData[gameID].cols, 
-			displayBoard, 
-			gameData[gameID].players,
-			gameData[gameID].gameState,
-			gameData[gameID].blockList,
-			gameData[gameID].timeLimit,
-			gameData[gameID].collisionMode,
-			gameData[gameID].moveCount,
-			gameData[gameID].timerValue,
-			gameData[gameID].gameType
-		);
-		if (gameData[gameID].gameState == 'gameover') {
-			gameOver(gameID);
-		}
-		sub_updateLobby();
-		// io.to(gameID).emit('update user list', userList(gameID));
+	if(gameData[gameID] == null) {
+		return
 	}
+	
+	socket.leave('lobby');
+	
+	
+	if (passedStatus === 'spec') {
+		socket.emit('log', '<div class="roomChange">spectating game</div>', true);
+	} else {
+		if (gameData[gameID].creator == socket.id) {
+			socket.emit('log', '<div class="roomChange">creating game</div>', true);
+		} else {
+			socket.emit('log', '<div class="roomChange">joining game</div>', true);
+		}
+	}
+	
+	var joinStatus = 'spectator'; // by default you're a specatator
+	var displayBoard = gameData[gameID].board;
+	
+	if (passedStatus !== 'spec') {
+		if (gameData[gameID].gameState == 'open') {
+			
+			// if the game is open, check if there are vacant slots
+			var playerCount = Object.keys(gameData[gameID].players).length;
+			if (playerCount < gameData[gameID].maxPlayers) {
+				setPlayer(socket, gameID, socket.id);
+				
+				// check if this is the creator of the game
+				if (gameData[gameID].creator == socket.id) {
+					joinStatus = 'creator';
+				} else {
+					joinStatus = 'player';
+					var playerCount = Object.keys(gameData[gameID].players).length;
+					if (playerCount < gameData[gameID].maxPlayers) {
+						//gameData[gameID].gameState == 'full';
+					}
+				}
+			}
+		}
+		
+		// log
+		if (joinStatus !== 'creator') {
+			io.to('lobby').emit('log', '<span style="color:' + userData[socket.id].color + ';">' + userData[socket.id].username + '</span> joined ' + gameData[gameID].title + '.');
+		}
+	} else {
+		
+		// handle spectator join
+		gameData[gameID].specsList.push(socket.id);
+		if (gameData[gameID].gameState == 'inprogress') {
+			// spec board.
+			displayBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
+			for (var i = 0; i < displayBoard.length; i++) {
+				if (displayBoard[i].type == 'mine') {
+					hiddenInformation(displayBoard[i]);
+				}
+			}
+		}
+	}
+	
+	var color = "#8474a4"
+	if (typeof gameData[gameID].players[socket.id] != 'undefined') {
+		color = gameData[gameID].players[socket.id].color;
+	}
+	
+	const username = userData[socket.id].username
+	
+	io.to(gameID).emit('log', '<span style="color: ' + color + '">' + username + ' joined as ' +  joinStatus + '.</span>');
+	if (joinStatus !== 'spectator') {
+		io.to(gameID).emit('add to heading', socket.id, username, gameData[gameID].players[socket.id].color, gameData[gameID].players[socket.id].elo);
+		io.to(gameID).emit('render board', gameData[gameID].board);
+	}
+	
+	socket.join(gameID);
+	userData[socket.id].room = gameID;
+	
+	socket.emit('setup game', 
+		gameID,
+		joinStatus,
+		gameData[gameID].title,
+		gameData[gameID].rows, 
+		gameData[gameID].cols, 
+		displayBoard, 
+		gameData[gameID].players,
+		gameData[gameID].gameState,
+		gameData[gameID].blockList,
+		gameData[gameID].timeLimit,
+		gameData[gameID].collisionMode,
+		gameData[gameID].moveCount,
+		gameData[gameID].timerValue,
+		gameData[gameID].gameType
+	);
+	
+	if (gameData[gameID].gameState == 'gameover') {
+		gameOver(gameID);
+	}
+	
+	sub_updateLobby();
+	// io.to(gameID).emit('update user list', userList(gameID));
+
 }
 
 // function userList(gameID) {
@@ -730,11 +804,11 @@ function setPlayer(socket, gameID, playerID) {
 
 function unready (gameID, playerID) {
 	if (gameData[gameID].players[playerID].ready) {
-		io.to(gameID).emit('log', '<span class="dimMsg">' + userData[playerID].username + ' isn\'t ready.</span>');
+		io.to(gameID).emit('log', dimMsg(userData[playerID].username + ' isn\'t ready.'));
 		gameData[gameID].players[playerID].ready = false;
 		wipePossession(gameID, playerID); 
 		
-		var pos = get_pos(gameID, gameData[gameID].players[playerID].baseX , gameData[gameID].players[playerID].baseY)
+		var pos = get_linearBoardArrayPos_from_xyPos(gameID, gameData[gameID].players[playerID].baseX , gameData[gameID].players[playerID].baseY)
 		gameData[gameID].board[pos].possession.push(playerID); // ??
 		gameData[gameID].board[pos].possessionDisplayName = userData[playerID].username;
 		gameData[gameID].board[pos].color = gameData[gameID].players[playerID].color;
@@ -764,7 +838,7 @@ function startGame(gameID) {
 		}
 	}
 	
-	io.to(gameID).emit('log', '<span class="dimMsg">Turn <b>1</b></span>');
+	io.to(gameID).emit('log', dimMsg('Turn <b>1</b>'));
 	io.to(gameID).emit('all players ready', 
 		gameID, 
 		gameData[gameID].timeLimit,
@@ -781,46 +855,58 @@ function startGame(gameID) {
 
 
 function resetTimer(gameID) {
-// called when:
-// * a new game is started
-// * after each turn
-	if (typeof gameData[gameID] !== 'undefined') {
-		clearInterval(gameData[gameID].gameTimer); // stop ticking the timer.
-		gameData[gameID].timerValue = gameData[gameID].timeLimit; // set the timer to max value
-		
-		io.to(gameID).emit('update timer', gameData[gameID].timerValue, gameData[gameID].moveCount); // update timer
-		gameData[gameID].timerValue--; // tick it down
-		
-		gameData[gameID].gameTimer = setInterval( function () {
-			if (typeof gameData[gameID] === 'undefined') {
-				io.emit('log', '<span class="redMsg">gameID undefined in resetTimer() setInterval</span>');
-				//clearInterval(gameData[gameID].gameTimer); // hope this works. it doesnt.
-			} else {
-				if (gameData[gameID].timerValue == 0) {
-					// out of time!
-					gameData[gameID].timerValue = gameData[gameID].timeLimit; // reset the timer
-					performTurn(gameID, gameData[gameID].tempBlock, 'pass'); // next turn!
-				} else {
-					
-					// this is where it sends, every second, to the client, the updated time.
-					// this is really inefficient because there's latency and the timer ticks down irregularly.
-					// instead, when a new turn happens the client itself should have a timer tick down.
-					// when that timer hits 0 it locks it so you cannot move and waits for the server to send the command that it's time out.
-					/*
-					io.to(gameID).emit('update timer', gameData[gameID].timerValue, gameData[gameID].moveCount); // update timer
-					*/
-					
-					
-					gameData[gameID].timerValue--; // tick it down
-				}
-			}
-		}, 1000); // this causes it to tick once per second
-	} else {
-		io.emit('log', '<span class="redMsg">gameID undefined in resetTimer()</span>');
+	// called when:
+	// * a new game is started
+	// * after each turn
+	
+	if(gameData[gameID] == null) {
+		io.emit('log', redMsg('gameID undefined in resetTimer()'));
+		return
 	}
+	
+	// stop ticking the timer.
+	clearInterval(gameData[gameID].gameTimer)
+	
+	// set the timer to max value
+	gameData[gameID].timerValue = gameData[gameID].timeLimit
+	
+	// update timer
+	io.to(gameID).emit('update timer', gameData[gameID].timerValue, gameData[gameID].moveCount)
+	
+	// tick it down
+	gameData[gameID].timerValue--
+	
+	
+	function gameTickSecond() {
+		if (typeof gameData[gameID] === 'undefined') {
+			io.emit('log', redMsg('gameID undefined in resetTimer() setInterval'));
+			//clearInterval(gameData[gameID].gameTimer); // hope this works. it doesnt.
+		} else {
+			if (gameData[gameID].timerValue == 0) {
+				// out of time!
+				gameData[gameID].timerValue = gameData[gameID].timeLimit; // reset the timer
+				performTurn(gameID, gameData[gameID].tempBlock, 'pass'); // next turn!
+			} else {
+				
+				// this is where it sends, every second, to the client, the updated time.
+				// this is really inefficient because there's latency and the timer ticks down irregularly.
+				// instead, when a new turn happens the client itself should have a timer tick down.
+				// when that timer hits 0 it locks it so you cannot move and waits for the server to send the command that it's time out.
+				/*
+				io.to(gameID).emit('update timer', gameData[gameID].timerValue, gameData[gameID].moveCount); // update timer
+				*/
+				
+				
+				gameData[gameID].timerValue--; // tick it down
+			}
+		}
+	}
+	
+	// this causes it to tick once per second
+	gameData[gameID].gameTimer = setInterval(gameTickSecond, 1000)
 }
 
-function performTurn (gameID, tBlock, tBlock2) {
+function performTurn(gameID, tBlock, tBlock2) {
 	
 	// called when:
 	// * both players move
@@ -861,7 +947,7 @@ function performTurn (gameID, tBlock, tBlock2) {
 	
 	
 	function reclaim(type, x, y, origin) {
-		var pos = get_pos(gameID, x, y);
+		var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
 		var reclaimed = gameData[gameID].board[pos].type;
 		if (typeof gameData[gameID].players[origin].blockList[reclaimed] !== 'undefined') {
 			if (gameData[gameID].players[origin].blockList[reclaimed].ammo !== 'inf') {
@@ -924,7 +1010,7 @@ function performTurn (gameID, tBlock, tBlock2) {
 	// if game is not over:
 	if (gameData[gameID].gameState == 'inprogress') {
 		gameData[gameID].tempBlock = 'pass'; // reset the temp block to nothing (so if time runs out...)
-		io.to(gameID).emit('log', '<span class="dimMsg">Turn <b>' + (gameData[gameID].moveCount) + '</b></span>'	);
+		io.to(gameID).emit('log', dimMsg('Turn <b>' + (gameData[gameID].moveCount) + '</b>'))
 		
 		if (thatType == 'mine explosion' || thisType == 'mine explosion') {
 			io.to(gameID).emit('detonate'); // sfx;
@@ -960,6 +1046,8 @@ function performTurn (gameID, tBlock, tBlock2) {
 			
 			io.to(playersArray[0]).emit('new move', thisBoard, noMove, gameData[gameID].players[playersArray[0]].blockList);
 			io.to(playersArray[1]).emit('new move', thatBoard, noMove, gameData[gameID].players[playersArray[1]].blockList);
+			
+			// specslist is for the spectators
 			for (var i = 0; i < gameData[gameID].specsList.length; i++) {
 				io.to(gameData[gameID].specsList[i]).emit('new move', specBoard, noMove);
 			}
@@ -979,10 +1067,9 @@ function performTurn (gameID, tBlock, tBlock2) {
 
 function wipeAndDetect(gameID) {
 	
-	
 	function wipeCollisions(gameID) {
 		
-		// opposite of get_pos, takes the position in array and returns x/y coords.
+		// opposite of get_linearBoardArrayPos_from_xyPos, takes the position in array and returns x/y coords.
 		function get_coords(gameID, pos) {
 			var x = (pos % gameData[gameID].cols) + 1;
 			var y = ((pos - x + 1) / gameData[gameID].cols) + 1;
@@ -1018,11 +1105,11 @@ function wipeAndDetect(gameID) {
 	for (playerID in gameData[gameID].players) {
 		wipePossession(gameID, playerID);
 		if ((gameData[gameID].players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
-			io.to(gameID).emit('log', '<span class="dimMsg">not relighting forfeit/dc\'d player</span>');
+			io.to(gameID).emit('log', dimMsg('not relighting forfeit/dc\'d player'))
 		} else {
 			var x = gameData[gameID].players[playerID].baseX;
 			var y = gameData[gameID].players[playerID].baseY;
-			var pos = get_pos(gameID, x, y);
+			var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
 			gameData[gameID].board[pos].possession.push(playerID);
 			gameData[gameID].board[pos].color = getColor(gameID, gameData[gameID].board[pos].possession);
 			optionsDetection2(gameID, x, y, playerID);

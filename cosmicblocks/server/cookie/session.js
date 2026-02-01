@@ -7,7 +7,7 @@ const {
 
 const {
 	getCookieSignerSecret
-} = require('../util.js')
+} = require('../util/util.js')
 
 const session_key = 'sessionId'
 

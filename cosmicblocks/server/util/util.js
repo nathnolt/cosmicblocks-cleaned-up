@@ -19,6 +19,7 @@ async function passHash(plaintextPassword) {
 	const hashedPassword = await bcrypt.hash(plaintextPassword, bcryptSaltRounds)
 	return hashedPassword
 }
+
 async function passVerify(password, hash) {
 	const match = await bcrypt.compare(password, hash)
 	return match
@@ -26,7 +27,7 @@ async function passVerify(password, hash) {
 
 
 function getCookieSignerSecret() {
-	const FILE_PATH = path.join(__dirname, 'cookie-sign-secret.txt')
+	const FILE_PATH = path.join(__dirname, '../dynamic/cookie-sign-secret.txt')
 	
 	let secret
 	try {
@@ -43,31 +44,9 @@ function combineObjects() {
 	return Object.assign({}, ...arguments)
 }
 
-function htmlEntities(str) {
-	return (
-		String(str)
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-	)
-}
-
-function dimMsg(content) {
-	return `<span class="dimMsg">${content}</span>`
-}
-function redMsg(content, style) {
-	let styleStr = style ? ' style="' + style + '"' : ''
-	return `<span class="redMsg"${styleStr}>${content}</span>`
-}
-
-
 module.exports = {
 	random_inclusive_int,
 	passHash,
 	passVerify,
 	getCookieSignerSecret,
-	htmlEntities,
-	dimMsg,
-	redMsg,
 }

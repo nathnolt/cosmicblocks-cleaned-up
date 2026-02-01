@@ -56,7 +56,7 @@ const {
 const {
 	dimMsg,
 	redMsg,
-} = require('../util.js')
+} = require('../util/html.js')
 
 
 // @TODO: Split this file out further
@@ -90,7 +90,7 @@ function handleConnection(socket) {
 	socket.on('error', socket_error)
 	socket.on('disconnect', socket_disconnect)
 	
-	
+	// other functionality
 	socket.on('send chat message', socket_sendChatMessage)
 	socket.on('attempt color reroll', socket_attemptColorReroll)
 	
@@ -165,43 +165,41 @@ function setUserDataAndGreet(socket, userData) {
 			username: user.username + '(g)',
 			room: false,
 			color: ghostColor,
-			// gamesPlayed: user.games_played,
-			// timePlayed: user.time_played,
-			// wins: user.wins,
-			// draws: user.draws,
-			// losses: user.losses,
-			
-			// I'm not sure about why I would limit this?
-			// remainingRerolls: 99999,
-			// elo: user.elo,
 			ghost: true
 		}
 	}
+	
+	const username = userObject.username
+	const color = userObject.color
 	
 	// 4. put the object on userData
 	userData[socket.id] = userObject
 	
 	// 5. welcome the user
-	socket.emit('store id', socket.id, userData[socket.id].username, userData[socket.id].ghost)
+	socket.emit('store id', socket.id, username, isGhost)
 	
-	const connectedHTML = `<span style="color: ${userData[socket.id].color}"><b>${userData[socket.id].username}</b> connected.</span>` +
+	const connectedHTML = `<span style="color: ${color}"><b>${username}</b> connected.</span>` +
 	`<span style="float:right;" class="greenMsg">${Object.keys(userData).length} </span>`
 	io.emit('log', connectedHTML)
 	
 	if (saveData) {
 		socket.emit('log', '<b>Welcome to Cosmic Blocks!</b>');
-		socket.emit('log', 'Consider joining <a href="https://discord.gg/szpznUj" target="_blank">Narcissa\'s Castle</a>, where game discussion happens.');
+		
+		// Discord out of date.
+		// socket.emit('log', 'Consider joining <a href="https://discord.gg/szpznUj" target="_blank">Narcissa\'s Castle</a>, where game discussion happens.');
+		
 	} else {
-		socket.emit('log', '<b>Development mode</b>: game results and rating changes will <span class="redMsg">not</span> be saved.');
+		socket.emit('log', `<b>Development mode</b>: game results and rating changes will ${redMsg('not')} be saved.`);
 	}
 	
-	io.to('lobby').emit('log', dimMsg(`${userData[socket.id].username} joined lobby.`) )
-	socket.emit('make chat available', userData[socket.id].username)
+	io.to('lobby').emit('log', dimMsg(`${username} joined lobby.`) )
+	socket.emit('make chat available', username)
 	socket.emit('log', '<div class="roomChange">joining lobby</div>', true)
 	
-	socket.join('lobby') // joins the socket io room "lobby"
+	// joins the socket io room "lobby"
+	socket.join('lobby')
 	userData[socket.id].room = 'lobby'
-	sub_renderLobby(socket) // render lobby.
+	sub_renderLobby(socket)
 }
 
 

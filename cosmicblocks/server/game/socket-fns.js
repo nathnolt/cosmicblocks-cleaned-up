@@ -6,7 +6,7 @@ const {
 	dimMsg,
 	redMsg,
 	htmlEntities,
-} = require('../util.js')
+} = require('../util/html.js')
 
 const {
 	userData,

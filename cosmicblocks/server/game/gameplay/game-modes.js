@@ -10,6 +10,10 @@ const {
 	updateBlock
 } = require('./gameplay.js')
 
+const {
+	random_inclusive_int
+} = require('../../util/util.js')
+
 // GAME MODES
 function classicMode(gameID) {
 	gameData[gameID].gameType = 'classic';
@@ -88,7 +92,7 @@ function advancedMode(gameID) {
 	};
 }
 
-function exMode(gameID) {
+function setupgame_exMode(gameID) {
 	gameData[gameID].gameType = 'ex';
 	gameData[gameID].rows = 11;
 	gameData[gameID].cols = 21;
@@ -122,7 +126,7 @@ function exMode(gameID) {
 	};
 }
 
-function practiceMode(gameID) {
+function setupgame_practiceMode(gameID) {
 	gameData[gameID].gameType = 'practice';
 	gameData[gameID].rows = 11;
 	gameData[gameID].cols = 21;
@@ -156,13 +160,15 @@ function practiceMode(gameID) {
 	};
 }
 
-function randomMode(gameID) {
+function setupgame_randomMode(gameID) {
 	gameData[gameID].gameType = 'random';
 	var quadrant = (Math.floor(Math.random() * 2));
 	var p1x, p1y, p2x, p2y;
+	
 	function getRandomStartPos() {
-		return (2 + (Math.floor(Math.random() * 3)));
+		return random_inclusive_int(2, 4)
 	}
+	
 	p1x = 1 + getRandomStartPos();
 	p2x = gameData[gameID].cols - getRandomStartPos();
 	if (quadrant == 0) {
@@ -335,7 +341,7 @@ function initializeBoard(gameID, rows, cols) {
 
 
 module.exports = {
-	practiceMode,
-	exMode,
-	randomMode,
+	setupgame_practiceMode,
+	setupgame_exMode,
+	setupgame_randomMode,
 }

@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+
 const {
 	gameData,
 	userData
@@ -9,12 +11,19 @@ const {
 
 const {
 	blocklist_moves,
+	blocklist_readableNames,
+	blocklist_circled
 } = require('./game-static.js')
 
 const {
 	sub_updateLobby
 } = require('../subs.js')
 
+const {
+	b,
+	div,
+	dimMsg,
+} = require('../../util/html.js')
 
 const {
 	// hslToHex,
@@ -24,17 +33,38 @@ const {
 	mix
 } = require('../../color-util.js')
 
+const {
+	random_inclusive_int,
+} = require('../../util/util.js')
+
+const {
+	saveData
+} = require('../../settings.js')
+
 let io
 function gameplay_setio(ioValue) {
 	io = ioValue
 }
 
+
+function getGameID() {
+	return 'game-' + crypto.randomBytes(8).toString('hex')
+}
+
+
+/** 
+* update an individual block, server-side \
+* initialType is resolved to actual blockType, which is different in some cases. \
+* when origin is set, both a chat message, and a history message is put on the board
+*/
 function updateBlock(gameID, x, y, initialType, origin) {
-	// update an individual block, server-side
-	// origin is socket.id or 'collision' or 'collision fade'
 	
-	var pos = get_pos(gameID, x, y); // get_pos finds where in the board array the block data is
-	var blockType = initialType;
+	// 1. get the board position
+	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
+	const tileObj = gameData[gameID].board[pos]
+	
+	// 2. Get the actual block type
+	let blockType = initialType;
 	if (initialType == 'mine explosion') {
 		blockType = 'blockade';
 	}
@@ -42,54 +72,89 @@ function updateBlock(gameID, x, y, initialType, origin) {
 		blockType = 'blank';
 	}
 	if (initialType == 'circle') {
-		blockType = transformCircle(gameData[gameID].board[pos].type);
+		
+		// @TODO: test what the game does when we hack the front-end to transformCircle on a tile that's not valid, 
+		// so that blockType becomes false.
+		blockType = blocklist_circled[tileObj.type]
+		if(blockType == undefined) {
+			blockType = false
+		}
+		
 	}
 	
-	// update the block:
-	gameData[gameID].board[pos].type = blockType;
-	gameData[gameID].board[pos].moveNum = gameData[gameID].moveCount;
 	
+	// 3. update the block:
+	tileObj.type    = blockType;
+	tileObj.moveNum = gameData[gameID].moveCount;
+	
+	
+	// 4. Does something with permanence. 
+	//    I think that's for the collision system, which ticks down every turn?
 	var permanence = gameData[gameID].collisionMode.permanence;
 	if ((blockType == 'blockade') && (permanence !== true)) {
-		gameData[gameID].board[pos].duration = permanence + 1;
+		
+		// It probably does permanence + 1 because it's -1'd at the end of every turn
+		tileObj.duration = permanence + 1
 	} else {
-		gameData[gameID].board[pos].duration = false;
+		tileObj.duration = false
 	}
-
+	
+	
+	// 5. Generate HTML strings for the chat and the history.
+	//    The history string is put on the gameData board position object for that tile
+	//    and the chat string is sent to the chatLog
+	// 
+	//    origin either is: socket.id or 'collision' or 'collision fade'
 	if (typeof origin !== 'undefined') {
-		gameData[gameID].board[pos].origin = origin;
-		var historyString = '<div>';
-		var chatHistoryString = '<div class="dimMsg">';
+		tileObj.origin = origin;
+		
+		let historyString = ''
+		let chatHistoryString = ''
+		
 		if (initialType !== 'mine') {
-			chatHistoryString += x + ',' + y + ': ';
+			chatHistoryString += x + ',' + y + ': '
 		}
+		
+		const turnNumber = gameData[gameID].moveCount - 1
+		
 		if (origin == 'collision' || origin == 'collision fade') {
-			historyString += '<b>'+ origin + '</b> on turn <b>' + (gameData[gameID].moveCount - 1) + '</b>.';
-			chatHistoryString += '<b>' + origin + '</b>.';
+			historyString += `${b(origin)} on turn ${turnNumber}.`;
+			chatHistoryString += b(origin)
 		} else {
-			gameData[gameID].board[pos].originColor = gameData[gameID].players[origin].color;
-			if (initialType === 'circle') {
-				historyString += '<b>circled</b> ';
-				chatHistoryString += '<b>circled</b> ';
-			} else if (initialType === 'mine explosion') {
-				historyString += '<b>mine tripped</b> ';
-				chatHistoryString += '<b>mine tripped</b> ';
-			} else if (initialType === 'reclaim') {
-				historyString += '<b>reclaimed</b> ';
-				chatHistoryString += '<b>reclaimed</b> ';
-			} else {
-				historyString += '<b>' + readableBlockName(blockType) + '</b> placed ';
-				chatHistoryString += '<b>' + readableBlockName(blockType) + '</b> placed ';
+			
+			const player = gameData[gameID].players[origin]
+			tileObj.originColor = player.color
+			
+			const typeStrMap = {
+				'circle': 'circled',
+				'mine explosion': 'mine tripped',
+				'reclaim': 'reclaimed'
 			}
-			historyString += 'by <b style="color:' + gameData[gameID].players[origin].color + '">' + gameData[gameID].players[origin].username + '</b> on turn <b>' + (gameData[gameID].moveCount - 1) + '</b>.';
-			chatHistoryString += 'by <b style="color:' + gameData[gameID].players[origin].color + '">' + gameData[gameID].players[origin].username + '</b>.';
+			const types = Object.keys(typeStrMap)
+			const typeStr = typeStrMap[initialType]
+			
+			if(types.includes(initialType)) {
+				historyString     += b(typeStr) + ' '
+				chatHistoryString += b(typeStr) + ' '
+			} else {
+				const blockPlacedStr = b(readableBlockName(blockType)) + ' placed '
+				
+				historyString     += blockPlacedStr
+				chatHistoryString += blockPlacedStr
+			}
+			
+			
+			const byColoredUsernameStr = 'by <b style="color:' + player.color + '">' + player.username + '</b>'
+			historyString     += byColoredUsernameStr + ' on turn ' + b(turnNumber) + '.'
+			chatHistoryString += byColoredUsernameStr + '.'
 		}
-		historyString += '</div>';
 		
-		io.to(gameID).emit('log', chatHistoryString);
-		gameData[gameID].board[pos].history.push(historyString);
+		// Set the strings on the board position, and send the chatString to the clients
+		gameData[gameID].board[pos].history.push( div(historyString) )
+		io.to(gameID).emit('log', div(chatHistoryString, 'dimMsg') )
 		
 		
+		// Commented code. Probably a different way of trying to do the same thing.
 		/*
 		var historyObj = {
 			turn: gameData[gameID].moveCount - 1,
@@ -108,76 +173,24 @@ function updateBlock(gameID, x, y, initialType, origin) {
 		gameData[gameID].board[pos].history.push(historyObj);
 		*/
 	}
-}
-
-function get_pos(gameID, x, y) {
-	// when a block's position in the board array needs to be found, this returns it.
-	return (y - 1) * gameData[gameID].cols + x - 1; // board[this]
-}
-
-function transformCircle(initialType) {
-	if (initialType == 'star')   { return 'ostar'; }
-	else if (initialType == 'plus')   { return 'oplus' }
-	else if (initialType == 'cross')  { return 'ocross' }
-	else if (initialType == 'hbar')   { return 'ohbar' }
-	else if (initialType == 'vbar')   { return 'ovbar' }
-	else if (initialType == 'tlbr')   { return 'otlbr' }
-	else if (initialType == 'bltr')   { return 'obltr' }
-	else if (initialType == 'arrow1') { return 'arrow11' }
-	else if (initialType == 'arrow2') { return 'arrow22' }
-	else if (initialType == 'arrow3') { return 'arrow33' }
-	else if (initialType == 'arrow4') { return 'arrow44' }
-	else if (initialType == 'arrow6') { return 'arrow66' }
-	else if (initialType == 'arrow7') { return 'arrow77' }
-	else if (initialType == 'arrow8') { return 'arrow88' }
-	else if (initialType == 'arrow9') { return 'arrow99' }
-	else { return false; }
-}
-
-// returns blocknames for hover info that don't suck
-function readableBlockName(blockType) { 
-	const blockList = {
-		'base': 'source',
-		'ostar': 'jump star',
-		'plus': '+',
-		'oplus': 'jump +',
-		'cross': 'x',
-		'ocross': 'jump x',
-		'ohbar': 'jump hbar',
-		'ovbar': 'jump vbar',
-		'otlbr': 'jump tlbr',
-		'obltr': 'jump bltr',
-		'arrow1': 'arrow1',
-		'arrow11': 'jump arrow1',
-		'arrow2': 'arrow2',
-		'arrow22': 'jump arrow2',
-		'arrow3': 'arrow3',
-		'arrow33': 'jump arrow3',
-		'arrow4': 'arrow4',
-		'arrow44': 'jump arrow4',
-		'arrow6': 'arrow6',
-		'arrow66': 'jump arrow6',
-		'arrow7': 'arrow7',
-		'arrow77': 'jump arrow7',
-		'arrow8': 'arrow8',
-		'arrow88': 'jump arrow8',
-		'arrow9': 'arrow9',
-		'arrow99': 'jump arrow9',
-		'mine': 'stealthy mine'
-	}
 	
-	if (blockList.hasOwnProperty(blockType)) {
-		return blockList[blockType]
+}
+
+function get_linearBoardArrayPos_from_xyPos(gameID, x, y) {
+	return (y - 1) * gameData[gameID].cols + x - 1
+}
+
+
+// This function is only used in 1 location.
+// But as it's used within the client, I think it's better to keep it this way, and eventually move it into a shared js so that both ends use the same code.
+// And maybe eventually only have it run on 1 end and not on both ends?
+function readableBlockName(blockType) { 
+	if (blocklist_readableNames.hasOwnProperty(blockType)) {
+		return blocklist_readableNames[blockType]
 	} else {
 		return blockType
 	}
 }
-
-
-
-
-
-
 
 
 function optionsDetection2(gameID, x, y, playerID) {
@@ -198,7 +211,7 @@ function optionsDetection2(gameID, x, y, playerID) {
 
 function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, iceDir) {
 	var collection = [];
-	var pos = get_pos(gameID, x,y);
+	var pos = get_linearBoardArrayPos_from_xyPos(gameID, x,y);
 	var dir
 	
 	if (typeof iceDir === 'undefined') {
@@ -231,7 +244,7 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 		var newX = x + dir[i][0];
 		var newY = y + dir[i][1];
 		if (((newX >= 1) && (newX <= gameData[gameID].cols)) && ((newY >= 1) && (newY <= gameData[gameID].rows))) { // if we're not out of bounds
-			var newPos = get_pos(gameID, newX,newY);
+			var newPos = get_linearBoardArrayPos_from_xyPos(gameID, newX,newY);
 			var newType = gameData[gameID].board[newPos].type;			
 			var run = true;
 			if (gameData[gameID].board[newPos].possession.indexOf(playerID) >= 0) {
@@ -339,6 +352,7 @@ function checkForPlayerExit(gameID, socket) {
 	// console.log('checkForPlayerExit', Object.keys(game))
 	
 	// remove from specs list if found there.
+	// specsList is for the spectators
 	for(var j = 0; j < game.specsList.length; j++) {
 		if (game.specsList[j] == socket.id) {
 			game.specsList.splice(j,1);
@@ -406,14 +420,15 @@ function checkForPlayerExit(gameID, socket) {
 function gameOver(gameID) {
 	
 	function stopTimer(gameID) {
-		if ((typeof gameData[gameID] !== 'undefined') && (gameData[gameID].gameTimer !== false)) {
-			clearInterval(gameData[gameID].gameTimer); // stop ticking the timer.
-			gameData[gameID].gameTimer = false;
-			//io.to(gameID).emit('log', '<span class="dimMsg">timer stopped</span>');
-		}
+		if( 
+			gameData[gameID] == null || 
+			gameData[gameID].gameTimer === false
+		) { return }
+		
+		clearInterval(gameData[gameID].gameTimer)
+		gameData[gameID].gameTimer = false
+		//io.to(gameID).emit('log', '<span class="dimMsg">timer stopped</span>');
 	}
-	
-	
 	
 	gameData[gameID].gameState = 'gameover';
 	stopTimer(gameID);
@@ -449,7 +464,10 @@ function gameOver(gameID) {
 	
 	if (gameData[gameID].gameType === 'practice') {
 		// durp
-	} else if ((typeof userData[playerIDs[0]].twitterid !== 'undefined') && (typeof userData[playerIDs[1]].twitterid !== 'undefined')) {			
+	} else {
+		
+		console.log('@TODO: handle game over stats calculation')
+		
 		if (gameData[gameID].moveCount > 1) {
 			if (gameData[gameID].ratingsCalculated == false) {
 				for (playerID in gameData[gameID].players) {
@@ -607,24 +625,21 @@ function gameOver(gameID) {
 			gameData[gameID].ratingsCalculated = true;
 			io.to(gameID).emit('log', 'No stats collected.');
 		}
-	} else {
-		gameData[gameID].ratingsCalculated = true;
-		io.to(gameID).emit('log', 'No stats collected.');
-	}
+	} 
+	// else {
+	// 	gameData[gameID].ratingsCalculated = true;
+	// 	io.to(gameID).emit('log', 'No stats collected.');
+	// }
 	
 	io.to(gameID).emit('victory', winners, winPaths, color, gameData[gameID].gameType);
 	sub_updateLobby();
 }
 
 
-
-
-
-
-
 module.exports = {
+	getGameID,
 	updateBlock,
-	get_pos,
+	get_linearBoardArrayPos_from_xyPos,
 	optionsDetection2,
 	gameplay_setio,
 	getColor,
