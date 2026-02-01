@@ -30,7 +30,12 @@ const {
 const { 
 	redMsg,
 	dimMsg
+} = require('../util/html.js')
+
+const { 
+	deepClone
 } = require('../util/util.js')
+
 
 let io
 
@@ -212,21 +217,27 @@ function socket_newGame(special) {
 function socket_joinGame(gameID, joinStatus) {
 	const socket = this
 	
-	if (userData[socket.id].room == 'lobby') { // if in lobby
-		if (gameExists(socket, undefined, gameID)) { // if game exist
-			if (userData[socket.id].ghost) {
-				joinStatus = 'spec';
-			}
-			setupGame(socket, gameID, joinStatus);
-		}
+	if(userData[socket.id].room != 'lobby') {
+		return
 	}
+	
+	// handle game not existing
+	if(!gameExists(gameID)) {
+		log_invalidGame(socket)
+		return
+	}
+	
+	if(userData[socket.id].ghost) {
+		joinStatus = 'spec'
+	}
+	
+	setupGame(socket, gameID, joinStatus)
 }
 
 
 // executed when you press ready
 function socket_handleGameReady() {
 	const socket = this
-	
 	
 	function allPlayersReady(gameID) {
 		if (Object.keys(gameData[gameID].players).length !== gameData[gameID].maxPlayers) {
@@ -240,28 +251,48 @@ function socket_handleGameReady() {
 		return true;
 	}
 	
+	const user = userData[socket.id]
+	const gameID = user.room
 	
-	var gameID = userData[socket.id].room;
-	if (gameExists(socket) && (typeof gameData[gameID].players[socket.id] !== 'undefined')) {
-		if (gameData[gameID].players[socket.id].ready !== true) {
-			var user = userData[socket.id].username;
-			if (gameData[gameID].gameType !== 'practice') {
-				io.to(gameID).emit('log', '<span style="color: '+ gameData[gameID].players[socket.id].color +';">' + user + ' is ready!</span>');
-			}
-			gameData[gameID].players[socket.id].ready = true;
-			
-			optionsDetection2(gameID, gameData[gameID].players[socket.id].baseX, gameData[gameID].players[socket.id].baseY, socket.id);
-			
-			//io.to(gameID).emit('add to heading', socket.id, userData[socket.id].username, gameData[gameID].players[socket.id].color, x);
-			io.to(gameID).emit('render board', gameData[gameID].board);
-			
-			if (allPlayersReady(gameID)) {
-				// clone object... dangerous if the obj has methods or date, etc. but it works here imo
-				gameData[gameID].initialBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
-				startGame(gameID);
-			}
-		}
+	// log error if game does not exist
+	if(!gameExists(gameID)) {
+		log_invalidGame(socket)
+		return
 	}
+	
+	const gameObj = gameData[gameID]
+	
+	// log error if you're not in the game
+	if(!socket_isPlayer_in_game(gameObj, socket)) {
+		log_notInGame(socket)
+		return
+	}
+	
+	const playerObj = gameObj.players[socket.id]
+	
+	// don't do anything if already ready
+	if(playerObj.ready === true) {
+		return
+	}
+	
+	
+	
+	if (gameObj.gameType !== 'practice') {
+		io.to(gameID).emit('log', '<span style="color: '+ playerObj.color +';">' + user.username + ' is ready!</span>')
+	}
+	playerObj.ready = true
+	
+	optionsDetection2(gameID, playerObj.baseX, playerObj.baseY, socket.id)
+	
+	//io.to(gameID).emit('add to heading', socket.id, user.username, playerObj.color, x)
+	io.to(gameID).emit('render board', gameObj.board)
+	
+	if (allPlayersReady(gameID)) {
+		// clone object... dangerous if the obj has methods or date, etc. but it works here imo
+		gameObj.initialBoard = deepClone(gameObj.board)
+		startGame(gameID)
+	}
+	
 }
 
 // executed when you press unready
@@ -409,29 +440,46 @@ function socket_exitGameToLobby() {
 	}
 }
 
+
+
+
 function socket_practiceGameReset() {
 	const socket = this
 	
-	var gameID = userData[socket.id].room;
-	if (gameExists(socket, 'creator')) {
-		if (gameData[gameID].gameType == 'practice') {
-			gameData[gameID].board = JSON.parse(JSON.stringify(gameData[gameID].initialBoard));
-			for (player in gameData[gameID].players) {
-				gameData[gameID].players[player].blockList = JSON.parse(JSON.stringify(gameData[gameID].blockList));
-				gameData[gameID].players[player].winner = false;
-				gameData[gameID].players[player].winPath = [];
-				gameData[gameID].players[player].hasMoved = false;
-				gameData[gameID].players[player].onStandby = false;
-				gameData[gameID].players[player].offeredDraw = false;
-				gameData[gameID].players[player].disconnected = false;
-				gameData[gameID].players[player].forfeit = false;
-			}
-			io.to(gameID).emit('setup rematch', gameData[gameID].blockList);
-			io.to(gameID).emit('log', dimMsg('Reset.'));
-			io.to(gameID).emit('render board', gameData[gameID].board);
-			startGame(gameID);
-		}
+	const gameID = userData[socket.id].room
+	const gameObj = gameData[gameID]
+	
+	// If this game does not exist, 
+	// or if this game does exist, but we are not the creator, we bail out.
+	if(gameObj == undefined || gameObj.creator != socket.id) {
+		return
 	}
+	
+	// bail out if the game is not a practice game.
+	if(gameObj.gameType != 'practice') {
+		return
+	}
+	
+	gameObj.board = deepClone(gameObj.initialBoard)
+	
+	for(playerSocketID in gameObj.players) {
+		const playerObj = gameObj.players[playerSocketID]
+		
+		playerObj.blockList = deepClone(gameObj.blockList)
+		playerObj.winner = false
+		playerObj.winPath = []
+		playerObj.hasMoved = false
+		playerObj.onStandby = false
+		playerObj.offeredDraw = false
+		playerObj.disconnected = false
+		playerObj.forfeit = false
+	}
+	
+	io.to(gameID).emit('setup rematch', gameObj.blockList)
+	io.to(gameID).emit('log', dimMsg('Reset.'))
+	io.to(gameID).emit('render board', gameObj.board)
+	
+	startGame(gameID)
 }
 
 
@@ -439,111 +487,116 @@ function socket_yesRematch() {
 	const socket = this
 	
 	var gameID = userData[socket.id].room;
-	if (gameExists(socket)) {
-		if (gameData[gameID].gameState == 'gameover' && gameData[gameID].noRematch == false) {
-			var hacking = true;
+	
+	if(!gameExists(gameID)) {
+		log_invalidGame(socket)
+		return
+	}
+	
+	if (gameData[gameID].gameState == 'gameover' && gameData[gameID].noRematch == false) {
+		var hacking = true;
+		for (player in gameData[gameID].players) {
+			if (player == socket.id) {
+				hacking = false;
+			}
+		}
+		if (!hacking) {
+			gameData[gameID].players[socket.id].rematchOffered = true;
+			var numPlayers = 0;
+			var numYesRematch = 0;
 			for (player in gameData[gameID].players) {
-				if (player == socket.id) {
-					hacking = false;
+				numPlayers++;
+				if (gameData[gameID].players[player].rematchOffered == true) {
+					numYesRematch++;
 				}
 			}
-			if (!hacking) {
-				gameData[gameID].players[socket.id].rematchOffered = true;
-				var numPlayers = 0;
-				var numYesRematch = 0;
+			if (numPlayers !== numYesRematch) {
+				socket.broadcast.to(gameID).emit('rematch offered');
+				io.to(gameID).emit('log', dimMsg(userData[socket.id].username +' offered a rematch.'));
+			} else {
+				// REMATCH INITIATED!!
+				gameData[gameID].board = deepClone(gameData[gameID].initialBoard)
+				gameData[gameID].ratingsCalculated = false;
+				
+				var over1000 = 0;
+				var creatorElo = sub_returnDisplayElo(gameData[gameID].creator);
+				var playerElo = creatorElo; // initially set this to creatorElo but change it if it's found to be different.
 				for (player in gameData[gameID].players) {
-					numPlayers++;
-					if (gameData[gameID].players[player].rematchOffered == true) {
-						numYesRematch++;
+					gameData[gameID].players[player].blockList = deepClone(gameData[gameID].blockList)
+					gameData[gameID].players[player].winner = false;
+					gameData[gameID].players[player].winPath = [];
+					gameData[gameID].players[player].hasMoved = false;
+					gameData[gameID].players[player].onStandby = false;
+					gameData[gameID].players[player].offeredDraw = false;
+					gameData[gameID].players[player].rematchOffered = false;
+					gameData[gameID].players[player].disconnected = false;
+					gameData[gameID].players[player].forfeit = false;
+					if (userData[player].elo !== creatorElo) { 
+						// if it's different, set it to the other player's elo.
+						playerElo = sub_returnDisplayElo(player);
 					}
-				}
-				if (numPlayers !== numYesRematch) {
-					socket.broadcast.to(gameID).emit('rematch offered');
-					io.to(gameID).emit('log', dimMsg(userData[socket.id].username +' offered a rematch.'));
-				} else {
-					// REMATCH INITIATED!!
-					gameData[gameID].board = JSON.parse(JSON.stringify(gameData[gameID].initialBoard));
-					gameData[gameID].ratingsCalculated = false;
 					
-					var over1000 = 0;
-					var creatorElo = sub_returnDisplayElo(gameData[gameID].creator);
-					var playerElo = creatorElo; // initially set this to creatorElo but change it if it's found to be different.
-					for (player in gameData[gameID].players) {
-						gameData[gameID].players[player].blockList = JSON.parse(JSON.stringify(gameData[gameID].blockList));
-						gameData[gameID].players[player].winner = false;
-						gameData[gameID].players[player].winPath = [];
-						gameData[gameID].players[player].hasMoved = false;
-						gameData[gameID].players[player].onStandby = false;
-						gameData[gameID].players[player].offeredDraw = false;
-						gameData[gameID].players[player].rematchOffered = false;
-						gameData[gameID].players[player].disconnected = false;
-						gameData[gameID].players[player].forfeit = false;
-						if (userData[player].elo !== creatorElo) { 
-							// if it's different, set it to the other player's elo.
-							playerElo = sub_returnDisplayElo(player);
-						}
-						
-						
-						/*
-						if (userData[player].elo > 1000) {
-							over1000++;
-						}
-						*/
-					}
-					gameData[gameID].totalGames++;
 					
-					var iceBoard = false;
 					/*
-					if ((gameData[gameID].totalGames >= 4) && (over1000 == 2)) {
-						// if at least 4 games were played, and both players are over 1000 elo
-						if (random_inclusive_int(1,7) == 7) {
-							// if 1/7
-							console.log('ice board');
-							iceBoard = true;
-							for (var i = 0; i < (gameData[gameID].board.length / 2); i++) {
-								if (gameData[gameID].board[i].type == 'blank' && (random_inclusive_int(1,15) == 15)) {
-									gameData[gameID].board[i].type = 'ice';
-									gameData[gameID].board[(gameData[gameID].board.length - i - 1)].type = 'ice';
-								}
-							}
-							
-							// clear surrounding. this shit sucks for different board sizes just FYI!!!
-							updateBlock(gameID, 4, 5, "blank");
-							updateBlock(gameID, 5, 5, "blank");
-							updateBlock(gameID, 6, 5, "blank");
-							updateBlock(gameID, 4, 6, "blank");
-							updateBlock(gameID, 6, 6, "blank");
-							updateBlock(gameID, 4, 7, "blank");
-							updateBlock(gameID, 5, 7, "blank");
-							updateBlock(gameID, 6, 7, "blank");
-							
-							updateBlock(gameID, 16, 5, "blank");
-							updateBlock(gameID, 17, 5, "blank");
-							updateBlock(gameID, 18, 5, "blank");
-							updateBlock(gameID, 16, 6, "blank");
-							updateBlock(gameID, 18, 6, "blank");
-							updateBlock(gameID, 16, 7, "blank");
-							updateBlock(gameID, 17, 7, "blank");
-							updateBlock(gameID, 18, 7, "blank");
-						}
+					if (userData[player].elo > 1000) {
+						over1000++;
 					}
 					*/
-					
-					io.to(gameID).emit('setup rematch', gameData[gameID].blockList, creatorElo, playerElo);
-					io.to(gameID).emit('log', dimMsg('Rematch initiated'));
-					if (iceBoard) {
-						io.to(gameID).emit('log', '<span class="coldWeather">Cold weather!</span>');
-					}
-					io.to(gameID).emit('render board', gameData[gameID].board);
-					startGame(gameID);
 				}
-			} else {
-				socket.emit('log', redMsg('No hacking!'));
+				gameData[gameID].totalGames++;
+				
+				var iceBoard = false;
+				/*
+				if ((gameData[gameID].totalGames >= 4) && (over1000 == 2)) {
+					// if at least 4 games were played, and both players are over 1000 elo
+					if (random_inclusive_int(1,7) == 7) {
+						// if 1/7
+						console.log('ice board');
+						iceBoard = true;
+						for (var i = 0; i < (gameData[gameID].board.length / 2); i++) {
+							if (gameData[gameID].board[i].type == 'blank' && (random_inclusive_int(1,15) == 15)) {
+								gameData[gameID].board[i].type = 'ice';
+								gameData[gameID].board[(gameData[gameID].board.length - i - 1)].type = 'ice';
+							}
+						}
+						
+						// clear surrounding. this shit sucks for different board sizes just FYI!!!
+						updateBlock(gameID, 4, 5, "blank");
+						updateBlock(gameID, 5, 5, "blank");
+						updateBlock(gameID, 6, 5, "blank");
+						updateBlock(gameID, 4, 6, "blank");
+						updateBlock(gameID, 6, 6, "blank");
+						updateBlock(gameID, 4, 7, "blank");
+						updateBlock(gameID, 5, 7, "blank");
+						updateBlock(gameID, 6, 7, "blank");
+						
+						updateBlock(gameID, 16, 5, "blank");
+						updateBlock(gameID, 17, 5, "blank");
+						updateBlock(gameID, 18, 5, "blank");
+						updateBlock(gameID, 16, 6, "blank");
+						updateBlock(gameID, 18, 6, "blank");
+						updateBlock(gameID, 16, 7, "blank");
+						updateBlock(gameID, 17, 7, "blank");
+						updateBlock(gameID, 18, 7, "blank");
+					}
+				}
+				*/
+				
+				io.to(gameID).emit('setup rematch', gameData[gameID].blockList, creatorElo, playerElo);
+				io.to(gameID).emit('log', dimMsg('Rematch initiated'));
+				if (iceBoard) {
+					io.to(gameID).emit('log', '<span class="coldWeather">Cold weather!</span>');
+				}
+				io.to(gameID).emit('render board', gameData[gameID].board);
+				startGame(gameID);
 			}
 		} else {
-			socket.emit('log', redMsg('rematch not possible in <i>offer rematch</i>!'));
+			socket.emit('log', redMsg('No hacking!'));
 		}
+	} else {
+		socket.emit('log', redMsg('rematch not possible in <i>offer rematch</i>!'));
 	}
+	
 }
 
 
@@ -552,53 +605,52 @@ function socket_forfeit() {
 	
 	gameID = userData[socket.id].room;
 	
-	if(gameExists(socket)) {
-		if (youArePlaying(gameData[gameID].players, socket.id)) {
-			wipePossession(gameID, socket.id);
-			gameData[gameID].remainingPlayers--;
-			gameData[gameID].players[socket.id].forfeit = true;
-			io.to(gameID).emit('render board', gameData[gameID].board);
-			if (gameData[gameID].remainingPlayers <= 1) {
-				var winner = false;
-				for (playerID in gameData[gameID].players) {
-					if ((gameData[gameID].players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
-						// this player is not the winner
-					} else {
-						gameData[gameID].players[playerID].winner = true;
-					}
+	if(!gameExists(gameID)) {
+		log_invalidGame(socket)
+		return
+	}
+	
+	if (youArePlaying(gameData[gameID].players, socket.id)) {
+		wipePossession(gameID, socket.id);
+		gameData[gameID].remainingPlayers--;
+		gameData[gameID].players[socket.id].forfeit = true;
+		
+		io.to(gameID).emit('render board', gameData[gameID].board);
+		
+		if (gameData[gameID].remainingPlayers <= 1) {
+			var winner = false;
+			for (playerID in gameData[gameID].players) {
+				if ((gameData[gameID].players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
+					// this player is not the winner
+				} else {
+					gameData[gameID].players[playerID].winner = true;
 				}
-				gameOver(gameID);
 			}
-		} else {
-			socket.emit('log', redMsg('spectator cannot forfeit'));	
-		}
-	}
-}
-
-
-
-function gameExists(socket, client, gameID) {
-	
-	if (typeof gameID === 'undefined') {
-		var gameID = userData[socket.id].room;
-	}
-	
-	if (typeof gameData[gameID] !== 'undefined') {
-		if (typeof client !== 'undefined' && client === 'creator') {
-			if (gameData[gameID].creator === socket.id) {
-				return true;
-			} else {
-				socket.emit('log', redMsg('not the creator'));
-				return false;
-			}
-		} else {
-			return true;
+			gameOver(gameID);
 		}
 	} else {
-		socket.emit('log', redMsg('not in a valid game'));
-		return false;
+		socket.emit('log', redMsg('spectator cannot forfeit'));	
 	}
+	
 }
+
+
+function gameExists(gameID) {
+	return gameData[gameID] != undefined
+}
+
+function log_invalidGame(socket) {
+	socket.emit('log', redMsg('not in a valid game'))
+}
+
+function socket_isPlayer_in_game(gameObj, socket) {
+	return gameObj.players[socket.id] != undefined
+}
+
+function log_notInGame(socket) {
+	socket.emit('log', redMsg('you are not in this game'))
+}
+
 
 function youArePlaying(players, socketID) {
 	for (id in players) { 
@@ -610,6 +662,7 @@ function youArePlaying(players, socketID) {
 }
 
 
+// @TODO: make this easier.
 function setupGame(socket, gameID, passedStatus) {
 	if(gameData[gameID] == null) {
 		return
@@ -662,7 +715,7 @@ function setupGame(socket, gameID, passedStatus) {
 		gameData[gameID].specsList.push(socket.id);
 		if (gameData[gameID].gameState == 'inprogress') {
 			// spec board.
-			displayBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
+			displayBoard = deepClone(gameData[gameID].board)
 			for (var i = 0; i < displayBoard.length; i++) {
 				if (displayBoard[i].type == 'mine') {
 					hiddenInformation(displayBoard[i]);
@@ -1021,7 +1074,7 @@ function performTurn(gameID, tBlock, tBlock2) {
 		} else {
 			// not practice mode.
 			// in the case of mines we need to send a separate board to each player now:
-			var thisBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
+			var thisBoard = deepClone(gameData[gameID].board)
 			for (var i = 0; i < thisBoard.length; i++) {
 				if (thisBoard[i].type == 'mine') {
 					if (thisBoard[i].origin !== playersArray[0]) {
@@ -1029,7 +1082,7 @@ function performTurn(gameID, tBlock, tBlock2) {
 					}
 				}
 			}
-			var thatBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
+			var thatBoard = deepClone(gameData[gameID].board)
 			for (var i = 0; i < thatBoard.length; i++) {
 				if (thatBoard[i].type == 'mine') {
 					if (thatBoard[i].origin !== playersArray[1]) {
@@ -1037,7 +1090,7 @@ function performTurn(gameID, tBlock, tBlock2) {
 					}
 				}
 			}
-			var specBoard = JSON.parse(JSON.stringify(gameData[gameID].board));
+			var specBoard = deepClone(gameData[gameID].board)
 			for (var i = 0; i < specBoard.length; i++) {
 				if (specBoard[i].type == 'mine') {
 					hiddenInformation(specBoard[i]);

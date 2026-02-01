@@ -44,9 +44,14 @@ function combineObjects() {
 	return Object.assign({}, ...arguments)
 }
 
+function deepClone(obj) {
+	return JSON.parse(JSON.stringify(obj))
+}
+
 module.exports = {
 	random_inclusive_int,
 	passHash,
 	passVerify,
 	getCookieSignerSecret,
+	deepClone,
 }

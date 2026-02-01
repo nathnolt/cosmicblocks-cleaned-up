@@ -3,9 +3,13 @@
 // And see if it offers interesting functionality that we want.
 //
 
+function isGameCreator(socket) {
+	console.log('@TODO: implement')
+}
+
 function socket_classicMode() {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		classicMode(gameID);
 		io.to(gameID).emit('log', '<span class="dimMsg">classic mode</span>');
 		unreadyAll(gameID);
@@ -15,7 +19,7 @@ function socket_classicMode() {
 
 function socket_advancedMode() {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		advancedMode(gameID);
 		// How Deep Is Your Love by Calvin Harris & Disciples is a great song.
 		io.to(gameID).emit('log', '<span class="dimMsg">advanced mode</span>');
@@ -26,7 +30,7 @@ function socket_advancedMode() {
 
 function socket_doneEditingGame() {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		socket.emit('setup game', 
 			gameID,
 			'creator',
@@ -45,7 +49,7 @@ function socket_doneEditingGame() {
 
 function socket_randomizeGame() {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		if (gameData[gameID].maxPlayers == 2) {
 			
 			randomMode(gameID);
@@ -61,20 +65,24 @@ function socket_randomizeGame() {
 
 function socket_chooseToSpectate() {
 	var gameID = userData[socket.id].room;
-	if (gameExists()) {
+	
+	// @TODO: check if we wanted to check isGameCreator, or just if the gameExists yes / no
+	if (gameExists(gameID)) {
 		if (gameData[gameID].gameState == 'open') {
 			unready(gameID, socket.id);
 			delete gameData[gameID].players[socket.id];
 			io.to(gameID).emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' is spectating.');
 			//io.to(gameID).emit('update colors', gameData[gameID].players, baseColors, gameData[gameID].maxPlayers, gameData[gameID].board);
 		}
+	} else {
+		log_invalidGame(socket)
 	}
 }
 
 
 function socket_timeLimitSetting(moreOrLess) {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		var problem = false;
 		if (moreOrLess === 'more') {
 			if (gameData[gameID].timeLimit >= 100) {
@@ -114,7 +122,7 @@ function socket_timeLimitSetting(moreOrLess) {
 
 function socket_collisionSetting(setting) {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		var problem = false;
 		if ((setting === 3) || (setting === 4) || (setting === 5)) {
 			// this code makes me nervous.
@@ -138,7 +146,7 @@ function socket_collisionSetting(setting) {
 
 function socket_boardEdit(x, y, blockType) {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		updateBlock(gameID, x, y, blockType);
 		if (gameData[gameID].gameType !== 'custom') {
 			gameData[gameID].gameType = 'custom';
@@ -149,7 +157,7 @@ function socket_boardEdit(x, y, blockType) {
 
 function socket_blocklistUpdate(blockType, active) {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		if (active) {
 			if (typeof gameData[gameID].blockList[blockType] === 'undefined') {
 				gameData[gameID].blockList[blockType] = { ammo: false }
@@ -169,7 +177,7 @@ function socket_blocklistUpdate(blockType, active) {
 
 function socket_ammoUpdate(blockType, ammoAmount) {
 	var gameID = userData[socket.id].room;
-	if (gameExists('creator')) {
+	if (isGameCreator(socket, gameID)) {
 		function validAmmo() {
 			if (ammoAmount === '&infin;') {
 				ammoAmount = false;
@@ -199,7 +207,7 @@ function socket_ammoUpdate(blockType, ammoAmount) {
 
 function socket_updateBoardSize(rows, cols) {
 	var gameID = userData[socket.id].room;
-	if (gameExists()) {
+	if (gameExists(gameID)) {
 		if (gameData[gameID].creator == socket.id) {
 			gameData[gameID].rows = rows;
 			gameData[gameID].cols = cols;

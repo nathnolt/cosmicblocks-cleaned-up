@@ -208,7 +208,9 @@ function optionsDetection2(gameID, x, y, playerID) {
 	}
 }
 
-
+// 
+// Only used from optionsDetection2
+//
 function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, iceDir) {
 	var collection = [];
 	var pos = get_linearBoardArrayPos_from_xyPos(gameID, x,y);
