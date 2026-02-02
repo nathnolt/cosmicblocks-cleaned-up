@@ -1,4 +1,4 @@
-var SocketIO = require('socket.io')
+const SocketIO = require('socket.io')
 
 const {
 	sub_renderLobby,

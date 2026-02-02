@@ -81,7 +81,7 @@
 					db.sync(function(err) {
 						if (err) throw err;
 						var userInfo = undefined;
-						var passedColor = assignColor();
+						var passedColor = getRandomUserColor();
 						var tempWins = 0;
 						var tempDraws = 0;
 						var tempLosses = 0;

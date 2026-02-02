@@ -106,19 +106,21 @@ function hslToRgb(hue, saturation, lightness) {
 
 
 
-function assignColor() {
-	var randomHue = random_inclusive_int(1, 360);
-	var randomSaturation = random_inclusive_int(40, 75);
-	var lightnessBonus = random_inclusive_int(-5, 5); // this is hacky but w/e.
+function getRandomUserColor() {
+	var randomHue = random_inclusive_int(1, 360)
+	var randomSaturation = random_inclusive_int(40, 75)
+	
+	var lightnessBonus = random_inclusive_int(-5, 5)
 	if ((randomHue > 50) && (randomHue < 190)) {
 		// when in the green/cyan range, decrease brightness a bit.
-		lightnessBonus = random_inclusive_int(-20, -10);
+		lightnessBonus = random_inclusive_int(-20, -10)
 	} else if ((randomHue > 210) && (randomHue < 300)) {
 		// in the blue/purple range, increase brightness a bit.
-		lightnessBonus = random_inclusive_int(10, 20);
+		lightnessBonus = random_inclusive_int(10, 20)
 	}
-	var randomLightness = (random_inclusive_int(50, 75) + lightnessBonus);
-	return hslToHex(randomHue,randomSaturation,randomLightness);
+	
+	var randomLightness = (random_inclusive_int(50, 75) + lightnessBonus)
+	return hslToHex(randomHue,randomSaturation,randomLightness)
 }
 
 function hexColorDelta(hex1, hex2) {
@@ -188,7 +190,7 @@ function mix(color_1, color_2, weight) {
 
 module.exports = {
 	hslToHex,
-	assignColor,
+	getRandomUserColor,
 	hexColorDelta,
 	increase_brightness,
 	mix

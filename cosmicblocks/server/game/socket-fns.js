@@ -4,13 +4,14 @@ const {
 } = require('../settings.js')
 
 const {
+	b,
 	dimMsg,
 	redMsg,
 	htmlEntities,
 } = require('../util/html.js')
 
 const {
-	assignColor
+	getRandomUserColor
 } = require('../util/color.js')
 
 const {
@@ -69,78 +70,96 @@ function socket_sendChatMessage(chatMessage) {
 	const color = userData[socket.id].color;
 	const isAdmin = adminUsernames.includes(username)
 	
-	chatMessage = htmlEntities(chatMessage);
-	var splitMessage = chatMessage.split(" ");
-	if (chatMessage === '/newcolor' && room === 'lobby' && isAdmin) {
-		updateUserColor(socket);
-	} else if (splitMessage[0] === '/debug' && isAdmin) {
-		socket.emit('console log', 'USER DATA:');
-		for (user in userData) {
-			socket.emit('console log', user);
-			socket.emit('console log', userData[user]);
+	chatMessage = htmlEntities(chatMessage)
+	
+	
+	const messageParts = chatMessage.split(" ")
+	const firstPart = messageParts[0]
+	
+	
+	if(isAdmin) {
+		if(firstPart == '/debug') {
+			
+			socket.emit('console log', 'USER DATA:');
+			for (user in userData) {
+				socket.emit('console log', user);
+				socket.emit('console log', userData[user]);
+			}
+			socket.emit('console log', 'GAME PLAYER DATA:');
+			for (game in gameData) {
+				socket.emit('console log', gameData[game].players);
+			}
+			socket.emit('log', '<span class="dimMsg">Data acquired.</span>');
+			return
 		}
-		socket.emit('console log', 'GAME PLAYER DATA:');
-		for (game in gameData) {
-			socket.emit('console log', gameData[game].players);
+		
+		if(firstPart == '/auth') {
+			/* this is old DB code...
+			var newAccess = new AccessList({
+				username: splitMessage[1]
+			});
+			newAccess.save(function (err, newAccess) {
+				if (err) return console.error(err);
+				twitterAuthList2.push(splitMessage[1]);
+				socket.emit('log', '<b>Access Granted to @' + splitMessage[1] + '</b>');
+			});
+			*/
+			return
 		}
-		socket.emit('log', '<span class="dimMsg">Data acquired.</span>');
-	} else if (splitMessage[0] === '/auth' && isAdmin) {
-		/* this is old DB code...
-		var newAccess = new AccessList({
-			username: splitMessage[1]
-		});
-		newAccess.save(function (err, newAccess) {
-			if (err) return console.error(err);
-			twitterAuthList2.push(splitMessage[1]);
-			socket.emit('log', '<b>Access Granted to @' + splitMessage[1] + '</b>');
-		});
-		*/
-	} else if (splitMessage[0] === '/revoke' && isAdmin) {
-		socket.emit('log', '<span class="redMsg">revoke not created yet</span>');
-	} else {
-		io.to(room).emit('log', '<span style="color: ' + color + '; font-weight:bold;">' + username + '</span><span class="dimMsg">:</span> ' + chatMessage);
-		console.log (username + ": " + chatMessage);
+		
+		if(firstPart == '/revoke') {
+			socket.emit('log', redMsg('revoke not created yet'))
+			return
+		}
 	}
+	
+	// routes everyone can do
+	if(firstPart == '/newcolor' && room == 'lobby') {
+		attemptColorReroll(socket)
+		return
+	}
+	
+	// regular message
+	io.to(room).emit('log', `<span style="color:${color}; font-weight:bold;">${username}</span>${dimMsg(':')} ${chatMessage}`)
+	console.log (username + ": " + chatMessage);
 }
 
 function socket_attemptColorReroll() {
 	const socket = this
-	if (userData[socket.id].remainingRerolls > 0) {
-		userData[socket.id].remainingRerolls--;
-		updateUserColor(socket);
-		if (userData[socket.id].remainingRerolls <= 0) {
-			socket.emit('ran out of rerolls');
-		}
-	} else {
-		socket.emit('log', redMsg('you have no color rerolls remaining.'));
-	}
+	attemptColorReroll(socket)
 }
 
 
-function updateUserColor(socket) {
-	const newRandomColor = assignColor()
-	userData[socket.id].color = newRandomColor;
-	var room = userData[socket.id].room;
-	io.to(room).emit('log', '<span style="color: ' + userData[socket.id].color + ';"><b>' + userData[socket.id].username + '</b> has a new color.</span>');
-	socket.emit('update lobby welcome name color', userData[socket.id].color);
+function attemptColorReroll(socket) {
+	const user = userData[socket.id]
 	
-	if (saveData) {
-		console.log('@TODO, set the color.')
-		const user = userData[socket.id]
-		db_updateColor(user.id, newRandomColor)
-		sub_updateLobby() // render lobby cause leaderboard name color.. wow maybe I need a better way of coding this.
+	if(user.remainingRerolls < 1) {
+		socket.emit('log', redMsg('you have no color rerolls remaining.'))
+		return
 	}
-
-	socket.emit('update lobby name color', userData[socket.id].color);
+	
+	user.remainingRerolls--
+	user.color = getRandomUserColor()
+	io.to(user.room).emit(
+		'log', 
+		`<span style="color:${user.color}">${b(user.username)} has a new color.</span>`
+	)
+	socket.emit('update lobby welcome name color', user.color)
+	
+	if(saveData) {
+		console.log('@TODO, set the color.')
+		db_updateColor(user.id, user.color)
+		
+		// render lobby cause leaderboard name color.. wow maybe I need a better way of coding this.
+		sub_updateLobby()
+	}
+	
+	socket.emit('update lobby name color', user.color)
+	
+	if(user.remainingRerolls < 1) {
+		socket.emit('ran out of rerolls')
+	}
 }
-
-
-
-
-
-
-
-
 
 module.exports = {
 	fns_setIo,

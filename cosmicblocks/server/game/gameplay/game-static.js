@@ -175,8 +175,11 @@ const blocklist_circled = {
 	arrow9: 'arrow99',
 }
 
+const blocklist_circleable = Object.keys(blocklist_circled)
+
 module.exports = {
 	blocklist_moves,
 	blocklist_readableNames,
-	blocklist_circled
+	blocklist_circled,
+	blocklist_circleable
 }

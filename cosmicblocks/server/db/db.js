@@ -1,5 +1,5 @@
 // const { getDB } = require('./get-db.js')
-const { assignColor } = require('../util/color.js')
+const { getRandomUserColor } = require('../util/color.js')
 const {
 	// user
 	create_user_stmt,
@@ -23,7 +23,7 @@ const {
 function db_createUser(username) {
 	
 	let stmtResult
-	const randomColor = assignColor()
+	const randomColor = getRandomUserColor()
 	const startingElo = 1000
 	try {
 		stmtResult = create_user_stmt.run({

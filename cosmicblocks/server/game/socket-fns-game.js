@@ -27,6 +27,10 @@ const {
 	gameOver,
 } = require('./gameplay/gameplay.js')
 
+const {
+	blocklist_circleable,
+} = require('./gameplay/game-static.js')
+
 const { 
 	redMsg,
 	dimMsg
@@ -276,9 +280,8 @@ function socket_handleGameReady() {
 		return
 	}
 	
-	
 	if (gameObj.gameType !== 'practice') {
-		io.to(gameID).emit('log', '<span style="color: '+ playerObj.color +';">' + user.username + ' is ready!</span>')
+		io.to(gameID).emit('log', `<span style="color:${playerObj.color}">${user.username} is ready!</span>`)
 	}
 	
 	playerObj.ready = true
@@ -317,136 +320,176 @@ function socket_handleGameUnready() {
 	}
 }
 
+
 function socket_attemptMove(x, y, blockType, moveCount) {
 	
-	
 	function allPlayersMoved(players) {
-		for (id in players) { 
-			if (players[id].hasMoved == false) { 
-				return false; 
+		for(playerSocketID in players) {
+			if(players[playerSocketID].hasMoved == false) { 
+				return false
 			} 
 		} 
-		return true; 
+		return true
 	}
 	
 	
 	function validateMove(gameID, blockType, pos, playerID) {
-		var initialType = gameData[gameID].board[pos].type;
-		if (typeof gameData[gameID].players[playerID].blockList[blockType] !== 'undefined') {
-			if (gameData[gameID].players[playerID].blockList[blockType].ammo === 0) {
-				return false
-			} else {
-				gameData[gameID].players[playerID].blockList[blockType].ammo--;
-			}
-		} else {
+		const gameObj = gameData[gameID]
+		const tileObj = gameObj.board[pos]
+		const initialType = tileObj.type
+		
+		const playerObj = gameObj.players[playerID]
+		const playerObj_blocklistItem = playerObj.blockList[blockType]
+		
+		if(playerObj_blocklistItem == undefined || playerObj_blocklistItem.ammo < 1) {
 			return false
 		}
-		if (blockType === 'circle') { 
-			var validTypes = ['star','plus','cross','hbar','vbar','tlbr','bltr','arrow1','arrow2','arrow3','arrow4','arrow6','arrow7','arrow8','arrow9'];
-			if (validTypes.includes(initialType)) {
-				return blockType;
-			} else {
-				return false;
+		playerObj_blocklistItem.ammo--
+		
+		
+		if(blockType === 'circle') {
+			const blockIsCircleable = blocklist_circleable.includes(initialType)
+			
+			if(blockIsCircleable) {
+				return blockType
 			}
-		} else if (blockType === 'reclaim') {
-			if ((initialType !== 'blank' && initialType !== 'base' && initialType !== 'blockade' && initialType !== 'mine')) {
-				if (gameData[gameID].board[pos].possession.length === 1) {
-					if (gameData[gameID].board[pos].possession[0] === playerID) {
-						return 'reclaim';
-					}
-				}
-				
+			return false
+			
+		} else 
+		if(blockType === 'reclaim') {
+			
+			const non_reclaimable = ['blank', 'base', 'blockade', 'mine']
+			const invalid_reclaim_action = non_reclaimable.includes(initialType)
+			
+			if(invalid_reclaim_action) {
+				return false
 			}
-			return false;
-		} else {
-			if (initialType === 'blank') { return blockType; }
-			if (initialType === 'mine') { return 'mine explosion'; }
-			else { return false; }
+			
+			// we can only reclaim a tile if we are the sole owner
+			if(tileObj.possession.length === 1 && tileObj.possession[0] === playerID) {
+				return 'reclaim';
+			}
+			
+			return false
+			
+		} else
+		if(initialType === 'blank') {
+			return blockType
+		} else
+		if(initialType === 'mine') {
+			return 'mine explosion'
 		}
+		
+		return false
 	}
-	
 	
 	
 	const socket = this
 	
 	// x,y was never checked as valid, fake shit can pass into here and mess everything up.
+	var gameID = userData[socket.id].room
 	
-	var gameID = userData[socket.id].room;
 	// obtain gameID
-	
-	if (typeof gameData[gameID] !== 'undefined') {
-	// if the game exists
-	
-		if ((youArePlaying(gameData[gameID].players, socket.id)) && (gameData[gameID].gameState == 'inprogress')) {
-		// if you are playing, and the game is in progress
-		
-			var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
-			// get move position for the board array
-			
-			try {
-				blockType = validateMove(gameID, blockType, pos, socket.id);
-				// validateMove returns false if invalid.
-			} catch(err) {
-				blockType = false;
-			}
-			
-			if (blockType !== false && moveCount == gameData[gameID].moveCount) {
-				// make sure the move is valid
-				
-				gameData[gameID].players[socket.id].hasMoved = true;
-				if (allPlayersMoved(gameData[gameID].players)) {
-					var tempBlock2 = [x,y,blockType,socket.id];
-					
-					// this shit is a problem for 4 player mode!
-					
-					performTurn(gameID, gameData[gameID].tempBlock, tempBlock2);
-				} else {
-					// still waiting for other players
-					gameData[gameID].tempBlock = [x,y,blockType,socket.id]; // store data temporarily
-					gameData[gameID].players[socket.id].onStandby = true;
-					socket.broadcast.to(gameID).emit('log', '<span class="waitMsg blinkText">' + gameData[gameID].players[socket.id].username + ' has moved.'); // let the opponent know
-					
-					var opponentList = [];
-					for (player in gameData[gameID].players) {
-						if (socket.id != player) {
-							opponentList.push(player);
-						}
-					}
-					if (opponentList.length == 1) {
-						socket.emit('log', '<span class="waitMsg blinkText">Waiting for '+ gameData[gameID].players[opponentList[0]].username +'.</span>');
-					} else {
-						socket.emit('log', '<span class="waitMsg blinkText">Waiting for opponents.</span>');
-					}
-				}
-			} else {
-				// invalid move.
-				socket.emit('log', redMsg('invalid move'))
-			}
-		} else {
-			socket.emit('log', redMsg('spectator cannot make moves'));
-		}
-	} else {
+	const gameObj = gameData[gameID]
+	if(gameObj == undefined) {
 		socket.emit('log', redMsg('undefined game in <i>attempt move</i>'));
+		return
 	}
+	
+	const weArePlaying = youArePlaying(gameObj.players, socket.id)
+	const gameIsInProgress = gameObj.gameState == 'inprogress'
+	
+	const goodCase = weArePlaying && gameIsInProgress
+	if(!goodCase) {
+		socket.emit('log', redMsg('spectator cannot make moves'));
+		return
+	}
+	
+	
+	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y)
+	
+	// Check if the move is valid:
+	try {
+		blockType = validateMove(gameID, blockType, pos, socket.id)
+		// validateMove returns false if invalid.
+	} catch(err) {
+		blockType = false
+	}
+	const validMove = blockType !== false
+	const moveCountMatches = moveCount == gameData[gameID].moveCount
+	
+	const completelyValidMove = validMove && moveCountMatches
+	
+	if(!completelyValidMove) {
+		socket.emit('log', redMsg('invalid move'))
+		return
+	}
+	
+	// When the move is valid:
+	const playerObj = gameObj.players[socket.id]
+	playerObj.hasMoved = true
+	if(allPlayersMoved(gameObj.players)) {
+		var tempBlock2 = [x, y, blockType, socket.id]
+		
+		// this shit is a problem for 4 player mode!
+		performTurn(gameID, gameObj.tempBlock, tempBlock2)
+	} else {
+		// still waiting for other players
+		
+		// @TODO
+		// store the mutated block on the global gameObj.
+		// this is going to be a problem when playing with multiple players.
+		// Instead, it would be better to put in on the playerObj of the gameObj???
+		// or to put it even somewhere else.
+		gameObj.tempBlock = [x, y, blockType, socket.id]
+		
+		playerObj.onStandby = true
+		socket.broadcast.to(gameID).emit('log', '<span class="waitMsg blinkText">' + playerObj.username + ' has moved.'); // let the opponent know
+		
+		
+		
+		// print out waiting message.
+		const opponentSocketIDs = []
+		for(const playerSocketID in playerObj.players) {
+			
+			if(socket.id != playerSocketID) {
+				opponentSocketIDs.push(playerSocketID)
+			}
+		}
+		
+		if(opponentSocketIDs.length == 1) {
+			const opponent = gameObj.players[ opponentSocketIDs[0] ]
+			socket.emit('log', '<span class="waitMsg blinkText">Waiting for '+ opponent.username +'.</span>')
+		} else {
+			socket.emit('log', '<span class="waitMsg blinkText">Waiting for opponents.</span>')
+		}
+	}
+	
 }
 
 function socket_exitGameToLobby() {
 	const socket = this
 	
+	const user = userData[socket.id]
+	const current_room = user.room
 	
-	var gameID = userData[socket.id].room;
-	if (gameID !== 'lobby') {
-		socket.leave(gameID);
-		io.to('lobby').emit('log', dimMsg(userData[socket.id].username + ' joined lobby.'));
-		socket.emit('log', '<div class="roomChange">joining lobby</div>', true);
-		socket.join('lobby');
-		userData[socket.id].room = 'lobby';
-		io.to(gameID).emit('log', dimMsg(userData[socket.id].username + ' left.') );
-		checkForPlayerExit(gameID, socket);
-		sub_renderLobby(socket);
-	} else {
-		socket.emit('log', redMsg('already in lobby!'));
+	if(current_room == 'lobby') {
+		socket.emit('log', redMsg('already in lobby!'))
+		return
 	}
+	
+	socket.leave(current_room)
+	
+	io.to('lobby').emit('log', dimMsg(user.username + ' joined lobby.'))
+	socket.emit('log', '<div class="roomChange">joining lobby</div>', true)
+	
+	socket.join('lobby')
+	user.room = 'lobby'
+	io.to(current_room).emit('log', dimMsg(user.username + ' left.') )
+	
+	checkForPlayerExit(current_room, socket)
+	
+	sub_renderLobby(socket)
 }
 
 
@@ -492,120 +535,150 @@ function socket_practiceGameReset() {
 }
 
 
+// @TODO: Allow A user to revoke their rematch offer.
 function socket_yesRematch() {
 	const socket = this
 	
-	var gameID = userData[socket.id].room;
+	const user = userData[socket.id]
+	const gameID = user.room
+	
+	if(user.ghost) {
+		socket.emit('log', redMsg('You cannot initiate rematch as a ghost'));
+		return
+	}
 	
 	if(!gameExists(gameID)) {
 		log_invalidGame(socket)
 		return
 	}
 	
-	if (gameData[gameID].gameState == 'gameover' && gameData[gameID].noRematch == false) {
-		var hacking = true;
-		for (player in gameData[gameID].players) {
-			if (player == socket.id) {
-				hacking = false;
-			}
-		}
-		if (!hacking) {
-			gameData[gameID].players[socket.id].rematchOffered = true;
-			var numPlayers = 0;
-			var numYesRematch = 0;
-			for (player in gameData[gameID].players) {
-				numPlayers++;
-				if (gameData[gameID].players[player].rematchOffered == true) {
-					numYesRematch++;
-				}
-			}
-			if (numPlayers !== numYesRematch) {
-				socket.broadcast.to(gameID).emit('rematch offered');
-				io.to(gameID).emit('log', dimMsg(userData[socket.id].username +' offered a rematch.'));
-			} else {
-				// REMATCH INITIATED!!
-				gameData[gameID].board = deepClone(gameData[gameID].initialBoard)
-				gameData[gameID].ratingsCalculated = false;
-				
-				var over1000 = 0;
-				var creatorElo = sub_returnDisplayElo(gameData[gameID].creator);
-				var playerElo = creatorElo; // initially set this to creatorElo but change it if it's found to be different.
-				for (player in gameData[gameID].players) {
-					gameData[gameID].players[player].blockList = deepClone(gameData[gameID].blockList)
-					gameData[gameID].players[player].winner = false;
-					gameData[gameID].players[player].winPath = [];
-					gameData[gameID].players[player].hasMoved = false;
-					gameData[gameID].players[player].onStandby = false;
-					gameData[gameID].players[player].offeredDraw = false;
-					gameData[gameID].players[player].rematchOffered = false;
-					gameData[gameID].players[player].disconnected = false;
-					gameData[gameID].players[player].forfeit = false;
-					if (userData[player].elo !== creatorElo) { 
-						// if it's different, set it to the other player's elo.
-						playerElo = sub_returnDisplayElo(player);
-					}
-					
-					
-					/*
-					if (userData[player].elo > 1000) {
-						over1000++;
-					}
-					*/
-				}
-				gameData[gameID].totalGames++;
-				
-				var iceBoard = false;
-				/*
-				if ((gameData[gameID].totalGames >= 4) && (over1000 == 2)) {
-					// if at least 4 games were played, and both players are over 1000 elo
-					if (random_inclusive_int(1,7) == 7) {
-						// if 1/7
-						console.log('ice board');
-						iceBoard = true;
-						for (var i = 0; i < (gameData[gameID].board.length / 2); i++) {
-							if (gameData[gameID].board[i].type == 'blank' && (random_inclusive_int(1,15) == 15)) {
-								gameData[gameID].board[i].type = 'ice';
-								gameData[gameID].board[(gameData[gameID].board.length - i - 1)].type = 'ice';
-							}
-						}
-						
-						// clear surrounding. this shit sucks for different board sizes just FYI!!!
-						updateBlock(gameID, 4, 5, "blank");
-						updateBlock(gameID, 5, 5, "blank");
-						updateBlock(gameID, 6, 5, "blank");
-						updateBlock(gameID, 4, 6, "blank");
-						updateBlock(gameID, 6, 6, "blank");
-						updateBlock(gameID, 4, 7, "blank");
-						updateBlock(gameID, 5, 7, "blank");
-						updateBlock(gameID, 6, 7, "blank");
-						
-						updateBlock(gameID, 16, 5, "blank");
-						updateBlock(gameID, 17, 5, "blank");
-						updateBlock(gameID, 18, 5, "blank");
-						updateBlock(gameID, 16, 6, "blank");
-						updateBlock(gameID, 18, 6, "blank");
-						updateBlock(gameID, 16, 7, "blank");
-						updateBlock(gameID, 17, 7, "blank");
-						updateBlock(gameID, 18, 7, "blank");
-					}
-				}
-				*/
-				
-				io.to(gameID).emit('setup rematch', gameData[gameID].blockList, creatorElo, playerElo);
-				io.to(gameID).emit('log', dimMsg('Rematch initiated'));
-				if (iceBoard) {
-					io.to(gameID).emit('log', '<span class="coldWeather">Cold weather!</span>');
-				}
-				io.to(gameID).emit('render board', gameData[gameID].board);
-				startGame(gameID);
-			}
-		} else {
-			socket.emit('log', redMsg('No hacking!'));
-		}
-	} else {
-		socket.emit('log', redMsg('rematch not possible in <i>offer rematch</i>!'));
+	const gameObj = gameData[gameID]
+	
+	const rematchPossible = gameObj.gameState == 'gameover' && gameObj.noRematch == false
+	
+	if(!rematchPossible) {
+		socket.emit('log', redMsg('rematch not possible in <i>offer rematch</i>!'))
+		return
 	}
 	
+	let weArePlaying = youArePlaying(gameObj.players, socket.id)
+	
+	if(!weArePlaying) {
+		socket.emit('log', redMsg('You are not in this game.'));
+		return
+	}
+	
+	const playerObj = gameObj.players[socket.id]
+	
+	playerObj.rematchOffered = true
+	
+	
+	const amountOfPlayers = Object.keys(gameObj.players).length
+	let amountOfPlayersWhoWantToRematch = 0
+	for(const playerSocketID in gameObj.players) {
+		if(gameObj.players[playerSocketID].rematchOffered == true) {
+			amountOfPlayersWhoWantToRematch++
+		}
+	}
+	
+	if(amountOfPlayers !== amountOfPlayersWhoWantToRematch) {
+		socket.broadcast.to(gameID).emit('rematch offered');
+		io.to(gameID).emit('log', dimMsg(user.username +' offered a rematch.'))
+		return
+	}
+	
+	
+	// REMATCH INITIATED!!
+	gameObj.board = deepClone(gameObj.initialBoard)
+	gameObj.ratingsCalculated = false
+	
+	
+	const creatorElo = sub_returnDisplayElo(gameObj.creator)
+	// initially set this to creatorElo but change it if it's found to be different.
+	let playerElo = creatorElo
+	
+	let playersWithMoreThan1000Elo = 0
+	
+	for(const playerSocketID in gameObj.players) {
+		const loop_userData = userData[playerSocketID]
+		const loop_playerObj = gameObj.players[playerSocketID]
+		loop_playerObj.blockList = deepClone(gameObj.blockList)
+		loop_playerObj.winner = false
+		loop_playerObj.winPath = []
+		loop_playerObj.hasMoved = false
+		loop_playerObj.onStandby = false
+		loop_playerObj.offeredDraw = false
+		loop_playerObj.rematchOffered = false
+		loop_playerObj.disconnected = false
+		loop_playerObj.forfeit = false
+		
+		if(loop_userData.elo !== creatorElo) {
+			// if it's different, set it to the other player's elo.
+			playerElo = sub_returnDisplayElo(playerSocketID)
+		}
+		
+		
+		
+		if (loop_userData.elo > 1000) {
+			playersWithMoreThan1000Elo++;
+		}
+		
+	}
+	gameData[gameID].totalGames++
+	
+	let is_iceBoard = false
+	const enable_iceBoard_functionality = false
+	if(enable_iceBoard_functionality) {
+		
+		const atleast4GamesPlayed = gameData[gameID].totalGames >= 4
+		const bothPlayersHaveMoreThan1000Elo = (playersWithMoreThan1000Elo == 2)
+		const diceRollOneOutOf7 = random_inclusive_int(1,7) == 7
+		
+		
+		if(atleast4GamesPlayed && bothPlayersHaveMoreThan1000Elo && diceRollOneOutOf7) {
+			is_iceBoard = true
+			
+			for(var i = 0; i < (gameData[gameID].board.length / 2); i++) {
+				if(gameData[gameID].board[i].type == 'blank' && (random_inclusive_int(1,15) == 15)) {
+					gameData[gameID].board[i].type = 'ice';
+					gameData[gameID].board[(gameData[gameID].board.length - i - 1)].type = 'ice';
+				}
+			}
+			
+			// I think the goal of this code is to clear the surrounding blocks of the base block. Considering it's 8 block updates twice.
+			// But test to see if this is what it does.
+			// @TODO: We could clean this up.
+			// clear surrounding. this shit sucks for different board sizes just FYI!!!
+			updateBlock(gameID, 4, 5, "blank")
+			updateBlock(gameID, 5, 5, "blank")
+			updateBlock(gameID, 6, 5, "blank")
+			updateBlock(gameID, 4, 6, "blank")
+			updateBlock(gameID, 6, 6, "blank")
+			updateBlock(gameID, 4, 7, "blank")
+			updateBlock(gameID, 5, 7, "blank")
+			updateBlock(gameID, 6, 7, "blank")
+			
+			updateBlock(gameID, 16, 5, "blank")
+			updateBlock(gameID, 17, 5, "blank")
+			updateBlock(gameID, 18, 5, "blank")
+			updateBlock(gameID, 16, 6, "blank")
+			updateBlock(gameID, 18, 6, "blank")
+			updateBlock(gameID, 16, 7, "blank")
+			updateBlock(gameID, 17, 7, "blank")
+			updateBlock(gameID, 18, 7, "blank")
+		}
+	}
+	
+	
+	io.to(gameID).emit('setup rematch', gameData[gameID].blockList, creatorElo, playerElo)
+	io.to(gameID).emit('log', dimMsg('Rematch initiated'))
+	
+	if(is_iceBoard) {
+		io.to(gameID).emit('log', '<span class="coldWeather">Cold weather!</span>')
+	}
+	
+	io.to(gameID).emit('render board', gameData[gameID].board)
+	startGame(gameID)
 }
 
 
@@ -661,13 +734,13 @@ function log_notInGame(socket) {
 }
 
 
-function youArePlaying(players, socketID) {
-	for (id in players) { 
-		if (id == socketID) { 
-			return true; 
-		} 
-	} 
-	return false; 
+function youArePlaying(players, findSocketID) {
+	for(playerSocketId in players) {
+		if(playerSocketId == findSocketID) {
+			return true
+		}
+	}
+	return false
 }
 
 

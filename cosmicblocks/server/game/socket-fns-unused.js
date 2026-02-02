@@ -34,7 +34,7 @@ function socket_newColor(color) {
 
 function socket_handleNameChosen(name) { 
 	userData[socket.id].username = name;
-	userData[socket.id].color = assignColor();
+	userData[socket.id].color = getRandomUserColor();
 	if (shortID(socket.id) != name) {
 		socket.broadcast.emit('log', '<span style="color: '+ userData[socket.id].color +';">' + shortID(socket.id) + '\'s name is <span style="font-weight: bold">' + userData[socket.id].username + '</span>.</span>' )
 	}

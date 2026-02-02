@@ -27,7 +27,7 @@ const {
 
 const {
 	// hslToHex,
-	// assignColor,
+	// getRandomUserColor,
 	// hexColorDelta,
 	// increase_brightness,
 	mix
