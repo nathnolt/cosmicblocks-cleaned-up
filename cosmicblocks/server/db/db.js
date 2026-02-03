@@ -10,6 +10,7 @@ const {
 	// user update
 	update_user_color_stmt,
 	update_last_action_stmt,
+	update_user_with_game_results_stmt,
 	
 	// session
 	link_session_stmt,
@@ -124,9 +125,23 @@ function db_validateUser() {
 	console.log('@TODO: implement validateUser')
 }
 
-function db_updateUserWithGameResults() {
-	console.log('@TODO: implement updateUserWithGameResults')
+function db_updateUserWithGameResults(userid, elo, games_played, wins, losses, draws, avg_move_count) {
+	try {
+		update_user_with_game_results_stmt.run({
+			id: userid,
+			elo: elo,
+			games_played: games_played,
+			wins: wins,
+			losses: losses,
+			draws: draws,
+			avg_move_count: avg_move_count
+		})
+	} catch(err) {
+		console.error(err)
+		throw err
+	}
 }
+
 
 module.exports = {
 	// user

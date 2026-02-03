@@ -40,6 +40,7 @@ const {
 const {
 	saveData
 } = require('../../settings.js')
+const { db_updateUserWithGameResults } = require('../../db/db.js')
 
 let io
 function gameplay_setio(ioValue) {
@@ -199,6 +200,16 @@ function readableBlockName(blockType) {
 }
 
 
+// 
+// right, this is complicated because optionsDetection is called from within a loop, 
+// which dynamically adds new items, which are looped over again, 
+// calling optionsDetection again, with other parameters.
+// 
+// It feels a bit like recursion, because in recursion you frequenty do the same kind of thing.
+// 
+// The way that this function is called, is where x and y are the base of a player.
+// So this probably tries to figure out whether you have won, or something.
+// 
 function optionsDetection2(gameID, x, y, playerID) {
 
 	var queue = [
@@ -206,19 +217,25 @@ function optionsDetection2(gameID, x, y, playerID) {
 	];
 	
 	while (queue.length) {
-		var newCollection = (optionsDetection(queue[0][0], queue[0][1], queue[0][2], queue[0][3], queue[0][4], queue[0][5], queue[0][6]));
+		var newCollection = optionsDetection(queue[0][0], queue[0][1], queue[0][2], queue[0][3], queue[0][4], queue[0][5], queue[0][6])
+		
+		// loop through newCollection, essentially appending to queue the result of the previous call.
 		for (var i = 0; i < newCollection.length; i++) {
 			queue.push(newCollection[i]);
 		}
+		
+		// remove item[0], aka: the item that we just handled.
 		queue.shift();	
 	}
 }
+
 
 // 
 // Only used from optionsDetection2
 // This function looks complicated.
 // It will get cleaned up eventually
 function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, iceDir) {
+	
 	var collection = [];
 	var pos = get_linearBoardArrayPos_from_xyPos(gameID, x,y);
 	var dir
@@ -240,15 +257,17 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 		}
 		dir = blocklist_moves[someType]
 		
-		
 	}
+	
 	if (typeof passedWinPath === 'undefined') { 
 		var winPath = [];
 		currentLayer = 0;
 	} else {
 		var winPath = passedWinPath.slice();
 	}
+	
 	winPath[currentLayer] = pos;
+	
 	for (var i = 0; i < dir.length; i++) {
 		var newX = x + dir[i][0];
 		var newY = y + dir[i][1];
@@ -448,7 +467,7 @@ function checkForPlayerExit(gameID, socket) {
 
 
 
-
+// @TODO: clean up.
 function gameOver(gameID) {
 	
 	function stopTimer(gameID) {
@@ -463,12 +482,16 @@ function gameOver(gameID) {
 	}
 	
 	gameData[gameID].gameState = 'gameover';
+	
 	stopTimer(gameID);
+	
+	
 	var winners = [];
 	var winPaths = [];
 	var color = [];
 	var playerIDs = [];
-	var drawgame;
+	var drawGame;
+	
 	for (playerID in gameData[gameID].players) {
 		playerIDs.push (playerID);
 		if (gameData[gameID].players[playerID].winner) {
@@ -479,6 +502,7 @@ function gameOver(gameID) {
 			wipePossession(gameID, playerID);
 		}
 	}
+	
 	if (winners.length == 1) {
 		drawGame = false;
 	} else {
@@ -494,170 +518,219 @@ function gameOver(gameID) {
 		}
 	}
 	
-	if (gameData[gameID].gameType === 'practice') {
-		// durp
-	} else {
+	
+	// use a label here so that we can break to after the label, in order to do a guard clause thing
+	// but not being in a function.
+	label: {
 		
-		console.log('@TODO: handle game over stats calculation')
+		if(gameData[gameID].gameType === 'practice') {
+			break label
+		}
 		
-		if (gameData[gameID].moveCount > 1) {
-			if (gameData[gameID].ratingsCalculated == false) {
-				for (playerID in gameData[gameID].players) {
-					if (drawGame == false) {
-						if (playerID === winners[0]) {
-							gameData[gameID].players[playerID].wins++;
-							userData[playerID].wins++;
-							userData[playerID].gamesPlayed++;
-							if (random_inclusive_int(1,5) !== 5) {
-								userData[playerID].remainingRerolls++;
-							}
-						} else {
-							gameData[gameID].players[playerID].losses++;
-							userData[playerID].losses++;
-							userData[playerID].gamesPlayed++;
-							if (random_inclusive_int(1,5) === 5) {
-								userData[playerID].remainingRerolls++;
-							}
-						}
+		if(gameData[gameID].moveCount <= 1) {
+			gameData[gameID].ratingsCalculated = true;
+			io.to(gameID).emit('log', 'No stats collected.');
+			break label
+		}
+		
+		if(gameData[gameID].ratingsCalculated != false) {
+			break label
+		}
+		
+		
+		for(playerID in gameData[gameID].players) {
+			if (drawGame == false) {
+				if (playerID === winners[0]) {
+					gameData[gameID].players[playerID].wins++;
+					userData[playerID].wins++;
+					userData[playerID].gamesPlayed++;
+					if (random_inclusive_int(1,5) !== 5) {
+						userData[playerID].remainingRerolls++;
+					}
+				} else {
+					gameData[gameID].players[playerID].losses++;
+					userData[playerID].losses++;
+					userData[playerID].gamesPlayed++;
+					if (random_inclusive_int(1,5) === 5) {
+						userData[playerID].remainingRerolls++;
+					}
+				}
+			} else {
+				gameData[gameID].players[playerID].draws++;
+				userData[playerID].draws++;
+				userData[playerID].gamesPlayed++;
+				if (random_inclusive_int(1,5) > 2) {
+					userData[playerID].remainingRerolls++;
+				}
+			}
+		}
+		
+		// Elo
+		var kFactor = 20;
+		if (gameData[gameID].gameType == 'random') {
+			kFactor = 7.5;
+		}
+		
+		if (gameData[gameID].moveCount < 8) {
+			kFactor *= (gameData[gameID].moveCount / 8);
+		}
+		
+		var winner, loser;
+		if (gameData[gameID].players[playerIDs[0]].winner) {
+			winner = playerIDs[0];
+			loser = playerIDs[1];
+		} else {
+			winner = playerIDs[1];
+			loser = playerIDs[0];
+		}
+		if (userData[winner].elo === -99999) { 
+			userData[winner].elo = 1000;
+		}
+		if (userData[loser].elo === -99999) {
+			userData[loser].elo = 1000;
+		}
+		var ratingDifference = userData[loser].elo - userData[winner].elo;
+		var expectedScoreWinner = 1 / ( 1 + Math.pow(10, ratingDifference/400) );
+		var actualScore = 1;
+		if (drawGame) { actualScore = 0.5; }
+		var e = kFactor * (actualScore - expectedScoreWinner);
+		userData[winner].oldElo = userData[winner].elo;
+		userData[winner].elo += e;
+		userData[loser].oldElo = userData[loser].elo;
+		userData[loser].elo -= e;
+		
+		gameData[gameID].ratingsCalculated = true;
+		
+		var p1Score = gameData[gameID].players[playerIDs[0]].wins + (gameData[gameID].players[playerIDs[0]].draws / 2);
+		var p2Score = gameData[gameID].players[playerIDs[1]].wins + (gameData[gameID].players[playerIDs[1]].draws / 2);
+		
+		var postGameMsg = '<div class="postGame">';
+		if (drawGame) {
+			postGameMsg += '<span class="result">Draw Game!</span>';
+		} else {
+			postGameMsg += '<span class="result" style="color: ' + userData[winners[0]].color + '">' + userData[winners[0]].username + ' Wins!</span>';
+		}
+		postGameMsg += '<div class="seriesScore"><div style="color: '+ userData[playerIDs[1]].color + '"><span>' + p2Score + '</span></div><div style="color: '+ userData[playerIDs[0]].color + '"><span>' + p1Score + '</span></div></div>';
+		for (var j = 0; j <= 1; j++) {			
+			if (userData[playerIDs[j]].gamesPlayed >= 10) {
+				// if user has not played at least 10 games, do not show rating change.
+				var prior = Math.round(userData[playerIDs[j]].oldElo) - 1000;
+				var post = Math.round(userData[playerIDs[j]].elo) - 1000;
+				if ((prior > 0) || (post > 0)) {
+					if (prior <= 0) {
+						prior = 0;
+					}
+					if (post <= 0) {
+						post = 0;
+					}
+					
+					var change = post - prior;
+					postGameMsg += '<div><span style="color:'+ gameData[gameID].players[playerIDs[j]].color +'; font-weight:bold;">'+ userData[playerIDs[j]].username +'</span><span class="dimMsg">: ';
+					postGameMsg += prior + '&rarr;</span>' + post +' </span>';
+					if (change > 0) {
+						postGameMsg += '<span class="greenMsg">(+' + change + ')</span>';
+					} else if (change == 0) {
+						postGameMsg += '<span>(&plusmn;0)</span>';
 					} else {
-						gameData[gameID].players[playerID].draws++;
-						userData[playerID].draws++;
-						userData[playerID].gamesPlayed++;
-						if (random_inclusive_int(1,5) > 2) {
-							userData[playerID].remainingRerolls++;
-						}
+						postGameMsg += '<span class="redMsg">(&minus;' + Math.abs(change) + ')</span>';
 					}
+					postGameMsg += '</div>';
 				}
-				
-				// Elo
-				var kFactor = 20;
-				if (gameData[gameID].gameType == 'random') {
-					kFactor = 7.5;
-				}
-				
-				if (gameData[gameID].moveCount < 8) {
-					kFactor *= (gameData[gameID].moveCount / 8);
-				}
-				
-				var winner, loser;
-				if (gameData[gameID].players[playerIDs[0]].winner) {
-					winner = playerIDs[0];
-					loser = playerIDs[1];
-				} else {
-					winner = playerIDs[1];
-					loser = playerIDs[0];
-				}
-				if (userData[winner].elo === -99999) { 
-					userData[winner].elo = 1000;
-				}
-				if (userData[loser].elo === -99999) {
-					userData[loser].elo = 1000;
-				}
-				var ratingDifference = userData[loser].elo - userData[winner].elo;
-				var expectedScoreWinner = 1 / ( 1 + Math.pow(10, ratingDifference/400) );
-				var actualScore = 1;
-				if (drawGame) { actualScore = 0.5; }
-				var e = kFactor * (actualScore - expectedScoreWinner);
-				userData[winner].oldElo = userData[winner].elo;
-				userData[winner].elo += e;
-				userData[loser].oldElo = userData[loser].elo;
-				userData[loser].elo -= e;
-				
-				gameData[gameID].ratingsCalculated = true;
-				
-				var p1Score = gameData[gameID].players[playerIDs[0]].wins + (gameData[gameID].players[playerIDs[0]].draws / 2);
-				var p2Score = gameData[gameID].players[playerIDs[1]].wins + (gameData[gameID].players[playerIDs[1]].draws / 2);
-				
-				var postGameMsg = '<div class="postGame">';
-				if (drawGame) {
-					postGameMsg += '<span class="result">Draw Game!</span>';
-				} else {
-					postGameMsg += '<span class="result" style="color: ' + userData[winners[0]].color + '">' + userData[winners[0]].username + ' Wins!</span>';
-				}
-				postGameMsg += '<div class="seriesScore"><div style="color: '+ userData[playerIDs[1]].color + '"><span>' + p2Score + '</span></div><div style="color: '+ userData[playerIDs[0]].color + '"><span>' + p1Score + '</span></div></div>';
-				for (var j = 0; j <= 1; j++) {			
-					if (userData[playerIDs[j]].gamesPlayed >= 10) {
-						// if user has not played at least 10 games, do not show rating change.
-						var prior = Math.round(userData[playerIDs[j]].oldElo) - 1000;
-						var post = Math.round(userData[playerIDs[j]].elo) - 1000;
-						if ((prior > 0) || (post > 0)) {
-							if (prior <= 0) {
-								prior = 0;
-							}
-							if (post <= 0) {
-								post = 0;
-							}
-							
-							var change = post - prior;
-							postGameMsg += '<div><span style="color:'+ gameData[gameID].players[playerIDs[j]].color +'; font-weight:bold;">'+ userData[playerIDs[j]].username +'</span><span class="dimMsg">: ';
-							postGameMsg += prior + '&rarr;</span>' + post +' </span>';
-							if (change > 0) {
-								postGameMsg += '<span class="greenMsg">(+' + change + ')</span>';
-							} else if (change == 0) {
-								postGameMsg += '<span>(&plusmn;0)</span>';
-							} else {
-								postGameMsg += '<span class="redMsg">(&minus;' + Math.abs(change) + ')</span>';
-							}
-							postGameMsg += '</div>';
-						}
-					}
-				}
-				postGameMsg += '</div>';
-				io.to(gameID).emit('log', postGameMsg, true);
+			}
+		}
+		
+		postGameMsg += '</div>';
+		io.to(gameID).emit('log', postGameMsg, true);
+		
+		// @TODO: handle sync
+		if(saveData) {
 			
-					if (saveData) {
-						db.sync(function(err) {
+			for(const playerID of playerIDs) {
+				const user = userData[playerID]
+				const userAvgMoveCount = user.avgMoveCount + (gameData[gameID].moveCount - user.avgMoveCount) / user.gamesPlayed
+				
+				db_updateUserWithGameResults(
+					user.id, 
+					user.elo, 
+					user.gamesPlayed, 
+					user.wins, 
+					user.losses, 
+					user.draws, 
+					userAvgMoveCount
+				)
+			}
+			
+			
+			const old_sync = false
+			if(old_sync) {
+				db.sync(function(err) {
+					if (err) throw err;
+					for(const playerID of playerIDs) {
+						const user = userData[playerID]
+						const userAvgMoveCount = user.avgMoveCount + (gameData[gameID].moveCount - user.avgMoveCount) / user.gamesPlayed
+						
+						db_updateUserWithGameResults(
+							user.id, 
+							user.elo, 
+							user.gamesPlayed, 
+							user.wins, 
+							user.losses, 
+							user.draws, 
+							userAvgMoveCount
+						)
+						
+					}
+					
+					if (typeof userData[playerIDs[0]] !== 'undefined') {
+						User.find({ twitterID: userData[playerIDs[0]].twitterid }, function (err, users){
 							if (err) throw err;
-							if (typeof userData[playerIDs[0]] !== 'undefined') {
-								User.find({ twitterID: userData[playerIDs[0]].twitterid }, function (err, users){
+							if ((users[0].gamesPlayed + 1) !== userData[playerIDs[0]].gamesPlayed) {
+								io.emit('log', '<span class="redMsg">FAILED STATS UPDATE FOR ' + userData[playerIDs[0]].username + '</span>');
+								io.emit('log', '<span class="redMsg">' + playerIDs[0] + '</span>');
+							} else {
+								// sync with userData, which is already done updating.
+								users[0].elo = userData[playerIDs[0]].elo;
+								users[0].gamesPlayed = userData[playerIDs[0]].gamesPlayed;
+								users[0].wins = userData[playerIDs[0]].wins;
+								users[0].losses = userData[playerIDs[0]].losses;
+								users[0].draws = userData[playerIDs[0]].draws;
+								users[0].avgMoveCount += ((gameData[gameID].moveCount - users[0].avgMoveCount) / users[0].gamesPlayed);
+								users[0].save(function (err) {
 									if (err) throw err;
-									if ((users[0].gamesPlayed + 1) !== userData[playerIDs[0]].gamesPlayed) {
-										io.emit('log', '<span class="redMsg">FAILED STATS UPDATE FOR ' + userData[playerIDs[0]].username + '</span>');
-										io.emit('log', '<span class="redMsg">' + playerIDs[0] + '</span>');
-									} else {
-										// sync with userData, which is already done updating.
-										users[0].elo = userData[playerIDs[0]].elo;
-										users[0].gamesPlayed = userData[playerIDs[0]].gamesPlayed;
-										users[0].wins = userData[playerIDs[0]].wins;
-										users[0].losses = userData[playerIDs[0]].losses;
-										users[0].draws = userData[playerIDs[0]].draws;
-										users[0].avgMoveCount += ((gameData[gameID].moveCount - users[0].avgMoveCount) / users[0].gamesPlayed);
-										users[0].save(function (err) {
-											if (err) throw err;
-											console.log("success: " + userData[playerIDs[0]].username);
-										});
-									}
-								});
-							}
-							if (typeof userData[playerIDs[1]] !== 'undefined') {
-								User.find({ twitterID: userData[playerIDs[1]].twitterid }, function (err, users2){
-									if (err) throw err;
-									if ((users2[0].gamesPlayed + 1) !== userData[playerIDs[1]].gamesPlayed) {
-										io.emit('log', '<span class="redMsg">FAILED STATS UPDATE FOR ' + userData[playerIDs[1]].username + '</span>');
-										io.emit('log', '<span class="redMsg">' + playerIDs[1] + '</span>');
-									} else {
-										//afaik can only update one user at a time.
-										users2[0].elo = userData[playerIDs[1]].elo;
-										users2[0].gamesPlayed = userData[playerIDs[1]].gamesPlayed;
-										users2[0].wins = userData[playerIDs[1]].wins;
-										users2[0].losses = userData[playerIDs[1]].losses;
-										users2[0].draws = userData[playerIDs[1]].draws;
-										users2[0].avgMoveCount += ((gameData[gameID].moveCount - users2[0].avgMoveCount) / users2[0].gamesPlayed);
-										users2[0].save(function (err) {
-											if (err) throw err;
-											console.log("success: " + userData[playerIDs[1]].username);
-										});
-									}
+									console.log("success: " + userData[playerIDs[0]].username);
 								});
 							}
 						});
 					}
+					
+					
+					if (typeof userData[playerIDs[1]] !== 'undefined') {
+						User.find({ twitterID: userData[playerIDs[1]].twitterid }, function (err, users2){
+							if (err) throw err;
+							if ((users2[0].gamesPlayed + 1) !== userData[playerIDs[1]].gamesPlayed) {
+								io.emit('log', '<span class="redMsg">FAILED STATS UPDATE FOR ' + userData[playerIDs[1]].username + '</span>');
+								io.emit('log', '<span class="redMsg">' + playerIDs[1] + '</span>');
+							} else {
+								//afaik can only update one user at a time.
+								users2[0].elo = userData[playerIDs[1]].elo;
+								users2[0].gamesPlayed = userData[playerIDs[1]].gamesPlayed;
+								users2[0].wins = userData[playerIDs[1]].wins;
+								users2[0].losses = userData[playerIDs[1]].losses;
+								users2[0].draws = userData[playerIDs[1]].draws;
+								users2[0].avgMoveCount += ((gameData[gameID].moveCount - users2[0].avgMoveCount) / users2[0].gamesPlayed);
+								users2[0].save(function (err) {
+									if (err) throw err;
+									console.log("success: " + userData[playerIDs[1]].username);
+								});
+							}
+						});
+					}
+				});
 			}
-		} else {
-			gameData[gameID].ratingsCalculated = true;
-			io.to(gameID).emit('log', 'No stats collected.');
 		}
-	} 
+		
+	} // end of label statement
+
 	// else {
 	// 	gameData[gameID].ratingsCalculated = true;
 	// 	io.to(gameID).emit('log', 'No stats collected.');

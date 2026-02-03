@@ -3,6 +3,10 @@ const {
 	gameData
 } = require('./vars.js')
 
+const {
+	db_getUsersSortedByElo
+} = require('../db/db.js')
+
 let io
 
 function sub_setIo(ioValue) {
@@ -100,19 +104,23 @@ function sub_leaderData(callback) {
 		});
 		
 	}
-	if(false) {
-		const users = db_getUsersSortedByElo()
-		console.log(users)
-		const leaderData = []
-		for(const user of users) {
-			
-		}
-	} 
 	
+	const users = db_getUsersSortedByElo()
+	console.log(users)
+	const leaderData = []
+	for(const user of users) {
+		leaderData.push({
+			displayName: decodeURI(user.username),
+			color: user.color,
+			gamesPlayed: user.games_played,
+			wins: user.wins,
+			draws: user.draws,
+			losses: user.losses,
+			elo: Math.round(user.elo) - 1000
+		})
+	}
 	
-	return callback(null, [
-		{displayName: 'testName', color: '#ff0000', gamesPlayed: 10, wins: 10, draws: 0, losses: 0, elo: 250}
-	]);
+	return callback(null, leaderData);
 	
 }
 

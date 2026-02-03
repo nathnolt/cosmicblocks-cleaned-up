@@ -59,6 +59,21 @@ const update_user_color_stmt = db.prepare(
 const update_last_action_stmt = db.prepare(
 	/*sql*/`UPDATE user SET last_action = current_timestamp WHERE id = :id`
 )
+const update_user_with_game_results_stmt = db.prepare(
+	/*sql*/`
+	UPDATE user
+	SET
+		elo = :elo,
+		games_played = :games_played,
+		wins = :wins,
+		losses = :losses,
+		draws = :draws,
+		avg_move_count = :avg_move_count,
+		last_action = current_timestamp
+	WHERE
+		id = :id
+	`
+)
 
 
 
@@ -80,6 +95,7 @@ module.exports = {
 	// user update
 	update_user_color_stmt,
 	update_last_action_stmt,
+	update_user_with_game_results_stmt,
 	
 	
 	// session
