@@ -21,6 +21,7 @@ const {
 	optionsDetection2,
 	wipePossession,
 	get_linearBoardArrayPos_from_xyPos,
+	get_xyPos_from_linearBoardArrayPos,
 	checkForPlayerExit,
 	getBoardCellColor,
 	updateBlock,
@@ -325,7 +326,7 @@ function socket_handleGameUnready() {
 function socket_attemptMove(x, y, blockType, moveCount) {
 	
 	function allPlayersMoved(players) {
-		for(playerSocketID in players) {
+		for(const playerSocketID in players) {
 			if(players[playerSocketID].hasMoved == false) { 
 				return false
 			} 
@@ -515,7 +516,7 @@ function socket_practiceGameReset() {
 	
 	gameObj.board = deepClone(gameObj.initialBoard)
 	
-	for(playerSocketID in gameObj.players) {
+	for(const playerSocketID in gameObj.players) {
 		const playerObj = gameObj.players[playerSocketID]
 		
 		playerObj.blockList = deepClone(gameObj.blockList)
@@ -741,7 +742,7 @@ function log_notInGame(socket) {
 
 
 function youArePlaying(players, findSocketID) {
-	for(playerSocketId in players) {
+	for(const playerSocketId in players) {
 		if(playerSocketId == findSocketID) {
 			return true
 		}
@@ -869,7 +870,7 @@ function addPlayerToGameObj(gameObj, socketID) {
 	
 	const playerObj = {
 		username: user.username,
-		displayElo: sub_returnDisplayElo(playerID),
+		displayElo: sub_returnDisplayElo(socketID),
 		winner: false, 
 		winPath: [], 
 		hasMoved: false,
@@ -1069,7 +1070,13 @@ function resetTimer(gameID) {
 	gameData[gameID].gameTimer = setInterval(gameTickSecond, 1000)
 }
 
-// @TODO: cleanup
+
+// The function that:
+// - updates the blocks for the users, 
+// - updates moveCount, 
+// - sets player.hasMoved to false
+// - executes gameOver when the game is won by a player
+//
 function performTurn(gameID, tBlock, tBlock2) {
 	
 	// called when:
@@ -1082,12 +1089,21 @@ function performTurn(gameID, tBlock, tBlock2) {
 	// [2] = blockType
 	// [3] = playerID / socket.id
 	
-	gameData[gameID].playerOnStandby = false; // no longer on standby
-	gameData[gameID].moveCount++;   // increase the move count
+	const gameObj = gameData[gameID]
+	
+	gameObj.playerOnStandby = false; // no longer on standby
+	gameObj.moveCount++;   // increase the move count
 	
 	var passedTurn = false;  // did a player pass?
 	var noMove = false;  // assume no at first.
-	var thisX, thisY, thisType, thisOrigin, thatX, thatY, thatType, thatOrigin;
+	var thisX, 
+	    thisY, 
+	    thisType,
+	    thisOrigin,
+	    thatX,
+	    thatY, 
+	    thatType, 
+	    thatOrigin;
 	var collision = false;
 	
 	if ((tBlock == 'pass') || (tBlock2 == 'pass')) {
@@ -1110,22 +1126,30 @@ function performTurn(gameID, tBlock, tBlock2) {
 	}
 	
 	
+	// Handle ammo increasing when reclaim.
 	function reclaim(type, x, y, origin) {
-		var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
-		var reclaimed = gameData[gameID].board[pos].type;
-		if (typeof gameData[gameID].players[origin].blockList[reclaimed] !== 'undefined') {
-			if (gameData[gameID].players[origin].blockList[reclaimed].ammo !== 'inf') {
-				gameData[gameID].players[origin].blockList[reclaimed].ammo++;
-			}
-		} else {
-			gameData[gameID].players[origin].blockList[reclaimed] = {ammo: 1};
-			console.log(gameData[gameID].players[origin].blockList);
+		const pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y)
+		const reclaimed = gameObj.board[pos].type
+		const playerObj = gameObj.players[origin]
+		
+		// handle no ammo case
+		if(playerObj.blockList[reclaimed] == undefined) {
+			playerObj.blockList[reclaimed] = {ammo: 1}
+			return
+		}
+		
+		// handle finite ammo case
+		if(playerObj.blockList[reclaimed].ammo !== 'inf') {
+			playerObj.blockList[reclaimed].ammo++
+			return
 		}
 	}
 	
-	if ((thisX == thatX) && (thisY == thatY)) {
-		// if there is a collision then reclaim should fail.
-	} else {
+	
+	const positionsAreTheSame = (thisX == thatX) && (thisY == thatY)
+	
+	// Handle reclaim code
+	if(!positionsAreTheSame) {
 		if (thisType == 'reclaim') {
 			reclaim(thisType, thisX, thisY, thisOrigin)
 		}
@@ -1134,13 +1158,14 @@ function performTurn(gameID, tBlock, tBlock2) {
 		}
 	}
 	
-	if (gameData[gameID].gameType == "practice") {
+	// update the blocks
+	if (gameObj.gameType == "practice") {
 		updateBlock(gameID, thatX, thatY, thatType, thatOrigin); // not fully sure why it uses tBlock2 / thatX but yeah alright.
 	} else {
-	
+		
 		// update blocks:
 		if (!passedTurn) { // if nobody ran out of time...
-			if ((thisX == thatX) && (thisY == thatY)) { // check for collision.
+			if (positionsAreTheSame) { // check for collision.
 				collision = true;
 				io.to(gameID).emit('collision'); // COLLISION!!!! this plays client-side sfx.
 				updateBlock(gameID, thisX, thisY, "blockade", 'collision');
@@ -1150,7 +1175,7 @@ function performTurn(gameID, tBlock, tBlock2) {
 				updateBlock(gameID, thatX, thatY, thatType, thatOrigin);
 			}
 		} else {
-		// one or both players ran out of time.
+			// one or both players ran out of time.
 			if (tBlock !== 'pass') {
 				// one player didn't run out of time.
 				updateBlock(gameID, thisX, thisY, thisType, thisOrigin);
@@ -1162,185 +1187,290 @@ function performTurn(gameID, tBlock, tBlock2) {
 	
 	}
 	
-	var playersArray = [];
-	for (playerID in gameData[gameID].players) {
-		gameData[gameID].players[playerID].hasMoved = false;
+	// set hasMoved to false, and build an array with the player socketID values.
+	const playersArray = [];
+	for (const playerID in gameObj.players) {
+		gameObj.players[playerID].hasMoved = false;
 		playersArray.push(playerID);
 	}
 	
-	// detect possession.
-	wipeAndDetect(gameID);
+	// @TODO figure out what this does.
+	wipeAndDetect(gameID)
+	
 	
 	// if game is not over:
-	if (gameData[gameID].gameState == 'inprogress') {
-		gameData[gameID].tempBlock = 'pass'; // reset the temp block to nothing (so if time runs out...)
-		io.to(gameID).emit('log', dimMsg('Turn <b>' + (gameData[gameID].moveCount) + '</b>'))
+	if (gameObj.gameState == 'inprogress') {
+		gameObj.tempBlock = 'pass'; // reset the temp block to nothing (so if time runs out...)
+		io.to(gameID).emit('log', dimMsg('Turn <b>' + (gameObj.moveCount) + '</b>'))
 		
 		if (thatType == 'mine explosion' || thisType == 'mine explosion') {
 			io.to(gameID).emit('detonate'); // sfx;
 		}
 		
-		if (gameData[gameID].gameType == "practice") {
-			io.to(gameID).emit('new move', gameData[gameID].board, noMove, gameData[gameID].players[playersArray[0]].blockList);
+		if (gameObj.gameType == "practice") {
+			io.to(gameID).emit('new move', gameObj.board, noMove, gameObj.players[playersArray[0]].blockList);
 		} else {
+			
+			// @TODO: it seems slow to loop 3 more times through each cell.
+			// I think I can improve this.
+			
 			// not practice mode.
 			// in the case of mines we need to send a separate board to each player now:
-			var thisBoard = deepClone(gameData[gameID].board)
-			for (var i = 0; i < thisBoard.length; i++) {
-				if (thisBoard[i].type == 'mine') {
-					if (thisBoard[i].origin !== playersArray[0]) {
-						hiddenInformation(thisBoard[i]);
+			
+			
+			// Newer more optimized version of the code. Not that it matters hugely, 
+			// but we do avoid looping through the same data structure 2 more times. 
+			// and avoiding a lot of serialization.
+			const do_new_version = true
+			if(do_new_version) {
+				var thisBoard = []
+				var thatBoard = []
+				var specBoard = []
+				for(const cellObj of gameObj.board) {
+					
+					var hideCellForSpectators = false
+					var hideCellForThisBoard = false
+					var hideCellForThatBoard = false
+					
+					if(cellObj.type == 'mine') {
+						hideCellForSpectators = true
+						
+						if(cellObj.origin !== playersArray[0]) {
+							hideCellForThisBoard = true
+						} else
+						if(cellObj.origin !== playersArray[1]) {
+							hideCellForThatBoard = true
+						}
 					}
-				}
-			}
-			var thatBoard = deepClone(gameData[gameID].board)
-			for (var i = 0; i < thatBoard.length; i++) {
-				if (thatBoard[i].type == 'mine') {
-					if (thatBoard[i].origin !== playersArray[1]) {
-						hiddenInformation(thatBoard[i]);
-					}
-				}
-			}
-			var specBoard = deepClone(gameData[gameID].board)
-			for (var i = 0; i < specBoard.length; i++) {
-				if (specBoard[i].type == 'mine') {
-					hiddenInformation(specBoard[i]);
+					
+					var specBoardCellItem = cellObj
+					var thisBoardCellItem = cellObj
+					var thatBoardCellItem = cellObj
+					
+					if(hideCellForSpectators) { specBoardCellItem = hiddenInformation(deepClone(cellObj)) }
+					if(hideCellForThisBoard ) { thisBoardCellItem = hiddenInformation(deepClone(cellObj)) }
+					if(hideCellForThatBoard ) { thatBoardCellItem = hiddenInformation(deepClone(cellObj)) } 
+					
+					specBoard.push(specBoardCellItem)
+					thisBoard.push(thisBoardCellItem)
+					thatBoard.push(thatBoardCellItem)
+					
 				}
 			}
 			
-			io.to(playersArray[0]).emit('new move', thisBoard, noMove, gameData[gameID].players[playersArray[0]].blockList);
-			io.to(playersArray[1]).emit('new move', thatBoard, noMove, gameData[gameID].players[playersArray[1]].blockList);
+			// old version of the code that's verified to work.
+			if(!do_new_version) {
+				var thisBoard = deepClone(gameObj.board)
+				for (var i = 0; i < thisBoard.length; i++) {
+					if (thisBoard[i].type == 'mine') {
+						if (thisBoard[i].origin !== playersArray[0]) {
+							hiddenInformation(thisBoard[i]);
+						}
+					}
+				}
+				
+				var thatBoard = deepClone(gameObj.board)
+				for (var i = 0; i < thatBoard.length; i++) {
+					if (thatBoard[i].type == 'mine') {
+						if (thatBoard[i].origin !== playersArray[1]) {
+							hiddenInformation(thatBoard[i]);
+						}
+					}
+				}
+				
+				var specBoard = deepClone(gameObj.board)
+				for (var i = 0; i < specBoard.length; i++) {
+					if (specBoard[i].type == 'mine') {
+						hiddenInformation(specBoard[i]);
+					}
+				}
+			}
+			
+			
+			io.to(playersArray[0]).emit('new move', thisBoard, noMove, gameObj.players[playersArray[0]].blockList);
+			io.to(playersArray[1]).emit('new move', thatBoard, noMove, gameObj.players[playersArray[1]].blockList);
 			
 			// specslist is for the spectators
-			for (var i = 0; i < gameData[gameID].specsList.length; i++) {
-				io.to(gameData[gameID].specsList[i]).emit('new move', specBoard, noMove);
+			for(var i = 0; i < gameObj.specsList.length; i++) {
+				io.to(gameObj.specsList[i]).emit('new move', specBoard, noMove);
 			}
+			
 		}
 	}
 	
+	
 	// if game IS over:
-	if (gameData[gameID].gameState == 'gameover') {
-		io.to(gameID).emit('new move', gameData[gameID].board, noMove);			
+	if (gameObj.gameState == 'gameover') {
+		io.to(gameID).emit('new move', gameObj.board, noMove);			
 		gameOver(gameID);
-	} else if (gameData[gameID].timeLimit != false) {
+	} else if (gameObj.timeLimit != false) {
 		resetTimer(gameID);
 	} else {
-		io.to(gameID).emit('update timer', false, gameData[gameID].moveCount); // update turn count.
+		io.to(gameID).emit('update timer', false, gameObj.moveCount); // update turn count.
 	}
 }
 
+// Solely executed from within performTurn
+// 
 function wipeAndDetect(gameID) {
+	const gameObj = gameData[gameID]
+	const permanence = gameObj.collisionMode.permanence
 	
 	function wipeCollisions(gameID) {
+		const gameObj = gameData[gameID]
 		
-		// opposite of get_linearBoardArrayPos_from_xyPos, takes the position in array and returns x/y coords.
-		function get_coords(gameID, pos) {
-			var x = (pos % gameData[gameID].cols) + 1;
-			var y = ((pos - x + 1) / gameData[gameID].cols) + 1;
-			return [x,y];
-		}
-		
-		var permanence = gameData[gameID].collisionMode.permanence;
 		// collisionMode.permanence is an int that says how many turns the block should stick around for.
-		for (var i = 0; i < gameData[gameID].board.length; i++) {
+		const permanence = gameObj.collisionMode.permanence
+		
 		// loop the entire board
-			if (gameData[gameID].board[i].duration !== false) {
-				// if we find a block with a duration
-				if (gameData[gameID].board[i].moveNum <= (gameData[gameID].moveCount - permanence)) {
-					xy = get_coords(gameID, i);
-					updateBlock(gameID, xy[0], xy[1], 'blank', 'collision fade');
+		for(let cellIndex = 0; cellIndex < gameObj.board.length; cellIndex++) {
+			const cellObj = gameObj.board[cellIndex]
+			
+			// if we find a block with a duration
+			if(cellObj.duration !== false) {
+				
+				// @TODO: figure out what the logic is here. As I don't get it. And what does cellObj.duration have to do with it?
+				if(cellObj.moveNum <= (gameObj.moveCount - permanence)) {
+					
+					// this is when it can be returned to a blank square.
+					const posObj = get_xyPos_from_linearBoardArrayPos(gameID, cellIndex)
+					updateBlock(gameID, posObj.x, posObj.y, 'blank', 'collision fade')
 				} else {
-					gameData[gameID].board[i].duration--;
+					cellObj.duration--
 				}
 			}
 		}
 	}
 	
 	
-	
-	
-	if (gameData[gameID].collisionMode.permanence !== true) {
+	// only wipe collisions when permanence is not true.
+	// a true value meaning permanent collisions.
+	if(permanence !== true) {
 		wipeCollisions(gameID);
 	}
-	for (var i = 0; i < gameData[gameID].board.length; i++) {
-		gameData[gameID].board[i].possessionSpread = {}; // wipe possessionSpread
-		gameData[gameID].board[i].possessionColorSpread = [];
+	
+	// @TODO: test if we can put this code below the next block, 
+	// into the block which also loops through every single cell.
+	for(const cellObj of gameObj.board) {
+		cellObj.possessionSpread = {} // wipe possessionSpread
+		cellObj.possessionColorSpread = []
 	}
-	for (playerID in gameData[gameID].players) {
-		wipePossession(gameID, playerID);
-		if ((gameData[gameID].players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
+	
+	
+	// For some reason we completely calculate many things on every turn.
+	// which is fine I guess.
+	// and at least it won't result in an incorrect state. 
+	// Although we could probably make it more performant by combining some loops and/or inverting some loops.
+	for(const playerID in gameObj.players) {
+		wipePossession(gameID, playerID)
+		
+		const playerObj = gameObj.players[playerID]
+		
+		if(
+			(playerObj.disconnected) || 
+			(playerObj.forfeit)
+		) {
 			io.to(gameID).emit('log', dimMsg('not relighting forfeit/dc\'d player'))
 		} else {
-			var x = gameData[gameID].players[playerID].baseX;
-			var y = gameData[gameID].players[playerID].baseY;
-			var pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
-			gameData[gameID].board[pos].possession.push(playerID);
-			gameData[gameID].board[pos].color = getBoardCellColor(gameID, gameData[gameID].board[pos].possession);
-			optionsDetection2(gameID, x, y, playerID);
+			const baseX = playerObj.baseX;
+			const baseY = playerObj.baseY;
+			const pos = get_linearBoardArrayPos_from_xyPos(gameID, baseX, baseY);
+			
+			const cellObj = gameObj.board[pos]
+			cellObj.possession.push(playerID)
+			cellObj.color = getBoardCellColor(gameID, cellObj.possession)
+			
+			optionsDetection2(gameID, baseX, baseY, playerID)
 		}
 	}
 	
-	for (var i = 0; i < gameData[gameID].board.length; i++) {
+	
+	for(const cellObj of gameObj.board) {
+		
 		// set possessionSpread color...
-		var length = Object.keys(gameData[gameID].board[i].possessionSpread).length
-		if (length === 1) {
+		const length = Object.keys(cellObj.possessionSpread).length
+		
+		// @TODO: figure out why this does not mess up. 
+		//   I assume, since before cellObj.possessionSpread is 0. 
+		//   But maybe cellObj.possessionSpread is set within optionsDetection2?
+		if(length === 1) {
 			
 			// if the length is 1 we just need to know which spread layer.
 			// along with the player color.
 			
-			for (playerID in gameData[gameID].board[i].possessionSpread) {
-				var passedColor = getBoardCellColor(gameID, [playerID]);
-				var passedLayer = gameData[gameID].board[i].possessionSpread[playerID];	
-				gameData[gameID].board[i].possessionColorSpread = [{
+			// @TODO: figure this out.
+			
+			for(const playerID in cellObj.possessionSpread) {
+				
+				const passedColor = getBoardCellColor(gameID, [playerID])
+				const passedLayer = cellObj.possessionSpread[playerID]
+				
+				cellObj.possessionColorSpread = [{
 					color: passedColor,
 					layer: passedLayer
-				}];
+				}]
 			}
+			
 		} else if (length === 2) {
 			
 			// if the length is 2 then we need to know which player's spread hit the square when.
 			// the second player to hit the square w/ the spread uses the mixed color
 			
-			var collection = [];
-			var players = [];
-			for (playerID in gameData[gameID].board[i].possessionSpread) {
-				var passedColor = getBoardCellColor(gameID, [playerID]);
-				var passedLayer = gameData[gameID].board[i].possessionSpread[playerID];
+			// @TODO: figure this out.
+			
+			const collection = []
+			const players = []
+			
+			for(const playerID in cellObj.possessionSpread) {
+				const passedColor = getBoardCellColor(gameID, [playerID])
+				const passedLayer = cellObj.possessionSpread[playerID]
+				
 				collection.push({
 					color: passedColor,
 					layer: passedLayer
-				});
-				players.push(playerID); // push playerIDs into an array for use in getBoardCellColor (for mixed colors)
+				})
+				
+				// push playerIDs into an array for use in getBoardCellColor (for mixed colors)
+				players.push(playerID);
 			}
+			
 			if (collection[0].layer == collection[1].layer) {
+				
 				// both player spread hit at the same time so just add the mixed color for that layer.
-				gameData[gameID].board[i].possessionColorSpread = [{
+				cellObj.possessionColorSpread = [{
 					color: getBoardCellColor(gameID, players),
 					layer: collection[0].layer
-				}];
+				}]
+				
 			} else if (collection[0].layer < collection[1].layer) {
+				
 				// 0 before 1.
-				gameData[gameID].board[i].possessionColorSpread.push({
+				cellObj.possessionColorSpread.push({
 					color: collection[0].color,
 					layer: collection[0].layer
-				});
-				gameData[gameID].board[i].possessionColorSpread.push({
+				})
+				
+				cellObj.possessionColorSpread.push({
 					color: getBoardCellColor(gameID, players),
 					layer: collection[1].layer
-				});
+				})
+				
 			} else if (collection[0].layer > collection[1].layer) {
+				
 				// 1 before 0.
-				gameData[gameID].board[i].possessionColorSpread.push({
+				cellObj.possessionColorSpread.push({
 					color: collection[1].color,
 					layer: collection[1].layer
-				});
-				gameData[gameID].board[i].possessionColorSpread.push({
+				})
+				
+				cellObj.possessionColorSpread.push({
 					color: getBoardCellColor(gameID, players),
 					layer: collection[0].layer
-				});
+				})
 			}
-		}
-	}
+		} // end of length == 2
+		
+	} // end of for loop for each cellObj
 	
 }
 

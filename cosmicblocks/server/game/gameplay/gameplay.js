@@ -180,6 +180,12 @@ function get_linearBoardArrayPos_from_xyPos(gameID, x, y) {
 	return (y - 1) * gameData[gameID].cols + x - 1
 }
 
+function get_xyPos_from_linearBoardArrayPos(gameID, pos) {
+	const x = (pos % gameData[gameID].cols) + 1
+	const y = ((pos - x + 1) / gameData[gameID].cols) + 1
+	return {x, y}
+}
+
 
 // This function is only used in 1 location.
 // But as it's used within the client, I think it's better to keep it this way, and eventually move it into a shared js so that both ends use the same code.
@@ -359,22 +365,19 @@ function wipePossession(gameID, socketID) {
 /**
 * Sets possession to a single cell.
 */
-function setPossessionToSingleCell(gameID, socketID, x, y) {
-	const gameObj = gameData[gameID]
-	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x , y)
-	const cellObj = gameObj.board[pos]
+function setPossessionToSingleCell(cellObj, socketID, username, color) {
 	cellObj.possession.push(socketID)
-	cellObj.possessionDisplayName = userData[socketID].username
-	cellObj.color = gameObj.players[socketID].color
+	cellObj.possessionDisplayName = username
+	cellObj.color = color
 }
 
 
 function checkForPlayerExit(gameID, socket) {
 	// @TODO: handle this function later.
 	// console.log('check for player exit')
-	const game = gameData[gameID]
+	const gameObj = gameData[gameID]
 	
-	if(game == null) {
+	if(gameObj == null) {
 		return
 	}
 	
@@ -382,24 +385,24 @@ function checkForPlayerExit(gameID, socket) {
 	
 	// remove from specs list if found there.
 	// specsList is for the spectators
-	for(var j = 0; j < game.specsList.length; j++) {
-		if (game.specsList[j] == socket.id) {
-			game.specsList.splice(j,1);
+	for(var j = 0; j < gameObj.specsList.length; j++) {
+		if (gameObj.specsList[j] == socket.id) {
+			gameObj.specsList.splice(j,1);
 		}
 	}
 	
-	if (game.gameState == 'open') {
-		if (game.creator == socket.id) {
+	if(gameObj.gameState == 'open') {
+		if(gameObj.creator == socket.id) {
 			// creator left an open game, so kill the game.
-			socket.broadcast.to(gameID).emit('kill game');
-			delete gameData[gameID]; // remove game.
-			sub_updateLobby(); // player spot opened?
+			socket.broadcast.to(gameID).emit('kill game')
+			delete gameData[gameID] // remove game.
+			sub_updateLobby() // player spot opened?
 		} else {
 			// player left an open game, so remove them.
-			for (playerID in game.players) {
+			for(const playerID in game.players) {
 				if (playerID == socket.id) {
 					wipePossession(gameID, playerID);
-					delete game.players[playerID];
+					delete gameObj.players[playerID];
 					sub_updateLobby(); // player spot opened?
 					io.to(gameID).emit('log', '<span class="dimMsg">removed ' + userData[socket.id].username + ' as player.</span>');
 					io.to(gameID).emit('remove player heading');
@@ -407,20 +410,20 @@ function checkForPlayerExit(gameID, socket) {
 				}
 			}
 		}
-	} else if (game.gameState == 'inprogress') {
-		for (playerID in game.players) {
+	} else if (gameObj.gameState == 'inprogress') {
+		for(const playerID in gameObj.players) {
 			if (playerID == socket.id) {
 				// player left an in-progress game, so they lose.
 				wipePossession(gameID, playerID);
-				game.players[playerID].disconnected = true;
-				game.remainingPlayers--;
-				io.to(gameID).emit('render board', game.board);
-				if (game.remainingPlayers <= 1) {
-					for (playerID in game.players) {
-						if ((game.players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
+				gameObj.players[playerID].disconnected = true;
+				gameObj.remainingPlayers--;
+				io.to(gameID).emit('render board', gameObj.board);
+				if (gameObj.remainingPlayers <= 1) {
+					for (playerID in gameObj.players) {
+						if ((gameObj.players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
 							// this player is not the winner
 						} else {
-							game.players[playerID].winner = true;
+							gameObj.players[playerID].winner = true;
 						}
 					}
 					gameOver(gameID);
@@ -428,11 +431,11 @@ function checkForPlayerExit(gameID, socket) {
 				}
 			}
 		}
-	} else if (game.gameState == 'gameover') {
-		for (playerID in game.players) {
+	} else if (gameObj.gameState == 'gameover') {
+		for(const playerID in gameObj.players) {
 			if (playerID == socket.id) {
 				io.to(gameID).emit('remove rematch button');
-				game.noRematch = true;
+				gameObj.noRematch = true;
 			}
 		}
 	}
@@ -669,6 +672,7 @@ module.exports = {
 	getGameID,
 	updateBlock,
 	get_linearBoardArrayPos_from_xyPos,
+	get_xyPos_from_linearBoardArrayPos,
 	optionsDetection2,
 	gameplay_setio,
 	getBoardCellColor,
