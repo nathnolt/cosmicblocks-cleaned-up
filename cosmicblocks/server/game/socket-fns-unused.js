@@ -8,7 +8,7 @@ function socket_newColor(color) {
 	if (typeof gameData[gameID] != 'undefined') {
 		if (gameData[gameID].gameState == 'open') {
 			if (typeof gameData[gameID].players[socket.id] == 'undefined') {
-				setPlayer();
+				addPlayerToGameObj();
 				io.to(gameID).emit('log', '<span style="color: ' + color + '">' + userData[socket.id].username + ' is playing.</span>');
 			} else {
 				io.to(gameID).emit('log', '<span style="color: ' + color + '">' + userData[socket.id].username + ' changed colors.</span>');

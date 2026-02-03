@@ -25,6 +25,7 @@ const {
 	getBoardCellColor,
 	updateBlock,
 	gameOver,
+	setPossessionToSingleCell,
 } = require('./gameplay/gameplay.js')
 
 const {
@@ -335,8 +336,8 @@ function socket_attemptMove(x, y, blockType, moveCount) {
 	
 	function validateMove(gameID, blockType, pos, playerID) {
 		const gameObj = gameData[gameID]
-		const tileObj = gameObj.board[pos]
-		const initialType = tileObj.type
+		const cellObj = gameObj.board[pos]
+		const initialType = cellObj.type
 		
 		const playerObj = gameObj.players[playerID]
 		const playerObj_blocklistItem = playerObj.blockList[blockType]
@@ -366,7 +367,7 @@ function socket_attemptMove(x, y, blockType, moveCount) {
 			}
 			
 			// we can only reclaim a tile if we are the sole owner
-			if(tileObj.possession.length === 1 && tileObj.possession[0] === playerID) {
+			if(cellObj.possession.length === 1 && cellObj.possession[0] === playerID) {
 				return 'reclaim';
 			}
 			
@@ -620,7 +621,7 @@ function socket_yesRematch() {
 		
 		
 		if (loop_userData.elo > 1000) {
-			playersWithMoreThan1000Elo++;
+			playersWithMoreThan1000Elo++
 		}
 		
 	}
@@ -685,35 +686,40 @@ function socket_yesRematch() {
 function socket_forfeit() {
 	const socket = this
 	
-	gameID = userData[socket.id].room;
+	gameID = userData[socket.id].room
 	
 	if(!gameExists(gameID)) {
 		log_invalidGame(socket)
 		return
 	}
 	
-	if (youArePlaying(gameData[gameID].players, socket.id)) {
-		wipePossession(gameID, socket.id);
-		gameData[gameID].remainingPlayers--;
-		gameData[gameID].players[socket.id].forfeit = true;
-		
-		io.to(gameID).emit('render board', gameData[gameID].board);
-		
-		if (gameData[gameID].remainingPlayers <= 1) {
-			var winner = false;
-			for (playerID in gameData[gameID].players) {
-				if ((gameData[gameID].players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
-					// this player is not the winner
-				} else {
-					gameData[gameID].players[playerID].winner = true;
-				}
-			}
-			gameOver(gameID);
-		}
-	} else {
-		socket.emit('log', redMsg('spectator cannot forfeit'));	
+	const weArePlaying = youArePlaying(gameData[gameID].players, socket.id)
+	if(!weArePlaying) {
+		socket.emit('log', redMsg('spectator cannot forfeit'))
+		return
 	}
 	
+	wipePossession(gameID, socket.id)
+	
+	const gameObj = gameData[gameID]
+	gameObj.remainingPlayers--
+	gameObj.players[socket.id].forfeit = true
+	
+	io.to(gameID).emit('render board', gameObj.board)
+	
+	if (gameObj.remainingPlayers <= 1) {
+		var winner = false
+		for (const playerID in gameObj.players) {
+			const playerObj = gameObj.players[playerID]
+			if ((playerObj.disconnected) || (playerObj.forfeit)) {
+				// this player is not the winner
+			} else {
+				gameObj.players[playerID].winner = true
+			}
+		}
+		
+		gameOver(gameID)
+	}
 }
 
 
@@ -746,17 +752,19 @@ function youArePlaying(players, findSocketID) {
 
 // @TODO: make this easier.
 function setupGame(socket, gameID, passedStatus) {
-	if(gameData[gameID] == null) {
+	const gameObj = gameData[gameID]
+	if(gameObj == null) {
 		return
 	}
 	
-	socket.leave('lobby');
+	const socketID = socket.id
+	socket.leave('lobby')
 	
 	
 	if (passedStatus === 'spec') {
 		socket.emit('log', '<div class="roomChange">spectating game</div>', true);
 	} else {
-		if (gameData[gameID].creator == socket.id) {
+		if (gameObj.creator == socketID) {
 			socket.emit('log', '<div class="roomChange">creating game</div>', true);
 		} else {
 			socket.emit('log', '<div class="roomChange">joining game</div>', true);
@@ -764,15 +772,15 @@ function setupGame(socket, gameID, passedStatus) {
 	}
 	
 	var joinStatus = 'spectator'; // by default you're a specatator
-	var displayBoard = gameData[gameID].board;
+	var displayBoard = gameObj.board;
 	
 	if (passedStatus !== 'spec') {
-		if (gameData[gameID].gameState == 'open') {
+		if (gameObj.gameState == 'open') {
 			
 			// if the game is open, check if there are vacant slots
-			var playerCount = Object.keys(gameData[gameID].players).length;
-			if (playerCount < gameData[gameID].maxPlayers) {
-				setPlayer(socket, gameID, socket.id);
+			var playerCount = Object.keys(gameObj.players).length
+			if (playerCount < gameObj.maxPlayers) {
+				addPlayerToGameObj(gameObj, socketID);
 				
 				// check if this is the creator of the game
 				if (gameData[gameID].creator == socket.id) {
@@ -853,9 +861,14 @@ function setupGame(socket, gameID, passedStatus) {
 // }
 
 
-function setPlayer(socket, gameID, playerID) {
-	gameData[gameID].players[playerID] = {
-		username: userData[socket.id].username,
+/**
+ * Adds the player to the gameObj
+ */
+function addPlayerToGameObj(gameObj, socketID) {
+	const user = userData[socketID]
+	
+	const playerObj = {
+		username: user.username,
 		displayElo: sub_returnDisplayElo(playerID),
 		winner: false, 
 		winPath: [], 
@@ -868,17 +881,18 @@ function setPlayer(socket, gameID, playerID) {
 		disconnected: false,
 		baseX: false,
 		baseY: false,
-		color: false,
+		color: user.color,
 		blockList: {},
 		wins: 0,
 		draws: 0,
 		losses: 0
-	};
+	}
 	
-	// assign player color to game
-	gameData[gameID].players[playerID].color = userData[playerID].color;
+	gameObj.players[socketID] = playerObj
 	
-	
+	// @TODO: Try to change the color of players when their colors are too close to each other.
+	// this is what was used before:
+	//
 	// this color brightness fix sucks too bad to use, need to do something different. disabling it for now.
 	/*
 	// it's time to figure out if player colors are too close to eachother...
@@ -900,50 +914,56 @@ function setPlayer(socket, gameID, playerID) {
 	}
 	*/
 	
-	var bases = [];
-	for (var i = 0; i < gameData[gameID].board.length; i++) {
-		if (gameData[gameID].board[i].type == 'base') {
-			bases.push(i); //  push base position into bases array
+	// get the list of linear index of the base cells/blocks from the game board
+	const bases = []
+	for (var i = 0; i < gameObj.board.length; i++) {
+		const cell = gameObj.board[i]
+		if (cell.type == 'base') {
+			bases.push(cell)
 		}
 	}
-	if (gameData[gameID].creator == socket.id) {
+	
+	// This code won't work for >2 players either.
+	let leftBase
+	let rightBase
+	if(bases[0].x < bases[1].x) {
+		leftBase = bases[0]
+		rightBase = bases[1]
+	} else { // bases[0].x >= bases[1].x
+		rightBase = bases[0]
+		leftBase = bases[1]
+	}
+	
+	let myBase
+	// if we are the creator
+	if (gameObj.creator == socketID) {
 		// find the base with a left-most x-position and use that for creator slot
-		if (gameData[gameID].board[bases[0]].x < gameData[gameID].board[bases[1]].x) {
-			var pos = bases[0];
-		} else {
-			var pos = bases[1];
-		}
+		myBase = leftBase
 	} else {
 		// find the base with a right-most position and use that for joining player
-		if (gameData[gameID].board[bases[0]].x < gameData[gameID].board[bases[1]].x) {
-			var pos = bases[1];
-		} else {
-			var pos = bases[0];
-		}
+		myBase = rightBase
 	}
-	var x = gameData[gameID].board[pos].x + 1;
-	var y = gameData[gameID].board[pos].y + 1;
-	gameData[gameID].board[pos].history[0] = { 
+	
+	myBase.history[0] = { 
 		turn: 0,
 		cause: 'source', 
-		playerColor: gameData[gameID].players[socket.id].color,
-		playerDisplayName: userData[socket.id].username
-	};
-	gameData[gameID].players[socket.id].baseX = x;
-	gameData[gameID].players[socket.id].baseY = y;
-	gameData[gameID].board[pos].possession.push(socket.id); // ??
-	gameData[gameID].board[pos].possessionDisplayName = userData[socket.id].username;
-	gameData[gameID].board[pos].color = gameData[gameID].players[socket.id].color;
+		playerColor: user.color,
+		playerDisplayName: user.username
+	}
 	
+	playerObj.baseX = myBase.x + 1
+	playerObj.baseY = myBase.y + 1
+	
+	setPossessionToSingleCell(myBase, socketID, user.username, user.color)
 }
 
 
 
 
-function unready(gameID, playerID) {
+function unready(gameID, socketID) {
 	const gameObj = gameData[gameID]
-	const playerObj = gameObj.players[playerID]
-	const username = userData[playerID].username
+	const playerObj = gameObj.players[socketID]
+	const username = userData[socketID].username
 	if(!playerObj.ready) {
 		return false
 	}
@@ -951,16 +971,16 @@ function unready(gameID, playerID) {
 	io.to(gameID).emit('log', dimMsg(username + ' isn\'t ready.'))
 	playerObj.ready = false
 	
-	wipePossession(gameID, playerID)
+	// remove all possession of playerID from the board.
+	wipePossession(gameID, socketID)
 	
-	var pos = get_linearBoardArrayPos_from_xyPos(gameID, playerObj.baseX , playerObj.baseY)
-	gameObj.board[pos].possession.push(playerID) // ??
-	gameObj.board[pos].possessionDisplayName = username
-	gameObj.board[pos].color = gameData[gameID].players[playerID].color
+	// Add possession back to just the base cell.
+	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x , y)
+	const cellObj = gameObj.board[pos]
+	setPossessionToSingleCell(cellObj, socketID, username, playerObj.color)
 	
 	//io.to(gameID).emit('remove from heading', playerID)
 	return true
-	
 }
 
 
@@ -1049,6 +1069,7 @@ function resetTimer(gameID) {
 	gameData[gameID].gameTimer = setInterval(gameTickSecond, 1000)
 }
 
+// @TODO: cleanup
 function performTurn(gameID, tBlock, tBlock2) {
 	
 	// called when:

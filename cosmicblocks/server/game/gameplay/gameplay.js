@@ -61,7 +61,7 @@ function updateBlock(gameID, x, y, initialType, origin) {
 	
 	// 1. get the board position
 	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
-	const tileObj = gameData[gameID].board[pos]
+	const cellObj = gameData[gameID].board[pos]
 	
 	// 2. Get the actual block type
 	let blockType = initialType;
@@ -75,7 +75,7 @@ function updateBlock(gameID, x, y, initialType, origin) {
 		
 		// @TODO: test what the game does when we hack the front-end to transformCircle on a tile that's not valid, 
 		// so that blockType becomes false.
-		blockType = blocklist_circled[tileObj.type]
+		blockType = blocklist_circled[cellObj.type]
 		if(blockType == undefined) {
 			blockType = false
 		}
@@ -84,8 +84,8 @@ function updateBlock(gameID, x, y, initialType, origin) {
 	
 	
 	// 3. update the block:
-	tileObj.type    = blockType;
-	tileObj.moveNum = gameData[gameID].moveCount;
+	cellObj.type    = blockType;
+	cellObj.moveNum = gameData[gameID].moveCount;
 	
 	
 	// 4. Does something with permanence. 
@@ -94,9 +94,9 @@ function updateBlock(gameID, x, y, initialType, origin) {
 	if ((blockType == 'blockade') && (permanence !== true)) {
 		
 		// It probably does permanence + 1 because it's -1'd at the end of every turn
-		tileObj.duration = permanence + 1
+		cellObj.duration = permanence + 1
 	} else {
-		tileObj.duration = false
+		cellObj.duration = false
 	}
 	
 	
@@ -106,7 +106,7 @@ function updateBlock(gameID, x, y, initialType, origin) {
 	// 
 	//    origin either is: socket.id or 'collision' or 'collision fade'
 	if (typeof origin !== 'undefined') {
-		tileObj.origin = origin;
+		cellObj.origin = origin;
 		
 		let historyString = ''
 		let chatHistoryString = ''
@@ -123,7 +123,7 @@ function updateBlock(gameID, x, y, initialType, origin) {
 		} else {
 			
 			const player = gameData[gameID].players[origin]
-			tileObj.originColor = player.color
+			cellObj.originColor = player.color
 			
 			const typeStrMap = {
 				'circle': 'circled',
@@ -331,31 +331,42 @@ function wipePossession(gameID, socketID) {
 	const gameObj = gameData[gameID]
 	
 	// loop through every cell (or tile) within the gameBoard
-	for(const tileObj of gameObj.board) {
+	for(const cellObj of gameObj.board) {
 		// and for every cell:
 		// 1. go through the posessions
 		// 2. check if a tile is posessed by socketID
 		// 3. if it is, remove the posession
 		// 4. and set the displayname and color
-		for (var j = 0; j < tileObj.possession.length; j++) {
+		for (var j = 0; j < cellObj.possession.length; j++) {
 			
-			if (tileObj.possession[j] == socketID) {
-				tileObj.possession.splice(j, 1)
+			if (cellObj.possession[j] == socketID) {
+				cellObj.possession.splice(j, 1)
 				
-				if (tileObj.possession.length == 0) {
-					tileObj.possessionDisplayName = false
+				if (cellObj.possession.length == 0) {
+					cellObj.possessionDisplayName = false
 				} else {
 					// assuming only 1 name then
-					tileObj.possessionDisplayName = userData[tileObj.possession[0]].username
+					cellObj.possessionDisplayName = userData[cellObj.possession[0]].username
 				}
 				
-				tileObj.color = getBoardCellColor(gameID, tileObj.possession)
+				cellObj.color = getBoardCellColor(gameID, cellObj.possession)
 			}
 		}
 		
 	}
 }
 
+/**
+* Sets possession to a single cell.
+*/
+function setPossessionToSingleCell(gameID, socketID, x, y) {
+	const gameObj = gameData[gameID]
+	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x , y)
+	const cellObj = gameObj.board[pos]
+	cellObj.possession.push(socketID)
+	cellObj.possessionDisplayName = userData[socketID].username
+	cellObj.color = gameObj.players[socketID].color
+}
 
 
 function checkForPlayerExit(gameID, socket) {
@@ -662,6 +673,7 @@ module.exports = {
 	gameplay_setio,
 	getBoardCellColor,
 	
+	setPossessionToSingleCell,
 	wipePossession,
 	checkForPlayerExit,
 	
