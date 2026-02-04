@@ -236,9 +236,11 @@ function optionsDetection2(gameID, x, y, playerID) {
 // It will get cleaned up eventually
 function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, iceDir) {
 	
-	var collection = [];
+	var collection = []
 	var pos = get_linearBoardArrayPos_from_xyPos(gameID, x,y);
 	var dir
+	
+	const gameObj = gameData[gameID]
 	
 	if (typeof iceDir === 'undefined') {
 		iceDir = false;
@@ -247,7 +249,7 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 		dir = iceDir;
 		iceDir = false;
 	} else {
-		var someType = gameData[gameID].board[pos].type;
+		var someType = gameObj.board[pos].type;
 		
 		
 		// set dir for type
@@ -266,62 +268,107 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 		var winPath = passedWinPath.slice();
 	}
 	
-	winPath[currentLayer] = pos;
+	winPath[currentLayer] = pos
 	
-	for (var i = 0; i < dir.length; i++) {
-		var newX = x + dir[i][0];
-		var newY = y + dir[i][1];
-		if (((newX >= 1) && (newX <= gameData[gameID].cols)) && ((newY >= 1) && (newY <= gameData[gameID].rows))) { // if we're not out of bounds
-			var newPos = get_linearBoardArrayPos_from_xyPos(gameID, newX,newY);
-			var newType = gameData[gameID].board[newPos].type;			
-			var run = true;
-			if (gameData[gameID].board[newPos].possession.indexOf(playerID) >= 0) {
-				// if you already have possession, run = false.
-				run = false;
-				if (currentLayer < gameData[gameID].board[newPos].possessionSpread[playerID]) { // always false with the queue, redundant.
-					gameData[gameID].board[newPos].possessionSpread[playerID] = currentLayer;
-					run = true;
-				}
-			} else if (newType !== 'ice' && newType !== 'blockade') {
-				// set possession and color, if not ice.
-				gameData[gameID].board[newPos].possession.push(playerID);
-				gameData[gameID].board[newPos].possessionSpread[playerID] = currentLayer;
-				if (gameData[gameID].board[newPos].possession.length == 2) {
-					gameData[gameID].board[newPos].possessionDisplayName = 'Both';
-				} else {
-					gameData[gameID].board[newPos].possessionDisplayName = userData[gameData[gameID].board[newPos].possession[0]].username;
-				}
-				gameData[gameID].board[newPos].color = getBoardCellColor(gameID, gameData[gameID].board[newPos].possession);
-			} else if (someType === 'knight' && newType === 'ice') {
-				// knights may not jump on ice.
-				run = false;
-			}
-			if ((newType != "blank") && (run == true)) { 
-				if (newType == 'base') {
-					if (gameData[gameID].board[newPos].possession !== [playerID]) {
-						gameData[gameID].players[playerID].winner = true; 
-						gameData[gameID].gameState = 'gameover';
-						if (gameData[gameID].players[playerID].winPath.length == 0 ) {
-							gameData[gameID].players[playerID].winPath = winPath.slice(0, currentLayer+1);
-							gameData[gameID].players[playerID].winPath.push(newPos);
-						}
-					}
-				} else if (newType == 'ice') {
-					var iceX = 0;
-					var iceY = 0;
-					if (dir[i][0] < 0) { iceX = -1 }
-					if (dir[i][0] > 0) { iceX = 1 }
-					if (dir[i][1] < 0) { iceY = -1 }
-					if (dir[i][1] > 0) { iceY = 1 }
-					iceDir = [ [iceX, iceY] ];
-				}
-				newLayer = currentLayer + 1;
-				//optionsDetection(gameID, newX, newY, playerID, winPath, newLayer, iceDir);
-				collection.push([gameID, newX, newY, playerID, winPath, newLayer, iceDir]);
-				iceDir = false;
-			}
+	// loop through the moves that this block has, for the + for example, it's 4 directions,
+	// [        [0, -1],
+	//   [-1, 0],       [1, 0],
+	//          [0,  1]
+	// ]
+	// it's an array with moves which is an array of offsets from the base position.
+	
+	// loop through each move
+	for(var i = 0; i < dir.length; i++) {
+		
+		// calculate the new position
+		var newX = x + dir[i][0]
+		var newY = y + dir[i][1]
+		
+		const newPositionInBounds = (
+			(
+				(newX >= 1) && 
+				(newX <= gameObj.cols)
+			) && 
+			(
+				(newY >= 1) && 
+				(newY <= gameObj.rows)
+			)
+		)
+		
+		if(!newPositionInBounds) {
+			continue
 		}
-	}
+		
+		// When the position is in bounds:
+		const newPos = get_linearBoardArrayPos_from_xyPos(gameID, newX, newY)
+		const cellObj = gameObj.board[newPos]
+		const newType = cellObj.type
+		
+		let run = true
+		const wePossessTheCellObj = cellObj.possession.indexOf(playerID) >= 0
+		if(wePossessTheCellObj) {
+			run = false
+			if(currentLayer < cellObj.possessionSpread[playerID]) { // always false with the queue, redundant.
+				cellObj.possessionSpread[playerID] = currentLayer
+				run = true
+			}
+			
+		} else if (newType !== 'ice' && newType !== 'blockade') {
+			// set possession and color, if not ice.
+			cellObj.possession.push(playerID);
+			cellObj.possessionSpread[playerID] = currentLayer;
+			if (cellObj.possession.length == 2) {
+				cellObj.possessionDisplayName = 'Both';
+			} else {
+				cellObj.possessionDisplayName = userData[cellObj.possession[0]].username;
+			}
+			cellObj.color = getBoardCellColor(gameID, cellObj.possession);
+		} else if (someType === 'knight' && newType === 'ice') {
+			// knights may not jump on ice.
+			run = false;
+		}
+		
+		
+		// 
+		if ((newType != "blank") && (run == true)) {
+			
+			// handle code that checks for win
+			if (newType == 'base') {
+				
+				// @TODO: this does not do what's intended. 
+				//        As this will always be false, 
+				//        resulting in the contents being run.
+				if(cellObj.possession !== [playerID]) {
+					gameObj.players[playerID].winner = true; 
+					gameObj.gameState = 'gameover';
+					if (gameObj.players[playerID].winPath.length == 0 ) {
+						gameObj.players[playerID].winPath = winPath.slice(0, currentLayer+1);
+						gameObj.players[playerID].winPath.push(newPos);
+					}
+				}
+				
+			} else 
+			// handle ice case
+			if (newType == 'ice') {
+				var iceX = 0;
+				var iceY = 0;
+				if (dir[i][0] < 0) { iceX = -1 }
+				if (dir[i][0] > 0) { iceX = 1 }
+				if (dir[i][1] < 0) { iceY = -1 }
+				if (dir[i][1] > 0) { iceY = 1 }
+				iceDir = [ [iceX, iceY] ];
+			}
+			
+			newLayer = currentLayer + 1;
+			
+			// push the next thing into collection.
+			//optionsDetection(gameID, newX, newY, playerID, winPath, newLayer, iceDir);
+			collection.push([gameID, newX, newY, playerID, winPath, newLayer, iceDir]);
+			iceDir = false;
+		}
+		
+	} // end of for loop
+	
 	return collection;
 }
 

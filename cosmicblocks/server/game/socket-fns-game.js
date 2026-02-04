@@ -1392,7 +1392,7 @@ function wipeAndDetect(gameID) {
 		
 		// @TODO: figure out why this does not mess up. 
 		//   I assume, since before cellObj.possessionSpread is 0. 
-		//   But maybe cellObj.possessionSpread is set within optionsDetection2?
+		//   But maybe cellObj.possessionSpread is set within optionsDetection2? Yes.
 		if(length === 1) {
 			
 			// if the length is 1 we just need to know which spread layer.
