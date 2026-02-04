@@ -13,7 +13,7 @@ function socket_classicMode() {
 		classicMode(gameID);
 		io.to(gameID).emit('log', '<span class="dimMsg">classic mode</span>');
 		unreadyAll(gameID);
-		io.to(gameID).emit('game preset', gameData[gameID].board, gameData[gameID].timeLimit, gameData[gameID].rows, gameData[gameID].cols, gameData[gameID].blockList, gameData[gameID].creator, gameData[gameID].collisionMode);
+		io.to(gameID).emit('game preset', gameObj.board, gameObj.timeLimit, gameObj.rows, gameObj.cols, gameObj.blockList, gameObj.creator, gameObj.collisionMode);
 	}
 }
 
@@ -24,7 +24,7 @@ function socket_advancedMode() {
 		// How Deep Is Your Love by Calvin Harris & Disciples is a great song.
 		io.to(gameID).emit('log', '<span class="dimMsg">advanced mode</span>');
 		unreadyAll(gameID);
-		io.to(gameID).emit('game preset', gameData[gameID].board, gameData[gameID].timeLimit, gameData[gameID].rows, gameData[gameID].cols, gameData[gameID].blockList, gameData[gameID].creator, gameData[gameID].collisionMode);
+		io.to(gameID).emit('game preset', gameObj.board, gameObj.timeLimit, gameObj.rows, gameObj.cols, gameObj.blockList, gameObj.creator, gameObj.collisionMode);
 	}
 }
 
@@ -34,15 +34,15 @@ function socket_doneEditingGame() {
 		socket.emit('setup game', 
 			gameID,
 			'creator',
-			gameData[gameID].title,
-			gameData[gameID].rows, 
-			gameData[gameID].cols, 
-			gameData[gameID].board, 
-			gameData[gameID].players,
-			gameData[gameID].gameState,
-			gameData[gameID].blockList,
-			gameData[gameID].timeLimit,
-			gameData[gameID].collisionMode
+			gameObj.title,
+			gameObj.rows, 
+			gameObj.cols, 
+			gameObj.board, 
+			gameObj.players,
+			gameObj.gameState,
+			gameObj.blockList,
+			gameObj.timeLimit,
+			gameObj.collisionMode
 		);
 	}
 }
@@ -50,12 +50,12 @@ function socket_doneEditingGame() {
 function socket_randomizeGame() {
 	var gameID = userData[socket.id].room;
 	if (isGameCreator(socket, gameID)) {
-		if (gameData[gameID].maxPlayers == 2) {
+		if (gameObj.maxPlayers == 2) {
 			
 			randomMode(gameID);
 			io.to(gameID).emit('log', '<span class="dimMsg">board randomly generated.</span>');
 			unreadyAll(gameID);
-			io.to(gameID).emit('game preset', gameData[gameID].board, gameData[gameID].timeLimit, gameData[gameID].rows, gameData[gameID].cols, gameData[gameID].blockList, gameData[gameID].creator, gameData[gameID].collisionMode);
+			io.to(gameID).emit('game preset', gameObj.board, gameObj.timeLimit, gameObj.rows, gameObj.cols, gameObj.blockList, gameObj.creator, gameObj.collisionMode);
 		} else {
 			// sorry this was only built for 2 players.
 			io.to(gameID).emit('log', 'randomization function only works with 2 player games.');
@@ -68,11 +68,11 @@ function socket_chooseToSpectate() {
 	
 	// @TODO: check if we wanted to check isGameCreator, or just if the gameExists yes / no
 	if (gameExists(gameID)) {
-		if (gameData[gameID].gameState == 'open') {
+		if (gameObj.gameState == 'open') {
 			unready(gameID, socket.id);
-			delete gameData[gameID].players[socket.id];
+			delete gameObj.players[socket.id];
 			io.to(gameID).emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' is spectating.');
-			//io.to(gameID).emit('update colors', gameData[gameID].players, baseColors, gameData[gameID].maxPlayers, gameData[gameID].board);
+			//io.to(gameID).emit('update colors', gameObj.players, baseColors, gameObj.maxPlayers, gameObj.board);
 		}
 	} else {
 		log_invalidGame(socket)
@@ -85,26 +85,26 @@ function socket_timeLimitSetting(moreOrLess) {
 	if (isGameCreator(socket, gameID)) {
 		var problem = false;
 		if (moreOrLess === 'more') {
-			if (gameData[gameID].timeLimit >= 100) {
-				gameData[gameID].timeLimit = false;
-			} else if (gameData[gameID].timeLimit == false) {
-				gameData[gameID].timeLimit = 10;
+			if (gameObj.timeLimit >= 100) {
+				gameObj.timeLimit = false;
+			} else if (gameObj.timeLimit == false) {
+				gameObj.timeLimit = 10;
 			} else {
-				gameData[gameID].timeLimit += 5;
+				gameObj.timeLimit += 5;
 			}
 		} else if (moreOrLess === 'less') {
-			if (gameData[gameID].timeLimit == false) {
-				gameData[gameID].timeLimit = 100;
-			} else if (gameData[gameID].timeLimit <= 10) {
-				gameData[gameID].timeLimit = false;
+			if (gameObj.timeLimit == false) {
+				gameObj.timeLimit = 100;
+			} else if (gameObj.timeLimit <= 10) {
+				gameObj.timeLimit = false;
 			} else {
-				gameData[gameID].timeLimit -= 5;
+				gameObj.timeLimit -= 5;
 			}
 		} else if (moreOrLess == 'infin') {
-			if (gameData[gameID].timeLimit == false) {
-				gameData[gameID].timeLimit = 60; 
+			if (gameObj.timeLimit == false) {
+				gameObj.timeLimit = 60; 
 			} else {
-				gameData[gameID].timeLimit = false;
+				gameObj.timeLimit = false;
 			}
 		} else {
 			problem = true;
@@ -112,10 +112,10 @@ function socket_timeLimitSetting(moreOrLess) {
 		if (problem) {
 			socket.emit('log', '<span class="redMsg">passed incorrect value to <i>time limit setting</i>.</span>');
 		} else {
-			gameData[gameID].gameType = 'custom';
-			gameData[gameID].timerValue = gameData[gameID].timeLimit;
+			gameObj.gameType = 'custom';
+			gameObj.timerValue = gameObj.timeLimit;
 			unreadyAll(gameID);
-			io.to(gameID).emit('time limit update', gameData[gameID].timeLimit);
+			io.to(gameID).emit('time limit update', gameObj.timeLimit);
 		}
 	}
 }
@@ -128,9 +128,9 @@ function socket_collisionSetting(setting) {
 			// this code makes me nervous.
 			// I'm using both true and 1 as valid, different values.
 			// it's a bit scary to me.
-			gameData[gameID].collisionMode.permanence = setting;
+			gameObj.collisionMode.permanence = setting;
 		} else if (setting === "Permanent") {
-			gameData[gameID].collisionMode.permanence = true;
+			gameObj.collisionMode.permanence = true;
 		} else {
 			problem = true;
 		}
@@ -138,7 +138,7 @@ function socket_collisionSetting(setting) {
 			io.to(gameID).emit('log', '<span class="redMsg">passed incorrect value to <i>collision setting</i></span>');
 		} else {
 			unreadyAll(gameID);
-			io.to(gameID).emit('collision update', gameData[gameID].collisionMode);
+			io.to(gameID).emit('collision update', gameObj.collisionMode);
 			updateLobby(); // render lobby because I now show this data in lobby.
 		}
 	}
@@ -148,10 +148,10 @@ function socket_boardEdit(x, y, blockType) {
 	var gameID = userData[socket.id].room;
 	if (isGameCreator(socket, gameID)) {
 		updateBlock(gameID, x, y, blockType);
-		if (gameData[gameID].gameType !== 'custom') {
-			gameData[gameID].gameType = 'custom';
+		if (gameObj.gameType !== 'custom') {
+			gameObj.gameType = 'custom';
 		}
-		io.to(gameID).emit('render board', gameData[gameID].board);
+		io.to(gameID).emit('render board', gameObj.board);
 	}
 }
 
@@ -159,18 +159,18 @@ function socket_blocklistUpdate(blockType, active) {
 	var gameID = userData[socket.id].room;
 	if (isGameCreator(socket, gameID)) {
 		if (active) {
-			if (typeof gameData[gameID].blockList[blockType] === 'undefined') {
-				gameData[gameID].blockList[blockType] = { ammo: false }
+			if (typeof gameObj.blockList[blockType] === 'undefined') {
+				gameObj.blockList[blockType] = { ammo: false }
 			}
 			io.to(gameID).emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' enabled ' + blockType + '.</span>');
 		} else {
-			delete gameData[gameID].blockList[blockType];
+			delete gameObj.blockList[blockType];
 			io.to(gameID).emit('log', '<span class="dimMsg">' + userData[socket.id].username + ' disabled ' + blockType + '.</span>');
 		}
 		unreadyAll(gameID);
-		gameData[gameID].gameType = 'custom';
+		gameObj.gameType = 'custom';
 		//io.to(gameID).emit('blocklist updated', blockType, active, false); // also send ammo later.
-		socket.broadcast.to(gameID).emit('build menu', gameData[gameID].blockList);
+		socket.broadcast.to(gameID).emit('build menu', gameObj.blockList);
 	}
 }
 
@@ -192,13 +192,13 @@ function socket_ammoUpdate(blockType, ammoAmount) {
 		}
 		
 		if (validAmmo()) {
-			gameData[gameID].blockList[blockType].ammo = ammoAmount; //crash
+			gameObj.blockList[blockType].ammo = ammoAmount; //crash
 			io.to(gameID).emit('log', '<span class="dimMsg">' + blockType + ' ammo = ' + ammoAmount + '.</span>');
 			unreadyAll(gameID);
-			gameData[gameID].gameType = 'custom';
+			gameObj.gameType = 'custom';
 			// io.to(gameID).emit('update ammo or w/e');
 			socket.emit('update creator ammo', blockType, ammoAmount);
-			socket.broadcast.to(gameID).emit('build menu', gameData[gameID].blockList);
+			socket.broadcast.to(gameID).emit('build menu', gameObj.blockList);
 		} else {
 			io.to(gameID).emit('log', '<span class="redMsg">invalid amount!</span>');
 		}
@@ -208,9 +208,9 @@ function socket_ammoUpdate(blockType, ammoAmount) {
 function socket_updateBoardSize(rows, cols) {
 	var gameID = userData[socket.id].room;
 	if (gameExists(gameID)) {
-		if (gameData[gameID].creator == socket.id) {
-			gameData[gameID].rows = rows;
-			gameData[gameID].cols = cols;
+		if (gameObj.creator == socket.id) {
+			gameObj.rows = rows;
+			gameObj.cols = cols;
 			socket.broadcast.to(gameID).emit('rebuild board', rows, cols);
 		} else {
 			socket.emit('log', '<span class="redMsg">you\'re not the creator!</span>');
@@ -221,17 +221,17 @@ function socket_updateBoardSize(rows, cols) {
 function socket_offerDraw(gameID) {
 	var whichPlayer = getPlayerNumber(gameID, socket.id);
 	if ((whichPlayer == 1) || (whichPlayer == 2)) {
-		gameData[gameID].playerOfferedDraw = whichPlayer;
+		gameObj.playerOfferedDraw = whichPlayer;
 		socket.broadcast.to(gameID).emit('draw offered', gameID);
 	}
 }
 
 function socket_drawAccepted(gameID) {
 	var whichPlayer = getPlayerNumber(gameID, socket.id);
-	if (whichPlayer == 1 && gameData[gameID].playerOfferedDraw == 2) {
+	if (whichPlayer == 1 && gameObj.playerOfferedDraw == 2) {
 		drawGameCleanup();
 		socket.broadcast.to(gameID).emit('game over', 3, 'drawAccepted');
-	} else if (whichPlayer == 2 && gameData[gameID].playerOfferedDraw == 1) {
+	} else if (whichPlayer == 2 && gameObj.playerOfferedDraw == 1) {
 		drawGameCleanup();
 		socket.broadcast.to(gameID).emit('game over', 3, 'drawAccepted');
 	} else {
@@ -240,25 +240,25 @@ function socket_drawAccepted(gameID) {
 	
 	function drawGameCleanup() {
 		var playerList = [];
-		for (playerID in gameData[gameID].players) {
-			if ((gameData[gameID].players[playerID].disconnected == false) && (gameData[gameID].players[playerID].forfeit == false)) {
-				gameData[gameID].players[playerID].winner = true;
+		for (playerID in gameObj.players) {
+			if ((gameObj.players[playerID].disconnected == false) && (gameObj.players[playerID].forfeit == false)) {
+				gameObj.players[playerID].winner = true;
 				playerList.push[playerID]
 			}
 		}
-		for (var i = 0; i < gameData[gameID].board.length; i++) {
-			if (gameData[gameID].board[i].possession.length != 0) {
-				gameData[gameID].board[i].possession = playerList;
+		for (var i = 0; i < gameObj.board.length; i++) {
+			if (gameObj.board[i].possession.length != 0) {
+				gameObj.board[i].possession = playerList;
 			}
 		}
-		io.to(gameID).emit('render board', gameData[gameID].board);
+		io.to(gameID).emit('render board', gameObj.board);
 	}
 }
 
 function socket_titleUpdate(title) {
 	var gameID = userData[socket.id].room;
-	if (gameData[gameID].creator == socket.id) {
-		gameData[gameID].title = title;
+	if (gameObj.creator == socket.id) {
+		gameObj.title = title;
 		//updateLobby();
 	} else {
 		socket.emit('log', '<span class="redMsg">you\'re not the creator!</span>');
@@ -271,13 +271,13 @@ function socket_titleUpdate(title) {
 
 function unreadyAll (gameID) {
 	var refresh = false;
-	for (playerID in gameData[gameID].players) {
+	for (playerID in gameObj.players) {
 		if (unready(gameID, playerID)) {
 			refresh = true;
 		}
 	}
 	if (refresh) {
-		io.to(gameID).emit('render board', gameData[gameID].board);
+		io.to(gameID).emit('render board', gameObj.board);
 	}
 }
 
@@ -288,10 +288,10 @@ function unreadyAll (gameID) {
 
 function getPlayerNumber (gameID, id) {
 // pass in the socket.id and return player number.
-	if (id == gameData[gameID].player1) {
+	if (id == gameObj.player1) {
 		return 1;
 	}
-	if (id == gameData[gameID].player2) {
+	if (id == gameObj.player2) {
 		return 2;
 	}
 	return 'spectator';

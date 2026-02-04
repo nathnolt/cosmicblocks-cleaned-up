@@ -16,18 +16,20 @@ const {
 
 // GAME MODES
 function classicMode(gameID) {
-	gameData[gameID].gameType = 'classic';
-	gameData[gameID].rows = 9;
-	gameData[gameID].cols = 20;
-	initializeBoard (gameID, gameData[gameID].rows, gameData[gameID].cols);
+	const gameObj = gameData[gameID]
+	
+	gameObj.gameType = 'classic';
+	gameObj.rows = 9;
+	gameObj.cols = 20;
+	initializeBoard(gameObj)
 	updateBlock(gameID, 5, 5, "base");
 	updateBlock(gameID, 16, 5, "base");
-	gameData[gameID].timeLimit = 60;
-	gameData[gameID].timerValue = 60;
-	gameData[gameID].collisionMode = { 
+	gameObj.timeLimit = 60;
+	gameObj.timerValue = 60;
+	gameObj.collisionMode = { 
 		permanence: 3
 	};
-	gameData[gameID].blockList = {
+	gameObj.blockList = {
 		plus: {	ammo: false },
 		cross: {ammo: false },
 		arrow4: { ammo: 5 },
@@ -48,10 +50,11 @@ function classicMode(gameID) {
 	// o+ ox  8  2  1  3
 }
 function advancedMode(gameID) {
-	gameData[gameID].gameType = 'advanced';
-	gameData[gameID].rows = 11;
-	gameData[gameID].cols = 21;
-	initializeBoard (gameID, gameData[gameID].rows, gameData[gameID].cols);
+	const gameObj = gameData[gameID]
+	gameObj.gameType = 'advanced';
+	gameObj.rows = 11;
+	gameObj.cols = 21;
+	initializeBoard (gameObj, gameObj.rows, gameObj.cols);
 	updateBlock(gameID, 5, 6, "base");
 	updateBlock(gameID, 17, 6, "base");
 	
@@ -67,9 +70,9 @@ function advancedMode(gameID) {
 	updateBlock(gameID, 11, 7, "ice");
 	updateBlock(gameID, 12, 7, "ice");
 	*/
-	gameData[gameID].timeLimit = 30;
-	gameData[gameID].timerValue = 30;
-	gameData[gameID].blockList = {
+	gameObj.timeLimit = 30;
+	gameObj.timerValue = 30;
+	gameObj.blockList = {
 		star: { ammo: 1 },
 		plus: {	ammo: false },
 		cross: { ammo: false },
@@ -86,22 +89,23 @@ function advancedMode(gameID) {
 		arrow1: { ammo: 2 },
 		arrow3: { ammo: 2 }
 	};
-	gameData[gameID].collisionMode = { 
+	gameObj.collisionMode = { 
 		permanence: 5
 		// use false for no limit
 	};
 }
 
 function setupgame_exMode(gameID) {
-	gameData[gameID].gameType = 'ex';
-	gameData[gameID].rows = 11;
-	gameData[gameID].cols = 21;
-	initializeBoard (gameID, gameData[gameID].rows, gameData[gameID].cols);
+	const gameObj = gameData[gameID]
+	gameObj.gameType = 'ex';
+	gameObj.rows = 11;
+	gameObj.cols = 21;
+	initializeBoard(gameObj)
 	updateBlock(gameID, 5, 6, "base");
 	updateBlock(gameID, 17, 6, "base");
-	gameData[gameID].timeLimit = 30;
-	gameData[gameID].timerValue = 30;
-	gameData[gameID].blockList = {
+	gameObj.timeLimit = 30;
+	gameObj.timerValue = 30;
+	gameObj.blockList = {
 		star: { ammo: 1 },
 		plus: {	ammo: 'inf' },
 		cross: { ammo: 'inf' },
@@ -120,22 +124,24 @@ function setupgame_exMode(gameID) {
 		arrow3: { ammo: 2 },
 		mine: { ammo: 3 }
 	};
-	gameData[gameID].collisionMode = { 
+	gameObj.collisionMode = { 
 		permanence: 5
 		// use false for no limit
 	};
 }
 
 function setupgame_practiceMode(gameID) {
-	gameData[gameID].gameType = 'practice';
-	gameData[gameID].rows = 11;
-	gameData[gameID].cols = 21;
-	initializeBoard (gameID, gameData[gameID].rows, gameData[gameID].cols);
+	const gameObj = gameData[gameID]
+	gameObj.gameType = 'practice';
+	gameObj.rows = 11;
+	gameObj.cols = 21;
+	initializeBoard(gameObj)
 	updateBlock(gameID, 5, 6, "base");
 	updateBlock(gameID, 17, 6, "base");
-	gameData[gameID].timeLimit = false;
-	gameData[gameID].timerValue = false;
-	gameData[gameID].blockList = {
+	gameObj.timeLimit = false;
+	gameObj.timerValue = false;
+	
+	gameObj.blockList = {
 		star: { ammo: 1 },
 		plus: {	ammo: 'inf' },
 		cross: { ammo: 'inf' },
@@ -154,14 +160,16 @@ function setupgame_practiceMode(gameID) {
 		arrow3: { ammo: 2 },
 		mine: { ammo: 3 }
 	};
-	gameData[gameID].collisionMode = { 
+	
+	gameObj.collisionMode = { 
 		permanence: 5
 		// use false for no limit
 	};
 }
 
 function setupgame_randomMode(gameID) {
-	gameData[gameID].gameType = 'random';
+	const gameObj = gameData[gameID]
+	gameObj.gameType = 'random';
 	var quadrant = (Math.floor(Math.random() * 2));
 	var p1x, p1y, p2x, p2y;
 	
@@ -170,15 +178,15 @@ function setupgame_randomMode(gameID) {
 	}
 	
 	p1x = 1 + getRandomStartPos();
-	p2x = gameData[gameID].cols - getRandomStartPos();
+	p2x = gameObj.cols - getRandomStartPos();
 	if (quadrant == 0) {
 		p1y = 1 + getRandomStartPos();
-		p2y = gameData[gameID].rows - getRandomStartPos();
+		p2y = gameObj.rows - getRandomStartPos();
 	} else if (quadrant == 1) {
-		p1y = gameData[gameID].rows - getRandomStartPos();
+		p1y = gameObj.rows - getRandomStartPos();
 		p2y = 1 + getRandomStartPos();
 	}
-	initializeBoard(gameID,gameData[gameID].rows,gameData[gameID].cols);
+	initializeBoard(gameObj)
 
 	function randomTerrain() {
 		// get random blockType for the random board generator
@@ -231,9 +239,9 @@ function setupgame_randomMode(gameID) {
 	// the 0.12 figure is used to fill up (at most) 12% of the board with terrain
 	// it could be less, though, if randX & randY end up the same as a prior update.
 	// i don't care too much tho, bc it's just a bit of variance in how the randomness plays out.
-	for (var i = 0; i < (0.12 * gameData[gameID].rows * gameData[gameID].cols); i++) {
-		var randX = Math.ceil(Math.random() * gameData[gameID].cols);
-		var randY = Math.ceil(Math.random() * gameData[gameID].rows);
+	for (var i = 0; i < (0.12 * gameObj.rows * gameObj.cols); i++) {
+		var randX = Math.ceil(Math.random() * gameObj.cols);
+		var randY = Math.ceil(Math.random() * gameObj.rows);
 		var randType = randomTerrain();
 		updateBlock(gameID,randX,randY,randType);
 	}
@@ -264,7 +272,7 @@ function setupgame_randomMode(gameID) {
 	var rand3 = random_inclusive_int(1,3);
 	var rand4 = random_inclusive_int(1,3);
 	
-	gameData[gameID].blockList = {
+	gameObj.blockList = {
 		plus: {	ammo: 'inf' },
 		cross: { ammo: 'inf' },
 		arrow4: { ammo: rand1 },
@@ -281,24 +289,24 @@ function setupgame_randomMode(gameID) {
 	};
 	
 	if (random_inclusive_int(1,2) == 2) { 
-		gameData[gameID].blockList['reclaim'] = { ammo: (random_inclusive_int(1,2)) }
+		gameObj.blockList['reclaim'] = { ammo: (random_inclusive_int(1,2)) }
 	}
-	gameData[gameID].blockList['circle'] = { ammo: (random_inclusive_int(1,3)) }
+	gameObj.blockList['circle'] = { ammo: (random_inclusive_int(1,3)) }
 	if (random_inclusive_int(1,4) !== 4) { 
-		gameData[gameID].blockList['mine'] = { ammo: (random_inclusive_int(1,5)) }
+		gameObj.blockList['mine'] = { ammo: (random_inclusive_int(1,5)) }
 	}
 	if (random_inclusive_int(1,3) !== 2) { 
-		gameData[gameID].blockList['star'] = { ammo: (random_inclusive_int(1,2)) }
+		gameObj.blockList['star'] = { ammo: (random_inclusive_int(1,2)) }
 	}
 	if (random_inclusive_int(1,4) == 4) { 
-		gameData[gameID].blockList['knight'] = { ammo: 1 }
+		gameObj.blockList['knight'] = { ammo: 1 }
 	}
 	
-	gameData[gameID].collisionMode = { 
+	gameObj.collisionMode = { 
 		permanence: 5
 	};
-	gameData[gameID].timeLimit = 40;
-	gameData[gameID].timerValue = 40;
+	gameObj.timeLimit = 40;
+	gameObj.timerValue = 40;
 }
 
 
@@ -306,10 +314,10 @@ function setupgame_randomMode(gameID) {
 
 
 
-function initializeBoard(gameID, rows, cols) {
-	gameData[gameID].board = [];
+function initializeBoard(gameObj) {
+	gameObj.board = [];
 	function addBlockInfo(x, y) {
-		gameData[gameID].board.push ({
+		gameObj.board.push ({
 			x:x, // x position
 			y:y, // y position
 			
@@ -331,8 +339,8 @@ function initializeBoard(gameID, rows, cols) {
 	}
 	
 	// loop thru every row and column and add the empty blocks
-	for (var i = 0; i < gameData[gameID].rows; i++) {
-		for (var j = 0; j < gameData[gameID].cols; j++) {
+	for (var i = 0; i < gameObj.rows; i++) {
+		for (var j = 0; j < gameObj.cols; j++) {
 			addBlockInfo(j, i);
 		}
 	}

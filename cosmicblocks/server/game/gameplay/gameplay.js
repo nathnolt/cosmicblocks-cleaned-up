@@ -59,10 +59,10 @@ function getGameID() {
 * when origin is set, both a chat message, and a history message is put on the board
 */
 function updateBlock(gameID, x, y, initialType, origin) {
-	
+	const gameObj = gameData[gameID]
 	// 1. get the board position
 	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x, y);
-	const cellObj = gameData[gameID].board[pos]
+	const cellObj = gameObj.board[pos]
 	
 	// 2. Get the actual block type
 	let blockType = initialType;
@@ -86,12 +86,12 @@ function updateBlock(gameID, x, y, initialType, origin) {
 	
 	// 3. update the block:
 	cellObj.type    = blockType;
-	cellObj.moveNum = gameData[gameID].moveCount;
+	cellObj.moveNum = gameObj.moveCount;
 	
 	
 	// 4. Does something with permanence. 
 	//    I think that's for the collision system, which ticks down every turn?
-	var permanence = gameData[gameID].collisionMode.permanence;
+	var permanence = gameObj.collisionMode.permanence;
 	if ((blockType == 'blockade') && (permanence !== true)) {
 		
 		// It probably does permanence + 1 because it's -1'd at the end of every turn
@@ -116,14 +116,14 @@ function updateBlock(gameID, x, y, initialType, origin) {
 			chatHistoryString += x + ',' + y + ': '
 		}
 		
-		const turnNumber = gameData[gameID].moveCount - 1
+		const turnNumber = gameObj.moveCount - 1
 		
 		if (origin == 'collision' || origin == 'collision fade') {
 			historyString += `${b(origin)} on turn ${turnNumber}.`;
 			chatHistoryString += b(origin)
 		} else {
 			
-			const player = gameData[gameID].players[origin]
+			const player = gameObj.players[origin]
 			cellObj.originColor = player.color
 			
 			const typeStrMap = {
@@ -151,27 +151,27 @@ function updateBlock(gameID, x, y, initialType, origin) {
 		}
 		
 		// Set the strings on the board position, and send the chatString to the clients
-		gameData[gameID].board[pos].history.push( div(historyString) )
+		cellObj.history.push( div(historyString) )
 		io.to(gameID).emit('log', div(chatHistoryString, 'dimMsg') )
 		
 		
 		// Commented code. Probably a different way of trying to do the same thing.
 		/*
 		var historyObj = {
-			turn: gameData[gameID].moveCount - 1,
+			turn: gameObj.moveCount - 1,
 			blockType: blockType
 		}
 		if (origin == 'collision' || origin == 'collision fade') {
 			historyObj.cause = origin;
-			gameData[gameID].board[pos].origin = origin;
+			cellObj.origin = origin;
 		} else {
 			historyObj.cause = 'player';
-			historyObj.playerDisplayName = gameData[gameID].players[origin].username;
-			historyObj.playerColor = gameData[gameID].players[origin].color;
-			gameData[gameID].board[pos].origin = origin;
-			gameData[gameID].board[pos].originColor = gameData[gameID].players[origin].color;
+			historyObj.playerDisplayName = gameObj.players[origin].username;
+			historyObj.playerColor = gameObj.players[origin].color;
+			cellObj.origin = origin;
+			cellObj.originColor = gameObj.players[origin].color;
 		}
-		gameData[gameID].board[pos].history.push(historyObj);
+		cellObj.history.push(historyObj);
 		*/
 	}
 	
@@ -372,20 +372,21 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 	return collection;
 }
 
+// send a possession array here after splicing or adding to return the color the block should be.
 function getBoardCellColor(gameID, possession) {
-	// send a possession array here after splicing or adding to return the color the block should be.
+	const gameObj = gameData[gameID]
 	
 	if (possession.length == 0) {
 		return emptyColor;
 	}
 	
 	if (possession.length == 1) {
-		return gameData[gameID].players[possession[0]].color;
+		return gameObj.players[possession[0]].color;
 	}
 	
 	if (possession.length == 2) {
-		var color_1 = gameData[gameID].players[possession[0]].color;
-		var color_2 = gameData[gameID].players[possession[1]].color;
+		var color_1 = gameObj.players[possession[0]].color;
+		var color_2 = gameObj.players[possession[1]].color;
 		return mix(color_1, color_2);
 	}
 	
@@ -516,19 +517,20 @@ function checkForPlayerExit(gameID, socket) {
 
 // @TODO: clean up.
 function gameOver(gameID) {
+	const gameObj = gameData[gameID]
 	
 	function stopTimer(gameID) {
 		if( 
-			gameData[gameID] == null || 
-			gameData[gameID].gameTimer === false
+			gameObj == null || 
+			gameObj.gameTimer === false
 		) { return }
 		
-		clearInterval(gameData[gameID].gameTimer)
-		gameData[gameID].gameTimer = false
+		clearInterval(gameObj.gameTimer)
+		gameObj.gameTimer = false
 		//io.to(gameID).emit('log', '<span class="dimMsg">timer stopped</span>');
 	}
 	
-	gameData[gameID].gameState = 'gameover';
+	gameObj.gameState = 'gameover';
 	
 	stopTimer(gameID);
 	
@@ -539,12 +541,12 @@ function gameOver(gameID) {
 	var playerIDs = [];
 	var drawGame;
 	
-	for (playerID in gameData[gameID].players) {
+	for (playerID in gameObj.players) {
 		playerIDs.push (playerID);
-		if (gameData[gameID].players[playerID].winner) {
+		if (gameObj.players[playerID].winner) {
 			winners.push(playerID);
-			color.push(gameData[gameID].players[playerID].color);
-			winPaths.push(gameData[gameID].players[playerID].winPath);
+			color.push(gameObj.players[playerID].color);
+			winPaths.push(gameObj.players[playerID].winPath);
 		} else {
 			wipePossession(gameID, playerID);
 		}
@@ -570,32 +572,32 @@ function gameOver(gameID) {
 	// but not being in a function.
 	label: {
 		
-		if(gameData[gameID].gameType === 'practice') {
+		if(gameObj.gameType === 'practice') {
 			break label
 		}
 		
-		if(gameData[gameID].moveCount <= 1) {
-			gameData[gameID].ratingsCalculated = true;
+		if(gameObj.moveCount <= 1) {
+			gameObj.ratingsCalculated = true;
 			io.to(gameID).emit('log', 'No stats collected.');
 			break label
 		}
 		
-		if(gameData[gameID].ratingsCalculated != false) {
+		if(gameObj.ratingsCalculated != false) {
 			break label
 		}
 		
 		
-		for(playerID in gameData[gameID].players) {
+		for(playerID in gameObj.players) {
 			if (drawGame == false) {
 				if (playerID === winners[0]) {
-					gameData[gameID].players[playerID].wins++;
+					gameObj.players[playerID].wins++;
 					userData[playerID].wins++;
 					userData[playerID].gamesPlayed++;
 					if (random_inclusive_int(1,5) !== 5) {
 						userData[playerID].remainingRerolls++;
 					}
 				} else {
-					gameData[gameID].players[playerID].losses++;
+					gameObj.players[playerID].losses++;
 					userData[playerID].losses++;
 					userData[playerID].gamesPlayed++;
 					if (random_inclusive_int(1,5) === 5) {
@@ -603,7 +605,7 @@ function gameOver(gameID) {
 					}
 				}
 			} else {
-				gameData[gameID].players[playerID].draws++;
+				gameObj.players[playerID].draws++;
 				userData[playerID].draws++;
 				userData[playerID].gamesPlayed++;
 				if (random_inclusive_int(1,5) > 2) {
@@ -614,16 +616,16 @@ function gameOver(gameID) {
 		
 		// Elo
 		var kFactor = 20;
-		if (gameData[gameID].gameType == 'random') {
+		if (gameObj.gameType == 'random') {
 			kFactor = 7.5;
 		}
 		
-		if (gameData[gameID].moveCount < 8) {
-			kFactor *= (gameData[gameID].moveCount / 8);
+		if (gameObj.moveCount < 8) {
+			kFactor *= (gameObj.moveCount / 8);
 		}
 		
 		var winner, loser;
-		if (gameData[gameID].players[playerIDs[0]].winner) {
+		if (gameObj.players[playerIDs[0]].winner) {
 			winner = playerIDs[0];
 			loser = playerIDs[1];
 		} else {
@@ -646,10 +648,10 @@ function gameOver(gameID) {
 		userData[loser].oldElo = userData[loser].elo;
 		userData[loser].elo -= e;
 		
-		gameData[gameID].ratingsCalculated = true;
+		gameObj.ratingsCalculated = true;
 		
-		var p1Score = gameData[gameID].players[playerIDs[0]].wins + (gameData[gameID].players[playerIDs[0]].draws / 2);
-		var p2Score = gameData[gameID].players[playerIDs[1]].wins + (gameData[gameID].players[playerIDs[1]].draws / 2);
+		var p1Score = gameObj.players[playerIDs[0]].wins + (gameObj.players[playerIDs[0]].draws / 2);
+		var p2Score = gameObj.players[playerIDs[1]].wins + (gameObj.players[playerIDs[1]].draws / 2);
 		
 		var postGameMsg = '<div class="postGame">';
 		if (drawGame) {
@@ -672,7 +674,7 @@ function gameOver(gameID) {
 					}
 					
 					var change = post - prior;
-					postGameMsg += '<div><span style="color:'+ gameData[gameID].players[playerIDs[j]].color +'; font-weight:bold;">'+ userData[playerIDs[j]].username +'</span><span class="dimMsg">: ';
+					postGameMsg += '<div><span style="color:'+ gameObj.players[playerIDs[j]].color +'; font-weight:bold;">'+ userData[playerIDs[j]].username +'</span><span class="dimMsg">: ';
 					postGameMsg += prior + '&rarr;</span>' + post +' </span>';
 					if (change > 0) {
 						postGameMsg += '<span class="greenMsg">(+' + change + ')</span>';
@@ -694,7 +696,7 @@ function gameOver(gameID) {
 			
 			for(const playerID of playerIDs) {
 				const user = userData[playerID]
-				const userAvgMoveCount = user.avgMoveCount + (gameData[gameID].moveCount - user.avgMoveCount) / user.gamesPlayed
+				const userAvgMoveCount = user.avgMoveCount + (gameObj.moveCount - user.avgMoveCount) / user.gamesPlayed
 				
 				db_updateUserWithGameResults(
 					user.id, 
@@ -714,7 +716,7 @@ function gameOver(gameID) {
 					if (err) throw err;
 					for(const playerID of playerIDs) {
 						const user = userData[playerID]
-						const userAvgMoveCount = user.avgMoveCount + (gameData[gameID].moveCount - user.avgMoveCount) / user.gamesPlayed
+						const userAvgMoveCount = user.avgMoveCount + (gameObj.moveCount - user.avgMoveCount) / user.gamesPlayed
 						
 						db_updateUserWithGameResults(
 							user.id, 
@@ -741,7 +743,7 @@ function gameOver(gameID) {
 								users[0].wins = userData[playerIDs[0]].wins;
 								users[0].losses = userData[playerIDs[0]].losses;
 								users[0].draws = userData[playerIDs[0]].draws;
-								users[0].avgMoveCount += ((gameData[gameID].moveCount - users[0].avgMoveCount) / users[0].gamesPlayed);
+								users[0].avgMoveCount += ((gameObj.moveCount - users[0].avgMoveCount) / users[0].gamesPlayed);
 								users[0].save(function (err) {
 									if (err) throw err;
 									console.log("success: " + userData[playerIDs[0]].username);
@@ -764,7 +766,7 @@ function gameOver(gameID) {
 								users2[0].wins = userData[playerIDs[1]].wins;
 								users2[0].losses = userData[playerIDs[1]].losses;
 								users2[0].draws = userData[playerIDs[1]].draws;
-								users2[0].avgMoveCount += ((gameData[gameID].moveCount - users2[0].avgMoveCount) / users2[0].gamesPlayed);
+								users2[0].avgMoveCount += ((gameObj.moveCount - users2[0].avgMoveCount) / users2[0].gamesPlayed);
 								users2[0].save(function (err) {
 									if (err) throw err;
 									console.log("success: " + userData[playerIDs[1]].username);
@@ -779,11 +781,11 @@ function gameOver(gameID) {
 	} // end of label statement
 
 	// else {
-	// 	gameData[gameID].ratingsCalculated = true;
+	// 	gameObj.ratingsCalculated = true;
 	// 	io.to(gameID).emit('log', 'No stats collected.');
 	// }
 	
-	io.to(gameID).emit('victory', winners, winPaths, color, gameData[gameID].gameType);
+	io.to(gameID).emit('victory', winners, winPaths, color, gameObj.gameType);
 	sub_updateLobby();
 }
 
