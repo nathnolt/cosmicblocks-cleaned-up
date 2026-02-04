@@ -77,7 +77,6 @@ function sub_getLobbyData() {
 
 
 function sub_leaderData(callback) {
-	console.log('@TODO: implement leader data...')
 	
 	if(false) {
 		
@@ -106,7 +105,6 @@ function sub_leaderData(callback) {
 	}
 	
 	const users = db_getUsersSortedByElo()
-	console.log(users)
 	const leaderData = []
 	for(const user of users) {
 		leaderData.push({

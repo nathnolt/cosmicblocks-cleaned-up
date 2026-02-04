@@ -477,27 +477,36 @@ function checkForPlayerExit(gameID, socket) {
 				}
 			}
 		}
-	} else if (gameObj.gameState == 'inprogress') {
+	} else 
+	if (gameObj.gameState == 'inprogress') {
+		
 		for(const playerID in gameObj.players) {
-			if (playerID == socket.id) {
-				// player left an in-progress game, so they lose.
-				wipePossession(gameID, playerID);
-				gameObj.players[playerID].disconnected = true;
-				gameObj.remainingPlayers--;
-				io.to(gameID).emit('render board', gameObj.board);
-				if (gameObj.remainingPlayers <= 1) {
-					for (playerID in gameObj.players) {
-						if ((gameObj.players[playerID].disconnected) || (gameData[gameID].players[playerID].forfeit)) {
-							// this player is not the winner
-						} else {
-							gameObj.players[playerID].winner = true;
-						}
-					}
-					gameOver(gameID);
-					//io.to(gameID).emit('game over', winner, 'dc');
-				}
+			
+			if(playerID != socket.id) {
+				continue
 			}
+			
+			
+			// player left an in-progress game, so they lose.
+			wipePossession(gameID, playerID);
+			gameObj.players[playerID].disconnected = true;
+			gameObj.remainingPlayers--;
+			io.to(gameID).emit('render board', gameObj.board)
+			
+			if (gameObj.remainingPlayers <= 1) {
+				for (const playerID2 in gameObj.players) {
+					if ((gameObj.players[playerID2].disconnected) || (gameData[gameID].players[playerID2].forfeit)) {
+						// this player is not the winner
+					} else {
+						gameObj.players[playerID2].winner = true;
+					}
+				}
+				gameOver(gameID);
+				//io.to(gameID).emit('game over', winner, 'dc');
+			}
+			
 		}
+		
 	} else if (gameObj.gameState == 'gameover') {
 		for(const playerID in gameObj.players) {
 			if (playerID == socket.id) {
@@ -541,7 +550,7 @@ function gameOver(gameID) {
 	var playerIDs = [];
 	var drawGame;
 	
-	for (playerID in gameObj.players) {
+	for (const playerID in gameObj.players) {
 		playerIDs.push (playerID);
 		if (gameObj.players[playerID].winner) {
 			winners.push(playerID);

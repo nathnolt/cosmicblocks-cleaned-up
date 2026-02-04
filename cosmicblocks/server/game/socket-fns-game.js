@@ -978,7 +978,7 @@ function unready(gameID, socketID) {
 	wipePossession(gameID, socketID)
 	
 	// Add possession back to just the base cell.
-	const pos = get_linearBoardArrayPos_from_xyPos(gameID, x , y)
+	const pos = get_linearBoardArrayPos_from_xyPos(gameID, playerObj.baseX , playerObj.baseY)
 	const cellObj = gameObj.board[pos]
 	setPossessionToSingleCell(cellObj, socketID, username, playerObj.color)
 	
