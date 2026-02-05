@@ -901,7 +901,7 @@ function addPlayerToGameObj(gameObj, socketID) {
 	// it's time to figure out if player colors are too close to eachother...
 	var playerColors = [];
 	var playerIDs = [];
-	for (playerID in gameObj.players) {
+	for (const playerID in gameObj.players) {
 		playerColors.push(gameObj.players[playerID].color);
 		playerIDs.push(playerID);
 	}

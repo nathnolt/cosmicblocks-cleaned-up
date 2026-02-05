@@ -240,7 +240,7 @@ function socket_drawAccepted(gameID) {
 	
 	function drawGameCleanup() {
 		var playerList = [];
-		for (playerID in gameObj.players) {
+		for (const playerID in gameObj.players) {
 			if ((gameObj.players[playerID].disconnected == false) && (gameObj.players[playerID].forfeit == false)) {
 				gameObj.players[playerID].winner = true;
 				playerList.push[playerID]
@@ -271,7 +271,7 @@ function socket_titleUpdate(title) {
 
 function unreadyAll (gameID) {
 	var refresh = false;
-	for (playerID in gameObj.players) {
+	for (const playerID in gameObj.players) {
 		if (unready(gameID, playerID)) {
 			refresh = true;
 		}

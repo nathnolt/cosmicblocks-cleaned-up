@@ -1,7 +1,93 @@
 <% it.title = 'Game' %>
 <% layout("./base.eta") %>
 
-<div id="container"></div>
+<div id="container">
+	<h1 id="chatToggle">&laquo;</h1>
+	
+	<div id="chatPanel">
+		<h1>Chat</h1>
+		
+		<div id="logContainer">
+			<div id="log"></div>
+		</div>
+		
+	</div>
+</div>
+
+<!-- load stuff which we will use within JS. -->
+
+<template id="audio-button">
+<svg
+	version="1.2"
+	baseProfile="tiny"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	x="0px"
+	y="0px"
+	viewBox="0 0 400 400"
+	overflow="scroll"
+	xml:space="preserve"
+>
+	<!-- speaker icon -->
+	<path d="M159,226.5c0,11-9,20-20,20H71c-11,0-20-9-20-20V174c0-11,9-20,20-20h68c11,0,20,9,20,20V226.5z"/>
+	<path d="M75.3,189.3c-9.3,5.9-9.3,15.7,0,21.6l126.8,81.5c9.3,5.9,16.8,1.8,16.8-9.2V117c0-11-7.6-15.1-16.8-9.2L75.3,189.3z"/>
+	
+	<!-- audio on -->
+	<path 
+		class="audioOn"
+		fill="none"
+		stroke="#2652AA"
+		stroke-width="20"
+		stroke-linecap="round"
+		stroke-miterlimit="10"
+		d="M314,126c0,0,90,74,0,148"
+	/>
+	<circle
+		class="audioOn"
+		fill="#061059"
+		cx="254"
+		cy="200"
+		r="21"
+	/>
+	<path
+		class="audioOn"
+		fill="none"
+		stroke="#123A89"
+		stroke-width="20"
+		stroke-linecap="round"
+		stroke-miterlimit="10"
+		d="M279,153c0,0,70,47,0,94"
+	/>
+	
+	<!-- audio off -->
+	<line
+		class="audioOff"
+		fill="none"
+		stroke="#890303"
+		stroke-width="20"
+		stroke-linecap="round"
+		stroke-miterlimit="10"
+		x1="249"
+		y1="166"
+		x2="318"
+		y2="235"
+	/>
+	<line
+		class="audioOff"
+		fill="none"
+		stroke="#890303"
+		stroke-width="20"
+		stroke-linecap="round"
+		stroke-miterlimit="10"
+		x1="318"
+		y1="166"
+		x2="249"
+		y2="235"
+	/>
+</svg>
+</template>
+
+
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
-<script type="text/javascript" src="client.js"></script>
+<script type="module" src="script/client.js"></script>

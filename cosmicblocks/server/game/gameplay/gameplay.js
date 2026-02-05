@@ -466,14 +466,14 @@ function checkForPlayerExit(gameID, socket) {
 			sub_updateLobby() // player spot opened?
 		} else {
 			// player left an open game, so remove them.
-			for(const playerID in game.players) {
+			for(const playerID in gameObj.players) {
 				if (playerID == socket.id) {
 					wipePossession(gameID, playerID);
 					delete gameObj.players[playerID];
 					sub_updateLobby(); // player spot opened?
 					io.to(gameID).emit('log', '<span class="dimMsg">removed ' + userData[socket.id].username + ' as player.</span>');
 					io.to(gameID).emit('remove player heading');
-					io.to(gameID).emit('render board', game.board);
+					io.to(gameID).emit('render board', gameObj.board);
 				}
 			}
 		}
