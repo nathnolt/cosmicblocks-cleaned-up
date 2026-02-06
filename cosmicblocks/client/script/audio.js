@@ -25,6 +25,7 @@ const audios = {
 const baseVolume = 1
 
 export function playAudio(name, multiplierVolume=1) {
+	console.log('playaudio', name)
 	if(!globals.audioEnabled) {
 		return
 	}

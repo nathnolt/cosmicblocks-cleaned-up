@@ -8,18 +8,21 @@
 //  **     ** **  **     ** **   ***   //
 //   ****  ****   *****   ***   ** **  //
 
-
-import { resizeFunction } from './subs.js'
-
-import { globals } from './globals.js'
-
-import { emptyColor } from './static.js'
+import { 
+	resizeFunction,
+	exitGame,
+	log
+} from './subs.js'
 
 import {
-	ColorLuminance,
-	mix,
-	hex2rgba
-} from './color.js'
+	playAudio
+} from './audio.js'
+
+import {
+	audioButtonSVG
+} from './static.js'
+
+import { globals } from './globals.js'
 
 import {
 	socket_connect_error,
@@ -61,45 +64,44 @@ import {
 	socket_console_log
 } from './socket-handlers.js'
 
-
-
-// new color rendering setup
-// preference is either 'server' or 'client'
-// server has the database name color of player1 and player2
-// client has your personal preference for player1 / player2, 
-var colors = {
-	preference: 'server',
-	server: ['', ''],
-	client: ['', '']
-}
-
-updateStyle('nocolor', "#d5ccbd")
-
-
 $( window ).resize(resizeFunction)
 resizeFunction()
 
-$("#chatToggle").on('click', function() {
-	if ($("#chatPanel").is(":visible")) {
-		$("#chatPanel").hide();
-		$("#chatToggle").html('&raquo;');
-		
-		resizeFunction();
-	} else {
-		$("#chatPanel").show();
-		$("#chatToggle").html('&laquo;');
-		
-		resizeFunction();
-	}
-})
+// Start
+{
+	$("#chatToggle").on('click', function() {
+		if ($("#chatPanel").is(":visible")) {
+			$("#chatPanel").hide();
+			$("#chatToggle").html('&raquo;');
+			
+			resizeFunction();
+		} else {
+			$("#chatPanel").show();
+			$("#chatToggle").html('&laquo;');
+			
+			resizeFunction();
+		}
+	})
+	
+	handleAudioToggleButton()
+	
+	$("#exit").on('click', function() {
+		exitGame()
+	})
+}
 
-onlinePlay()
 
-function onlinePlay() {
+// Handle socket
+{
 	const socket = io();
 	globals.socket = socket
 	
 	console.log('socket', socket)
+	
+	socket.onAny(function(event, ...data) {
+		console.log('socket-event', event, data)
+	})
+	
 	
 	// handle socket on methods.
 	socket.on("connect_error", socket_connect_error)
@@ -138,50 +140,89 @@ function onlinePlay() {
 	socket.on('rematch offered', socket_rematch_offered)
 	socket.on('setup rematch', socket_setup_rematch)
 	socket.on('draw offered', socket_draw_offered)
-	socket.on('console log', socket_console_log);
+	socket.on('console log', socket_console_log)
+	
+	// send the server new game command
+	$('#newgame').on("click",function() {
+		socket.emit('new game')
+	})
+	
+	// send the server new game [random board] command
+	$('#randgame').on("click",function() {
+		socket.emit('new game', 'random')
+	})
+	
+	$('#practice').on("click",function() {
+		socket.emit('practice mode')
+	})
+	
+	$("#rerollColor").on('click', function() {
+		socket.emit('attempt color reroll');
+	})
+	
+	
+	// handle game ready button
+	$("#ready").on('click', function() {
+		if ($(this).hasClass("unbound")) {
+			log('<span class="redMsg">cannot ready as spectator</span>');
+		} else {
+			if ($(this).hasClass("notready")) {
+				socket.emit('ready');
+				$(this).html('Unready').removeClass('notready');
+			} else {
+				socket.emit('not ready');
+				$(this).html('Ready Up').addClass('notready');
+			}
+		}
+	})
+	
+	
+	$("#rematch").on('click', function() {
+		socket.emit('yes rematch')
+		
+		console.log('@TODO: fix the rematch button text. Make the system more robust.')
+		/*
+		$("#rematch").off()
+		$("#rematch > span").text("Offered Rematch").addClass("blinkText")
+		*/
+	})
+	
+	$("#forfeit").on("click",function() {
+		socket.emit('forfeit')
+	})
+	
 }
 
 
 
 
 
-
-// @TODO: see what happens if we remove this function, as this is only used from within client.js really
-function updateStyle(styleID, color) {
-	// empty what was already there
-	$("#" + styleID).empty();
+function handleAudioToggleButton() {
+	$('.toggleAudio').append(audioButtonSVG)
 	
-	// BLOCK
-	var rule = '.' + styleID + ' { background-color: ' + color + '; } ';
-	rule += '.' + styleID + ' svg .border { fill: '+ ColorLuminance(color, -0.65) +' }';
-	rule += '.' + styleID + '.empty svg .border { opacity: 0; }';
-	rule += '.' + styleID + ' svg .border2 { stroke: '+ ColorLuminance(color, 0.125) +' }';
-	
-	if (color !== emptyColor) {
-		// SVG OUTLINE
-		rule += '.' + styleID + ' svg .outline { fill: '+ ColorLuminance(color, 0.125) +'; }';
-
-		// SVG BASE JEWEL
-		rule += '.' + styleID + ' svg .jewel { fill: '+ color +'; animation: jewel-' + color.substr(1) +' 1s infinite alternate ease-in-out; }';
-		rule += '@keyframes jewel-'+ color.substr(1) +' { 0% { opacity: 0.2; } 100% { opacity: 1; } }';
-
+	function toggleAudioIconShapes() {
+		if(globals.audioEnabled) {
+			$(".audioOn").show()
+			$(".audioOff").hide()
+		} else {
+			$(".audioOn").hide()
+			$(".audioOff").show()
+		}
 	}
 	
-	// EMPTY
-	var mixed = mix(color, emptyColor, 55); // old was 35
-	var mixed2 = ColorLuminance(color, -0.09);
-	rule += '.' + styleID + '.empty { background-color: ' + mixed + '; box-shadow: inset 0 0 0 1px '+ mixed2 +';  }';
-
-	// HOVER
-	rule += '.' + styleID + ':hover:not(.nohover):not(.disabled), .' + styleID + '.highlighted { background-color: ' + ColorLuminance(mixed, 0.125) +'; cursor:pointer; }';
+	toggleAudioIconShapes()
 	
-	// PRIOR
-	rule += '.prior-' + color.substr(1) + '::before { animation: origin-' + color.substr(1) + ' 0.25s infinite alternate; content:""; display: block; height: 100%; width: 100%; position: absolute; left: 0; top: 0; background-color: '+ hex2rgba(mix(color, '#ffffff', 50), 50) +'; box-shadow: inset 0 0 0 1px '+ ColorLuminance(color,-0.3) +', inset 0 0 0 3px '+ color +'; }';
-	globals.priorColorList.push('prior-' + color.substr(1)); // global var holds all prior classes.
-	
-	// ANIMATION
-	rule += '@keyframes origin-' + color.substr(1) +' { 0% { opacity: 0.2; } 40% { opacity: 0.25; } 60% { opacity: 0.95; } 100% { opacity: 1 } }';
-	
-	// append
-	$("#" + styleID).append(rule);
+	// @TODO: see if I can inline this function at the start of the whole thing, once all the HTML has been inlined.
+	$(".toggleAudio").on("click", function() {
+		if (globals.audioEnabled) {
+			globals.audioEnabled = false
+			log('<span class="dimMsg">Audio disabled.</span>')
+			toggleAudioIconShapes()
+		} else {
+			globals.audioEnabled = true
+			playAudio('move')
+			log('<span class="dimMsg">Audio enabled.</span>')
+			toggleAudioIconShapes()
+		}
+	})
 }

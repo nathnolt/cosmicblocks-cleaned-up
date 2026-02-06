@@ -204,7 +204,7 @@ h1, #gameHead {
   color: #2aaddd;
 }
 
-#toggleAudio {
+.toggleAudio {
   padding: 0;
   width: 45px;
   height: 28px;
@@ -212,7 +212,7 @@ h1, #gameHead {
   background-repeat: no-repeat;
   background-position: center center;
 }
-#toggleAudio .audioOff {
+.toggleAudio .audioOff {
   display: none;
 }
 

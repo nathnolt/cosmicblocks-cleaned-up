@@ -9,10 +9,107 @@
 		
 		<div id="logContainer">
 			<div id="log"></div>
+		</div>	
+	</div>
+	
+	<div id="lobby" class="hidden-during-gameplay">
+		<h1>
+			<span class="yourname"></span>, 
+			welcome to Cosmic Blocks!
+		</h1>
+		
+		<div class="buttons-and-stats">
+			<div id="optionButtons">
+				<!-- 
+					@TODO: change the button div elements into button elements. But for this I need to rewrite the CSS to get rid of SCSS -> CSS 
+					Because we don't want this compilation step. Because we can use css custom-properties to handle variables.
+					And native CSS nesting is a thing now.
+					
+					And the existing CSS code can be cleaned up anyways.
+				-->
+				<div id="newgame"  class="buttonStyle hidden-for-ghost">Create Game</div>
+				<div id="randgame" class="buttonStyle hidden-for-ghost">Random Game</div>
+				<div id="practice" class="buttonStyle hidden-for-ghost">Practice Mode</div>
+				
+				<a
+					id="howToPlay" 
+					class="buttonStyle" 
+					href="https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit" 
+					target="_blank"
+				>How to Play</a>
+				<a 
+					class="buttonStyle" 
+					href="https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" 
+					target="_blank"
+				>Documentation</a>
+				<div class="toggleAudio buttonStyle"></div>
+				
+				<div class="buttonStyle" id="rerollColor">New Color</div>
+			</div>
+			
+			<div id="playerStats" class="hidden-for-ghost">
+				<ul id="lobbyUserData">
+					<li>Games Played<span class="stat" id="stat-games-played"></span></li>
+					<li>Games Won<span class="stat" id="stat-games-won"></span></li>
+					<li>Games Drawn<span class="stat" id="stat-games-drawn"></span></li>
+					<li>Games Lost<span class="stat" id="stat-games-lost"></span></li>
+					<li>Elo<span class="stat" id="stat-display-elo"></span></li>
+				</ul>
+			</div>
+			
+		</div>
+		
+		<div id="gameTypes">
+			<div id="open"></div>
+			<div id="inprogress"></div>
 		</div>
 		
 	</div>
+	
+	<div id="leaderboard" class="hidden-during-gameplay">
+		<h1>World Ranking</h1>
+		<div id="rankingContainer">
+			<table id="eloRank"></table>
+		</div>
+	</div>
+	
+	<div class="hidden-in-lobby" id="headBoardContainer">
+		<div id="gameHead">
+			<div id="playerLeft"></div>
+			<div id="timeRemaining"></div>
+			<div id="playerRight"></div>
+		</div>
+		<div id="board"></div>
+		<div id="menuContainer">
+			<div id="menuRightContainer">
+				<div id="gameButtons">
+					<div class="buttonStyle" id="forfeit">Forfeit</div>
+					<div id="exit" class="buttonStyle">Exit to Lobby</div>
+					<div class="buttonStyle notready" id="ready">Ready Up</div>
+					<div class="buttonStyle" id="rematch"><span>Rematch</span></div>
+					<div class="toggleAudio buttonStyle"></div>
+				</div>
+				
+				<div id="bottomInfo"></div>
+			</div>
+			<div id="menu"></div>
+		</div>
+	</div>
+	
 </div>
+
+<!-- small css code to make my modifications work. -->
+<style>
+.in-gameplay .hidden-during-gameplay {
+	display: none;
+}
+.in-lobby .hidden-in-lobby{
+	display: none;
+}
+</style>
+
+
+
 
 <!-- load stuff which we will use within JS. -->
 

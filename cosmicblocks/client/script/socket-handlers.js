@@ -4,12 +4,11 @@ import {
 
 import {
 	log,
-	toggleAudioButton,
 	renderLeaderboard,
 	renderGames,
 	resizeFunction,
 	buildBlockMenu,
-	buildBoard,
+	buildEmptyBoard,
 	renderBoard,
 	blockHoverData,
 	renderExitButton,
@@ -23,6 +22,7 @@ import {
 import {
 	audioButtonSVG
 } from './static.js'
+
 import { playAudio } from './audio.js'
 
 export function socket_connect_error(err) {
@@ -30,25 +30,30 @@ export function socket_connect_error(err) {
 }
 
 export function socket_connect() {
+//s
 	console.log('socket connected')
 	//log('<span class="greenMsg" style="font-weight:bold">Connected</span>');
 	//$("#disconnected").remove();
+	//
 }
 
 export function socket_disconnect() {
 	log('<b class="redMsg">Disconnected</b>');
-	$("#username").remove();
-	$(".dynamicStyle").remove();
+	
+	console.log('Maybe we can do something here. But this is on')
+	// $("#username").remove();
+	// $(".dynamicStyle").remove();
 	globals.gameplay.show.winstate = false;
-	$("#sidebar").empty();
-	$("#container").empty();
+	// $("#sidebar").empty();
+	// $("#container").empty();
+	//
 	
 	playAudio('disconnect')
 	
 	//changeFavIcon('img/favico.png');
 	//location.reload();
 	
-	globals.socket = false;
+	// globals.socket = false;
 }
 
 export function socket_update_user_count(totalusers){
@@ -77,88 +82,33 @@ export function socket_make_chat_available(username) {
 }
 
 export function socket_update_lobby(lobbyData, leaderData) {
-	$("#open").empty();
-	$("#inprogress").empty();
-	
-	$("#eloRank").empty();
-	
-	renderLeaderboard(leaderData);
-	renderGames(lobbyData);
+	renderLeaderboard(leaderData)
+	renderGames(lobbyData)
 }
 
 
 
 export function socket_render_lobby(lobbyData, leaderData, lobbyUserData) {
+	$('#container')
+			.addClass('in-lobby')
+			.removeClass('in-gameplay')
+	
 	globals.isPlayer = false
 	
-	$("#lobby").remove();
-	$("#leaderboard").remove();
-	$("#headBoardContainer").remove();
-
-	var appendString = '<div id="lobby"><h1><span style="color:' + lobbyUserData.color + '">' + lobbyUserData.username + '</span>, ';
-	appendString += "welcome to Cosmic Blocks!";
-	appendString += '</h1><div style="padding:20px;"><div id="optionButtons">';
-	if (!globals.isGhost) {
-		appendString += '<div id="newgame" class="buttonStyle">Create Game</div><div id="randgame" class="buttonStyle">Random Game</div><div id="practice" class="buttonStyle">Practice Mode</div>';
-	}
-	appendString += '<a id="howToPlay" class="buttonStyle" href="https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit" target="_blank">How to Play</a><a class="buttonStyle" href="https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" target="_blank">Documentation</a><div id="toggleAudio" class="buttonStyle">' + audioButtonSVG +'</div></div>';
-	if (!globals.isGhost) {
-		appendString += '<div id="playerStats"></div>';
-	}
-	appendString += '<div id="gameTypes"><div id="open"></div><div id="inprogress"></div></div></div></div>	<div id="leaderboard"><h1>World Ranking</h1><div id="rankingContainer"><table id="eloRank"></table></div></div>'
-	$("#container").append(appendString);
-			
-	$('#newgame').on("click",function() {
-		globals.socket.emit('new game'); // send the server new game command
-	});
-	$('#randgame').on("click",function() {
-		globals.socket.emit('new game', 'random'); // send the server new game [random board] command
-	});
-	$('#practice').on("click",function() {
-		globals.socket.emit('practice mode');
-	});	
+	$('#lobby .yourname').css('color', lobbyUserData.color).text(lobbyUserData.username)
 	
-	
-	toggleAudioButton();
-	
-	// RENDER LEADERBOARD!
 	renderLeaderboard(leaderData);
 	
-	// RENDER GAMES!
 	renderGames(lobbyData);
 	
-	// RENDER PLAYER STATS (not a separate function because it is only called within renderLobby();
-	if (!globals.isGhost) {
-		if (lobbyUserData.gamesPlayed !== 0) {
-			var appendString = '<ul id="lobbyUserData">';
-			appendString += '<li>Games Played<span class="stat">' + lobbyUserData.gamesPlayed + '</span></li>';
-			
-			if (lobbyUserData.wins !== 0) {
-				appendString += '<li>Games Won<span class="stat">' + lobbyUserData.wins + '</span></li>';
-			}
-			
-			if (lobbyUserData.draws !== 0) {
-				appendString += '<li>Games Drawn<span class="stat">' + lobbyUserData.draws + '</span></li>';
-			}
-			
-			if (lobbyUserData.losses !== 0) {
-				appendString += '<li>Games Lost<span class="stat">' + lobbyUserData.losses + '</span></li>';
-			}
-			
-			if (lobbyUserData.displayElo > 0) {
-				appendString += '<li>Points<span class="stat">' + lobbyUserData.displayElo + '</span></li>';
-			}
-			appendString += '</ul>';
-			$("#playerStats").append(appendString);
-		}
-		if (lobbyUserData.remainingRerolls !== 0) {
-			$("#optionButtons").append('<div class="buttonStyle" id="rerollColor">New Color</div>');
-			$("#rerollColor").on('click', function() {
-				globals.socket.emit('attempt color reroll');
-			});
-		}
+	if(!globals.isGhost) {
+		$('#stat-games-played').text(lobbyUserData.gamesPlayed)
+		$('#stat-games-won').text(lobbyUserData.wins)
+		$('#stat-games-drawn').text(lobbyUserData.draws)
+		$('#stat-games-lost').text(lobbyUserData.losses)
+		$('#stat-display-elo').text(lobbyUserData.displayElo)
 	}
-	resizeFunction(); // visually shows the resize, would be ideal to not have it be visible
+	
 }
 
 
@@ -178,94 +128,57 @@ export function socket_setup_game(
 	timerValue, 
 	gameType
 ) {
+	$('#container')
+		.addClass('in-gameplay')
+		.removeClass('in-lobby')
+	
 	// this runs when:
 	// - a game is started
 	// - a game is joined in progress.
 	
-	setupGame(); // why is this a function? 
-	function setupGame() {
-		$("#lobby").remove();
-		$("#leaderboard").remove();
-		$("#container").append(`
-			<div id="headBoardContainer">
-				<div id="gameHead">
-					<div id="playerLeft"></div>
-					<div id="timeRemaining"></div>
-					<div id="playerRight"></div>
-				</div>
-				<div id="board"></div>
-				<div id="menuContainer">
-					<div id="menuRightContainer">
-						<div id="gameButtons"></div>
-						<div id="bottomInfo"></div>
-					</div>
-				</div>
-			</div>`);
-		buildBlockMenu(blockList);
-		$(".winState").remove(); // ??
-		buildBoard(rows, cols);
-		renderBoard(board);
-		$(".block").addClass('nohover');
-		blockHoverData();
-		renderExitButton();
-		//renderRoomTitle(title);
-		for (var playerID in players) {
-			addHeading(playerID, players[playerID].username, players[playerID].color, players[playerID].displayElo);
-		}
-		
-		// IF THE GAME IS OPEN, AND HAS NOT STARTED YET:
-		if (gameState == 'open') {
-			if (gameType === 'practice') {
-				globals.socket.emit('ready');
-			} else if (joinStatus !== 'spectator') {
-				// you are a player in the game
-				$("#gameButtons").append('<div class="buttonStyle notready" id="ready">Ready Up</div>');
-				$("#ready").on('click', function() {
-					if ($(this).hasClass("unbound")) {
-						log('<span class="redMsg">cannot ready as spectator</span>');
-					} else {
-						if ($(this).hasClass("notready")) {
-							globals.socket.emit('ready');
-							$(this).html('Unready').removeClass('notready');
-						} else {
-							globals.socket.emit('not ready');
-							$(this).html('Ready Up').addClass('notready');
-						}
-					}
-				});
-			}
-			
-			/*
-			// TIME LIMIT
-			if (timeLimit == false) { timeLimit = '&infin;'}
-			//$("#sidebar").append('<div id="timeLimitContainer">Time Limit: <span id="timeLimit">' + timeLimit + '</span></div>');
-			
-			// COLLISION MODE
-			var collisionString = '<div id="collisionContainer">Collisions: <span id="collisionSetting">';
-			if (collisionMode.permanence === true) {
-				collisionString += 'Permanent';
-			} else {
-				collisionString += '<span class="collisionTurnCount">' + collisionMode.permanence.toString() + '</span> Turn';
-			}
-			collisionString += '</span></div>';
-			//$("#gameButtons").append(collisionString);
-			*/
-			
-			
-			// CREATOR SETTINGS:
-			
-			// function creatorSettings() {...} // now in unused.js
-			
-		} else if (gameState == 'inprogress') {
-			globals.gameplay.moveCount = moveCount;
-			$("#timeRemaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
-			updateTimer(timerValue, moveCount);
-		}
-		$("#gameButtons").append('<div id="toggleAudio" class="buttonStyle">' + audioButtonSVG + '</div>');
-		toggleAudioButton();
-		$(".menu_block").addClass('nohover disabled');
-		//menuHideBlocksAndResize();
+	// @TODO: continue with this function
+	buildBlockMenu(blockList);
+	// $(".winState").remove(); // ??
+	
+	buildEmptyBoard(rows, cols);
+	
+	renderBoard(board);
+	
+	$(".block").addClass('nohover');
+	blockHoverData()
+	
+	
+	renderExitButton()
+	
+	// empty some elements
+	$('#playerRight').empty()
+	$("#timeRemaining").empty()
+	
+	
+	//renderRoomTitle(title);
+	for (var playerID in players) {
+		addHeading(playerID, players[playerID].username, players[playerID].color, players[playerID].displayElo);
 	}
+	
+	
+	// IF THE GAME IS OPEN, AND HAS NOT STARTED YET:
+	if (gameState == 'open') {
+		if (gameType === 'practice') {
+			globals.socket.emit('ready');
+		} else if (joinStatus !== 'spectator') {
+			
+		}
+		// see gameState == 'open' && unused_functionality in unused.js
+		
+	} else if (gameState == 'inprogress') {
+		globals.gameplay.moveCount = moveCount;
+		$("#timeRemaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
+		updateTimer(timerValue, moveCount);
+	}
+	
+	$(".menu_block").addClass('nohover disabled');
+	//menuHideBlocksAndResize();
+	
 }
 
 
@@ -279,7 +192,7 @@ export function socket_play_detonate_sfx() {
 export function socket_game_preset(board, timeLimit, rows, cols, blockList, creator, collisionMode) {
 	timeLimitUpdate(timeLimit);
 	collisionUpdate(collisionMode);
-	buildBoard(rows, cols);
+	buildEmptyBoard(rows, cols);
 	renderBoard(board);
 	buildBlockMenu(blockList);
 	$(".block").addClass('nohover');
@@ -290,6 +203,9 @@ export function socket_game_preset(board, timeLimit, rows, cols, blockList, crea
 	}
 }
 
+
+// I don't think this is used yet
+// but it's a cool idea
 export function socket_rebuild_board(rows, cols) {
 	rebuildBoard(rows, cols);
 }
@@ -349,7 +265,9 @@ export function socket_all_players_ready(gameID, timeLimit, players, rows, cols,
 	$("#board").off(); // for blockHoverData(); I could combine (".block, #board") and ("#board") together.
 	blockHoverData();
 	if (gameType !== 'practice') {
-		$("#gameButtons > *:not('#toggleAudio')").remove();
+		console.log('do some button hiding @TODO: fix this logic')
+		// $("#gameButtons > *:not('#toggleAudio')").remove();
+		
 	} else {
 		// practice mode reset cleanup:
 		for (var i = 0; i < globals.priorColorList.length; i++) {
@@ -445,6 +363,9 @@ export function socket_store_id(id, displayName, ghost) {
 	// globals.socket.id = id
 	globals.name = displayName
 	globals.isGhost = ghost
+	if(globals.isGhost) {
+		$('#container').addClass('is-ghost')
+	}
 }
 
 export function socket_play_connect_audio_sfx() {

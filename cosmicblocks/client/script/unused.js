@@ -506,3 +506,26 @@ function menuHideBlocksAndResize () {
 	//$('link[rel="shortcut icon"]').attr('href', src);
 }
 */
+
+
+
+
+// see export function socket_setup_game(
+if (gameState == 'open' && unused_functionality) {
+	// TIME LIMIT
+	if (timeLimit == false) { timeLimit = '&infin;'}
+	//$("#sidebar").append('<div id="timeLimitContainer">Time Limit: <span id="timeLimit">' + timeLimit + '</span></div>');
+	
+	// COLLISION MODE
+	var collisionString = '<div id="collisionContainer">Collisions: <span id="collisionSetting">';
+	if (collisionMode.permanence === true) {
+		collisionString += 'Permanent';
+	} else {
+		collisionString += '<span class="collisionTurnCount">' + collisionMode.permanence.toString() + '</span> Turn';
+	}
+	collisionString += '</span></div>';
+	//$("#gameButtons").append(collisionString);
+	
+	// CREATOR SETTINGS:
+	// function creatorSettings() {...} // now in unused.js
+}

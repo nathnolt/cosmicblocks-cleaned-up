@@ -17,7 +17,7 @@ import {
 } from './color.js'
 
 export function rebuildBoard(rows, cols) {
-	buildBoard(rows, cols);
+	buildEmptyBoard(rows, cols);
 	log('<span class="dimMsg">New dimensions: ' + cols + ' x ' + rows + '</span>');
 	$(".block").addClass('nohover');
 }
@@ -187,10 +187,7 @@ export function joinGame(gameID, moveCount, timeLeft, players, rows, cols, board
 				});
 			}
 		} else {
-			$("#gameButtons").prepend('<div class="buttonStyle" id="forfeit">Forfeit</div>');
-			$("#forfeit").on("click",function() {
-				globals.socket.emit('forfeit');
-			});
+			console.log('show forfeit button')
 		}
 		
 		/*
@@ -483,12 +480,7 @@ export function cleanup(winners, reason) {
 	
 	if (globals.isPlayer) {
 		if (reason !== 'dc' && reason !== 'practice') {
-			$('<div class="buttonStyle" id="rematch"><span>Rematch</span></div>').insertBefore('#toggleAudio');
-			$("#rematch").on('click', function() {
-				globals.socket.emit('yes rematch');
-				$("#rematch").off()
-				$("#rematch > span").text("Offered Rematch").addClass("blinkText");
-			});
+			console.log('show rematchbutton')
 		}
 	}
 
@@ -682,12 +674,17 @@ export function blockHoverData() {
 
 
 export function renderExitButton() {
-	if ($("#exit").length === 0) {
-		$("#gameButtons").prepend('<div id="exit" class="buttonStyle">Exit to Lobby</div>');
-		$("#exit").on('click', function() {
-			exitGame();
-		});
+	const $exitBtn = $("#exit")
+	
+	console.log('render exit button')
+	
+	/*
+	if ($exitBtn.length === 0) {
+		$exitBtn.show()
+	} else {
+		$exitBtn.hide()
 	}
+	*/
 }
 
 export function exitGame() {
@@ -701,9 +698,9 @@ export function exitGame() {
 
 
 
-export function buildBoard(rows, cols) {
+export function buildEmptyBoard(rows, cols) {
 	// clear the board
-	$("#board").empty();
+	$("#board").empty()
 	
 	// begin building the physical board (as <div>s)
 	for (var i = 0; i < rows; i++) {
@@ -716,7 +713,7 @@ export function buildBoard(rows, cols) {
 		$("#board").append(buildstring);
 	}
 	
-	sizeBoard(rows, cols);
+	sizeBoard()
 }
 
 
@@ -725,30 +722,38 @@ export function buildBoard(rows, cols) {
 
 export function resizeFunction() {
 	
-	function sidebarsResize() {
-	  if ($(window).width() > 1450) {
-	    var initialWidth = 222 + (($(window).width() - 1450) / 3);
-	    if (initialWidth > 300) { initialWidth = 300; }
-	  } else {
-	    var initialWidth = 222;
-	  }
+	// Note, I think that we can do the same thing purely within CSS, probably
+	return
+	
+	// 1. resize sidebars
+	{
+		let initialWidth
+		if ($(window).width() > 1450) {
+			initialWidth = 222 + (($(window).width() - 1450) / 3);
+		if (initialWidth > 300) { initialWidth = 300; }
+		} else {
+			initialWidth = 222;
+		}
+		
+		console.log('intialWidth', initialWidth)
 		$('#chatPanel').css('width', initialWidth + 'px');
 		$('#leaderboard').css('width', initialWidth + 'px');
-	  //log(initialWidth);
 	}
 	
 	
-	sidebarsResize();
 	if ($("#menuContainer").length > 0) {
 		menuResize();
 	}
+	
 	if ($("#board").length > 0) {
 		sizeBoard();
 	}
+	
 	if ($("#blockListEditor").length > 0) {
 		let hWidth = hSpace();
 		$("#blockListEditor").css('width', hWidth);
 	}
+	
 }
 
 
@@ -783,7 +788,10 @@ function sizeBoard() {
 	$('.board_row').map(function (i) {
 		arr[i] = $(this).children().length;
 	});
-	var cols = Math.max.apply(Math, arr); //get the max value from the array
+	
+	//get the max value from the array
+	var cols = Math.max.apply(Math, arr);
+	
 	var rows = $(".board_row").length;
 	
 	let blockSize = getBlockSize(rows, cols);
@@ -800,8 +808,7 @@ function sizeBoard() {
 
 
 export function buildBlockMenu (blockList) {
-	$("#menu").remove();
-	$("#menuContainer").append('<div id="menu"></div>');
+	$("#menu").empty();
 	// define what blocks are used in the menu.
 	var menuBlocks = blockList;
 	var buildString = '';
@@ -876,14 +883,29 @@ function vSpace () {
 
 
 export function renderBoard(data) {
+	
 	for (var i = 0; i < globals.priorColorList.length; i++) {
 		$(".block").removeClass(globals.priorColorList[i]);
 	}
+	
 	$.each(data, function( index, value ) {
 		let tempX = value.x + 1;
 		let tempY = value.y + 1;
-		updateBlock (tempX, tempY, value.type, value.possessionDisplayName, value.moveNum, value.origin, value.color, value.duration, value.history, value.originColor, value.possession, value.possessionColorSpread);
-	});
+		updateBlock(
+			tempX, 
+			tempY, 
+			value.type, 
+			value.possessionDisplayName, 
+			value.moveNum, 
+			value.origin, 
+			value.color, 
+			value.duration, 
+			value.history, 
+			value.originColor, 
+			value.possession, 
+			value.possessionColorSpread
+		)
+	})
 	//log ('<span class="dimMsg">rendered board</span>');
 }
 
@@ -1357,8 +1379,10 @@ export function renderLeaderboard(leaderData) {
 
 
 export function renderGames(lobbyData) {
+	console.log('function renderGames', lobbyData)
 	
-	console.log('lobbyData', lobbyData)
+	$('#gameTypes #open').empty()
+	$('#gameTypes #inprogress').empty()
 	
 	// RENDER GAMES!
 	for (var i = 0; i < lobbyData.length; i++) {
@@ -1441,29 +1465,9 @@ export function renderGames(lobbyData) {
 
 
 
-export function toggleAudioButton() {
-	if (globals.audioEnabled == false) {
-		$(".audioOn").hide();
-		$(".audioOff").show();
-	}
-	
-	$("#toggleAudio").on("click",function() {
-		if (globals.audioEnabled) {
-			globals.audioEnabled = false;
-			log('<span class="dimMsg">Audio disabled.</span>');
-			//$("#toggleAudio > span").html("OFF");
-			$(".audioOn").hide();
-			$(".audioOff").show();
-		} else {
-			globals.audioEnabled = true;
-			log('<span class="dimMsg">Audio enabled.</span>');
-			playAudio('move')
-			//$("#toggleAudio > span").html("ON");
-			$(".audioOn").show();
-			$(".audioOff").hide();
-		}
-	})
-}
+
+
+// toggles audio 
 
 
 
