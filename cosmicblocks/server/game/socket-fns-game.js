@@ -259,8 +259,11 @@ function socket_handleGameReady() {
 		return true;
 	}
 	
+	
 	const user = userData[socket.id]
 	const gameID = user.room
+	
+	// 1. validate that the ready action is valid.
 	
 	// log error if game does not exist
 	if(!gameExists(gameID)) {
@@ -276,6 +279,11 @@ function socket_handleGameReady() {
 		return
 	}
 	
+	if(gameObj.gameState != 'open') {
+		io.to(gameID).emit('log', redMsg('cannot ready in a game that\'s not open'))
+		return
+	}
+	
 	const playerObj = gameObj.players[socket.id]
 	
 	// don't do anything if already ready
@@ -283,6 +291,8 @@ function socket_handleGameReady() {
 		return
 	}
 	
+
+	// 2. handle game ready code
 	if (gameObj.gameType !== 'practice') {
 		io.to(gameID).emit('log', `<span style="color:${playerObj.color}">${user.username} is ready!</span>`)
 	}
@@ -306,10 +316,13 @@ function socket_handleGameUnready() {
 	const socket = this
 	const gameID = userData[socket.id].room
 	
+	// 1. check if the unready is valid
 	if(!gameExists(gameID)) {
 		log_invalidGame(socket)
 		return
 	}
+	
+	
 	
 	const gameObj = gameData[gameID]
 	
@@ -318,6 +331,14 @@ function socket_handleGameUnready() {
 		return
 	}
 	
+	if(gameObj.gameState != 'open') {
+		io.to(gameID).emit('log', redMsg('cannot unready in a game that\'s not open.'))
+		return
+	}
+	
+
+	
+	// 2. handle unready
 	if(unready(gameID, socket.id)) {
 		io.to(gameID).emit('render board', gameObj.board);
 	}
@@ -539,12 +560,12 @@ function socket_practiceGameReset() {
 
 
 // @TODO: Allow A user to revoke their rematch offer.
-function socket_yesRematch() {
+function socket_offer_rematch() {
 	const socket = this
-	
 	const user = userData[socket.id]
 	const gameID = user.room
 	
+	// 1. check if a rematch is valid
 	if(user.ghost) {
 		socket.emit('log', redMsg('You cannot initiate rematch as a ghost'));
 		return
@@ -571,10 +592,10 @@ function socket_yesRematch() {
 		return
 	}
 	
+	// 2. handle rematch code
 	const playerObj = gameObj.players[socket.id]
 	
 	playerObj.rematchOffered = true
-	
 	
 	const amountOfPlayers = Object.keys(gameObj.players).length
 	let amountOfPlayersWhoWantToRematch = 0
@@ -585,8 +606,8 @@ function socket_yesRematch() {
 	}
 	
 	if(amountOfPlayers !== amountOfPlayersWhoWantToRematch) {
-		socket.broadcast.to(gameID).emit('rematch offered');
-		io.to(gameID).emit('log', dimMsg(user.username +' offered a rematch.'))
+		io.to(gameID).emit('rematch-offered', {id: socket.id, username: user.username})
+		// io.to(gameID).emit('log', dimMsg(user.username +' offered a rematch.'))
 		return
 	}
 	
@@ -691,6 +712,7 @@ function socket_forfeit() {
 	const gameID = userData[socket.id].room
 	const gameObj = gameData[gameID]
 	
+	// 1. check if forfeit is valid
 	if(!gameExists(gameID)) {
 		log_invalidGame(socket)
 		return
@@ -701,6 +723,13 @@ function socket_forfeit() {
 		socket.emit('log', redMsg('spectator cannot forfeit'))
 		return
 	}
+	
+	if(gameObj.gameState != 'inprogress') {
+		socket.emit('log', redMsg('cannot forfeit in a game that\'s not in progress'))
+		return
+	}
+	
+	// 2. handle forfeit
 	
 	wipePossession(gameID, socket.id)
 	
@@ -1498,6 +1527,6 @@ module.exports = {
 	socket_attemptMove,
 	socket_exitGameToLobby,
 	socket_practiceGameReset,
-	socket_yesRematch,
+	socket_offer_rematch,
 	socket_forfeit,
 }

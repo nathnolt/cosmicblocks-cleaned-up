@@ -44,7 +44,7 @@ const {
 	socket_attemptMove,
 	socket_exitGameToLobby,
 	socket_practiceGameReset,
-	socket_yesRematch,
+	socket_offer_rematch,
 	socket_forfeit,
 	socketGame_setIo,
 } = require('./socket-fns-game.js')
@@ -103,7 +103,7 @@ function handleConnection(socket) {
 	socket.on('attempt move', socket_attemptMove)
 	socket.on('exit to lobby', socket_exitGameToLobby)
 	socket.on('practice reset', socket_practiceGameReset)
-	socket.on('yes rematch', socket_yesRematch);
+	socket.on('offer-rematch', socket_offer_rematch);
 	socket.on('forfeit', socket_forfeit);
 	
 	commented_out_socket_ons(socket)
@@ -193,7 +193,6 @@ function setUserDataAndGreet(socket, userData) {
 	}
 	
 	io.to('lobby').emit('log', dimMsg(`${username} joined lobby.`) )
-	socket.emit('make chat available', username)
 	socket.emit('log', '<div class="roomChange">joining lobby</div>', true)
 	
 	// joins the socket io room "lobby"

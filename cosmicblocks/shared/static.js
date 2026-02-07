@@ -1,12 +1,3 @@
-
-
-// this is the empty block color passed in from server later on
-export const emptyColor = "#d5ccbd"
-
-export const audioButtonSVG = document.querySelector('#audio-button').innerHTML.trim()
-
-
-// @TODO: move this over to load from ../../shared/static.js
 export const blocklist_readableNames = {
 	'base': 'source',
 	'ostar': 'jump star',

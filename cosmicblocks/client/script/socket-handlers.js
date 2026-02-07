@@ -3,6 +3,10 @@ import {
 } from './globals.js'
 
 import {
+	dimMsg
+} from './html.js'
+
+import {
 	log,
 	renderLeaderboard,
 	renderGames,
@@ -10,7 +14,6 @@ import {
 	buildBlockMenu,
 	buildEmptyBoard,
 	renderBoard,
-	blockHoverData,
 	renderExitButton,
 	addHeading,
 	updateTimer,
@@ -18,10 +21,6 @@ import {
 	cleanup,
 	exitGame,
 } from './subs.js'
-
-import {
-	audioButtonSVG
-} from './static.js'
 
 import { playAudio } from './audio.js'
 
@@ -38,22 +37,14 @@ export function socket_connect() {
 }
 
 export function socket_disconnect() {
-	log('<b class="redMsg">Disconnected</b>');
-	
-	console.log('Maybe we can do something here. But this is on')
-	// $("#username").remove();
-	// $(".dynamicStyle").remove();
+	log('<b class="redMsg">Disconnected</b>')
 	globals.gameplay.show.winstate = false;
-	// $("#sidebar").empty();
-	// $("#container").empty();
-	//
+	
+	$('#logContainer #log').empty()
 	
 	playAudio('disconnect')
-	
 	//changeFavIcon('img/favico.png');
 	//location.reload();
-	
-	// globals.socket = false;
 }
 
 export function socket_update_user_count(totalusers){
@@ -66,19 +57,7 @@ export function socket_update_user_count(totalusers){
 }
 
 export function socket_make_chat_available(username) {
-	$("#chat").remove();
-	$("#chatPanel").append('<div id="chat"><input id="chatInput" type="text" maxlength="140" value="" autocomplete="off" /></div>');
-	$("#chatInput").on('keydown', function (e) {
-		if (e.keyCode == 13) {
-			let chatMessage = $("#chatInput").val();
-			$("#chatInput").val('');
-			if (!$.trim(chatMessage)) {
-				// no msg
-			} else {
-				globals.socket.emit('send chat message', chatMessage);
-			}
-		}
-	});
+	console.log('make chat available...')
 }
 
 export function socket_update_lobby(lobbyData, leaderData) {
@@ -145,10 +124,14 @@ export function socket_setup_game(
 	renderBoard(board);
 	
 	$(".block").addClass('nohover');
-	blockHoverData()
-	
 	
 	renderExitButton()
+	
+	
+	// set game ready button
+	$("#ready")
+		.html('Ready Up')
+		.addClass('notready')
 	
 	// empty some elements
 	$('#playerRight').empty()
@@ -223,7 +206,8 @@ export function socket_exit_game() {
 }
 
 export function socket_ran_out_of_rerolls(color) {
-	$("#rerollColor").remove();
+	// not important
+	// $("#rerollColor").remove();
 }
 
 export function socket_update_lobby_name_color(color) {
@@ -260,10 +244,6 @@ export function socket_update_lobby_welcome_name_color(color) {
 }
 
 export function socket_all_players_ready(gameID, timeLimit, players, rows, cols, board, gameType) {
-	$(".block", "#board").off(); // for joinGame();
-	$("#menuContainer").off(); // for joinGame() && blockHoverData();
-	$("#board").off(); // for blockHoverData(); I could combine (".block, #board") and ("#board") together.
-	blockHoverData();
 	if (gameType !== 'practice') {
 		console.log('do some button hiding @TODO: fix this logic')
 		// $("#gameButtons > *:not('#toggleAudio')").remove();
@@ -407,8 +387,15 @@ export function socket_time_out(playerWhoMoved) {
 	}
 }
 
-export function socket_rematch_offered() {
-	$("#rematch > span").text("Accept Rematch").addClass("blinkText");
+export function socket_rematch_offered(data) {
+	
+	const wasMyRematchRequest = data.id == globals.socket.id
+	if(wasMyRematchRequest) {
+		$("#rematch > span").text("Offered Rematch").addClass("blinkText")
+	} else {
+		$("#rematch > span").text("Accept Rematch").addClass("blinkText");
+		log(dimMsg(data.username + ' offered a rematch.'))
+	}
 }
 
 export function socket_setup_rematch(blockList, creatorElo, playerElo) {

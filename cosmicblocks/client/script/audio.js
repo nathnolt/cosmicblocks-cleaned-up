@@ -25,7 +25,7 @@ const audios = {
 const baseVolume = 1
 
 export function playAudio(name, multiplierVolume=1) {
-	console.log('playaudio', name)
+	
 	if(!globals.audioEnabled) {
 		return
 	}
@@ -37,7 +37,7 @@ export function playAudio(name, multiplierVolume=1) {
 	
 	try {
 		const outputVolume = baseVolume * multiplierVolume
-		console.log('play audio', name, 'volume', outputVolume)
+		// console.log('play audio', name, 'volume', outputVolume)
 		
 		const audio = getAudio(name)
 		audio.volume = outputVolume

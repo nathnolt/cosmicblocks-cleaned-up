@@ -7,21 +7,6 @@
 //  **     ****   **     ** **    *    //
 //  **     ** **  **     ** **   ***   //
 //   ****  ****   *****   ***   ** **  //
-
-import { 
-	resizeFunction,
-	exitGame,
-	log
-} from './subs.js'
-
-import {
-	playAudio
-} from './audio.js'
-
-import {
-	audioButtonSVG
-} from './static.js'
-
 import { globals } from './globals.js'
 
 import {
@@ -64,31 +49,10 @@ import {
 	socket_console_log
 } from './socket-handlers.js'
 
-$( window ).resize(resizeFunction)
-resizeFunction()
+import './handle-event-listeners.js'
 
-// Start
-{
-	$("#chatToggle").on('click', function() {
-		if ($("#chatPanel").is(":visible")) {
-			$("#chatPanel").hide();
-			$("#chatToggle").html('&raquo;');
-			
-			resizeFunction();
-		} else {
-			$("#chatPanel").show();
-			$("#chatToggle").html('&laquo;');
-			
-			resizeFunction();
-		}
-	})
-	
-	handleAudioToggleButton()
-	
-	$("#exit").on('click', function() {
-		exitGame()
-	})
-}
+
+
 
 
 // Handle socket
@@ -137,92 +101,9 @@ resizeFunction()
 	socket.on('collision', socket_collision)
 	socket.on('update timer', socket_update_timer)
 	socket.on('time out', socket_time_out)
-	socket.on('rematch offered', socket_rematch_offered)
+	socket.on('rematch-offered', socket_rematch_offered)
 	socket.on('setup rematch', socket_setup_rematch)
 	socket.on('draw offered', socket_draw_offered)
 	socket.on('console log', socket_console_log)
 	
-	// send the server new game command
-	$('#newgame').on("click",function() {
-		socket.emit('new game')
-	})
-	
-	// send the server new game [random board] command
-	$('#randgame').on("click",function() {
-		socket.emit('new game', 'random')
-	})
-	
-	$('#practice').on("click",function() {
-		socket.emit('practice mode')
-	})
-	
-	$("#rerollColor").on('click', function() {
-		socket.emit('attempt color reroll');
-	})
-	
-	
-	// handle game ready button
-	$("#ready").on('click', function() {
-		if ($(this).hasClass("unbound")) {
-			log('<span class="redMsg">cannot ready as spectator</span>');
-		} else {
-			if ($(this).hasClass("notready")) {
-				socket.emit('ready');
-				$(this).html('Unready').removeClass('notready');
-			} else {
-				socket.emit('not ready');
-				$(this).html('Ready Up').addClass('notready');
-			}
-		}
-	})
-	
-	
-	$("#rematch").on('click', function() {
-		socket.emit('yes rematch')
-		
-		console.log('@TODO: fix the rematch button text. Make the system more robust.')
-		/*
-		$("#rematch").off()
-		$("#rematch > span").text("Offered Rematch").addClass("blinkText")
-		*/
-	})
-	
-	$("#forfeit").on("click",function() {
-		socket.emit('forfeit')
-	})
-	
-}
-
-
-
-
-
-function handleAudioToggleButton() {
-	$('.toggleAudio').append(audioButtonSVG)
-	
-	function toggleAudioIconShapes() {
-		if(globals.audioEnabled) {
-			$(".audioOn").show()
-			$(".audioOff").hide()
-		} else {
-			$(".audioOn").hide()
-			$(".audioOff").show()
-		}
-	}
-	
-	toggleAudioIconShapes()
-	
-	// @TODO: see if I can inline this function at the start of the whole thing, once all the HTML has been inlined.
-	$(".toggleAudio").on("click", function() {
-		if (globals.audioEnabled) {
-			globals.audioEnabled = false
-			log('<span class="dimMsg">Audio disabled.</span>')
-			toggleAudioIconShapes()
-		} else {
-			globals.audioEnabled = true
-			playAudio('move')
-			log('<span class="dimMsg">Audio enabled.</span>')
-			toggleAudioIconShapes()
-		}
-	})
 }

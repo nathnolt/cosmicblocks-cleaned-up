@@ -1,5 +1,6 @@
 import {
-	emptyColor
+	emptyColor,
+	blocklist_readableNames
 } from './static.js'
 
 import {
@@ -492,12 +493,13 @@ export function cleanup(winners, reason) {
 	//$("#menu").css('opacity', '0.5'); // dim the menu
 	//$("#menuContainer").off();
 	$(".menu_block").addClass('disabled');
-	$("#offerDraw").remove();
-	$("#forfeit").remove();
+	
+	// $("#offerDraw").remove();
+	// $("#forfeit").remove();
+	
 	$(".moveStatus").remove(); // remove the move status
 	$("#timer").remove();
 	$(".waitMsg").parent().remove();
-	//blockHoverData();
 	renderExitButton();
 	
 	globals.debounce = Math.random();
@@ -511,164 +513,6 @@ export function cleanup(winners, reason) {
 	}
 }
 
-
-
-
-
-export function blockHoverData() {
-	
-	function readableBlockName(blockType) { // returns blocknames for hover info that don't suck
-		var blockList = {
-			'base': 'source',
-			'ostar': 'jump star',
-			'plus': '+',
-			'oplus': 'jump +',
-			'cross': 'x',
-			'ocross': 'jump x',
-			'ohbar': 'jump hbar',
-			'ovbar': 'jump vbar',
-			'otlbr': 'jump tlbr',
-			'obltr': 'jump bltr',
-			'arrow1': 'arrow1',
-			'arrow11': 'jump arrow1',
-			'arrow2': 'arrow2',
-			'arrow22': 'jump arrow2',
-			'arrow3': 'arrow3',
-			'arrow33': 'jump arrow3',
-			'arrow4': 'arrow4',
-			'arrow44': 'jump arrow4',
-			'arrow6': 'arrow6',
-			'arrow66': 'jump arrow6',
-			'arrow7': 'arrow7',
-			'arrow77': 'jump arrow7',
-			'arrow8': 'arrow8',
-			'arrow88': 'jump arrow8',
-			'arrow9': 'arrow9',
-			'arrow99': 'jump arrow9',
-			'mine': 'stealthy mine'
-		}
-		
-		if (blockList.hasOwnProperty(blockType)) {
-			return blockList[blockType];
-		} else {
-			return blockType;
-		}
-	}
-	
-	
-	
-	// 
-	// handle blockHoverData code.
-	// 
-	
-	
-	$("#board").on({
-		mouseenter: function () {
-			//stuff to do on mouse enter
-			var blockType = ($(this).data('blockType'));
-			blockType = readableBlockName(blockType);
-			var history = $(this).data('history');
-			var possessionColor = $(this).data('possessionColor');
-			var xx = $(this).data('x'); //x pos
-			var yy = $(this).data('y'); //y pos
-			var showHistory = true;
-			
-			var possessionDisplayName = $(this).data('possessionDisplayName');
-			var possessionSpread = $(this).data('possessionColorSpread');
-
-			if (blockType == 'source') {
-				if (typeof history[0] !== 'undefined') {
-					blockType = '<span style="color: ' + history[0].playerColor + ';">' + history[0].playerDisplayName + '\'s source</span>';
-					showHistory = false;
-				} else {
-					blockType = 'unclaimed source';
-					showHistory = false;
-				}
-			}
-			
-			var appendString = '<div class="dimMsg">x: <b>' + xx + '</b>,&ensp;y: <b>' + yy + '</b></div>';
-			appendString += '<div style="font-weight: bold; color:white; font-size:15px;">' + blockType + '</div>';
-			
-			if (showHistory && possessionDisplayName !== false && blockType !== 'blockade') {
-				appendString += '<div>possessed by <b style="color: ' + possessionColor + '">' + possessionDisplayName + '</b></div>';
-			}
-			
-			if (showHistory) {
-				for (var i = 0; i < history.length; i++) {
-					
-					appendString += history[i];
-					
-					/*
-					appendString += '<div><b>' + readableBlockName(history[i].blockType) + '</b>';
-					if (history[i].cause == 'player') {
-						appendString += ' placed by <b style="color: ' + history[i].playerColor + '">' + history[i].playerDisplayName + '</b>';
-					} else {
-						appendString += ' caused by <b>' + history[i].cause + '</b>';
-					}
-					appendString += ' on turn <b>' + history[i].turn + '</b>.</div>'
-					*/
-				}
-			}
-			
-			$("#bottomInfo").append(appendString);
-		},
-		mouseleave: function () {
-			// this is a mouse out function for when the hover ends
-			$("#bottomInfo").html('');
-		}
-	}, ".block"); //pass the element as an argument to .on
-	
-	
-	$("#menuContainer").on({
-		mouseenter: function () {
-			//stuff to do on mouse enter
-			var type = $(this).attr('id');
-			var blockType = readableBlockName(type);
-			var appendString = '';
-			if (globals.isPlayer) {
-				
-				appendString += '<div>' + globals.name + '\'s stockpile</div>';
-				// appendString += '<div>' + 'my name' + '\'s stockpile</div>';
-			} else {
-				appendString += '<div class="dimMsg">starting stockpile</div>';
-			}
-			appendString += '<div style="font-weight: bold; color:white; font-size:15px;">' + blockType + '</div>';
-			var ammo;
-			if ($(this).find('.ammo').length != 0) {
-				ammo = parseInt($('#' + type + '-ammo').html());
-				appendString += '<div><b>' + ammo + '</b> remaining</div>';
-			}
-			/*
-			if (type == 'star') {
-				appendString += `<div>a <i>star</i>, similar to the player's <i>source</i>, spreads color to all 8 adjacent squares.</div>`;
-			}
-			if (type == 'plus') {
-				appendString += `<div>a <i>+</i> is a basic block that spreads color to the 4 adjacent non-diagonal squares.</div>`;
-			}
-			if (type == 'cross') {
-				appendString += `<div>an <i>x</i> is a basic block that spreads color to the 4 adjacent diagonal squares.</div>`;
-			}
-			if (type == 'circle') {
-				appendString += `<div>a <i>circle</i> turns an uncircled block into a jump block. a circle may be placed on any uncircled block already on the board, 
-				including blocks placed by the opponent. you may not circle a <i>source</i>, however.</div>`;
-			}
-			if (type == 'reclaim') {
-				appendString += `<div>you may <i>reclaim</i> any block that you have sole possession over, including blocks placed by the opponent. 
-				a reclaimed block becomes a blank space on the board, and will add to your stockpile. you cannot reclaim your <i>source</i>.</div>`;
-			}
-			if (type == 'mine') {
-				appendString += `<div>a <i>stealthy mine</i> may be placed on any blank space. it is invisible to the opponent and spectators. 
-				attempting to place a block where a mine is will result in a blockade being formed. mines are un-reclaimable.</div>`;
-			}
-			*/
-			$("#bottomInfo").append(appendString);
-		},
-		mouseleave: function () {
-			// this is a mouse out function for when the hover ends
-			$("#bottomInfo").html('');
-		}
-	}, ".menu_block"); //pass the element as an argument to .on
-}
 
 
 
@@ -1366,6 +1210,8 @@ export function menuBlockEnableDisable() {
 
 
 export function renderLeaderboard(leaderData) {
+	$("#eloRank").empty()
+	
 	for (var i = 0; i < leaderData.length; i++) {
 		$("#eloRank").append(
 			'<tr><td>' + (i+1) + '</td><td style="color:' + leaderData[i].color + '">' + 

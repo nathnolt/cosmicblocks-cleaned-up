@@ -59,10 +59,12 @@ body {
 	height: 100%;
 	background:$borderColor;
 	margin: 0; padding: 0;
-	font-family: Roboto, 'Segoe UI', Calibri, sans-serif;
-	font-size: 15px;
 	background:#e4e4e4;
 	overflow:hidden;
+}
+body,button,input {
+	font-family: Roboto, 'Segoe UI', Calibri, sans-serif;
+	font-size: 15px;
 }
 
 h1 {

@@ -9,7 +9,11 @@
 		
 		<div id="logContainer">
 			<div id="log"></div>
-		</div>	
+		</div>
+		<form id="chat">
+			
+			<input id="chatInput" type="text" maxlength="140" value="" autocomplete="off" />
+		</form>
 	</div>
 	
 	<div id="lobby" class="hidden-during-gameplay">
@@ -27,9 +31,9 @@
 					
 					And the existing CSS code can be cleaned up anyways.
 				-->
-				<div id="newgame"  class="buttonStyle hidden-for-ghost">Create Game</div>
-				<div id="randgame" class="buttonStyle hidden-for-ghost">Random Game</div>
-				<div id="practice" class="buttonStyle hidden-for-ghost">Practice Mode</div>
+				<button id="newgame"  class="buttonStyle hidden-for-ghost">Create Game</button>
+				<button id="randgame" class="buttonStyle hidden-for-ghost">Random Game</button>
+				<button id="practice" class="buttonStyle hidden-for-ghost">Practice Mode</button>
 				
 				<a
 					id="howToPlay" 
@@ -42,9 +46,9 @@
 					href="https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" 
 					target="_blank"
 				>Documentation</a>
-				<div class="toggleAudio buttonStyle"></div>
+				<button class="toggleAudio buttonStyle"></button>
 				
-				<div class="buttonStyle" id="rerollColor">New Color</div>
+				<button class="buttonStyle" id="rerollColor">New Color</button>
 			</div>
 			
 			<div id="playerStats" class="hidden-for-ghost">
@@ -103,8 +107,24 @@
 .in-gameplay .hidden-during-gameplay {
 	display: none;
 }
+
 .in-lobby .hidden-in-lobby{
 	display: none;
+}
+
+.is-ghost .hidden-for-ghost {
+	display: none;
+}
+
+button {
+	font-size: 1rem;
+}
+.buttonStyle {
+	white-space: nowrap;
+}
+#lobby #optionButtons {
+	flex-wrap:wrap;
+	gap: 2px;
 }
 </style>
 
