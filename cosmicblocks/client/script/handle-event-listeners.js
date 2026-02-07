@@ -83,6 +83,21 @@ $( window ).resize(resizeFunction)
 resizeFunction()
 
 
+// join games
+
+$('.lobby__games').on('click', ".joinGameButton", function () {
+	var tempID = $(this).parent().parent().data("gameid");
+	
+	globals.socket.emit('join game', tempID);
+	// should remove click handlers here or somethin.
+})
+
+$('.lobby__games').on('click', ".spectateGameButton", function() {
+	var tempID = $(this).parent().parent().data("gameid");
+	globals.socket.emit('join game', tempID, 'spec');
+})
+
+
 
 // block hover data:
 $(".game__board").on({

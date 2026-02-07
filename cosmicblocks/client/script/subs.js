@@ -838,7 +838,7 @@ export function renderGames(lobbyData) {
 			$target = $('.lobby__games-in-progress')
 		} else {
 			console.error('gamestate', gamestate, 'will result in error')
-			return
+			continue
 		}
 		
 		var appendString = '<div class="lobbyGame" style="border: 2px ' + lobbyData[i].creatorColor + ' solid" data-gameid=' + lobbyData[i].id + '>';
@@ -874,20 +874,6 @@ export function renderGames(lobbyData) {
 	
 	$(".lobby__games-open").prepend('<div class="lobbyLabel">open games:</div>');
 	$(".lobby__games-in-progress").prepend('<div class="lobbyLabel">in progress:</div>');
-	
-	if (globals.isGhost == false) {
-		$(".joinGameButton").on('click', function () {
-			var tempID = $(this).parent().parent().data("gameid");
-			
-			globals.socket.emit('join game', tempID);
-			// should remove click handlers here or somethin.
-		});
-	}
-		
-	$(".spectateGameButton").on('click', function() {
-		var tempID = $(this).parent().parent().data("gameid");
-		globals.socket.emit('join game', tempID, 'spec');
-	});
 	
 	globals.debounce = Math.random();
 	var temp = globals.debounce;

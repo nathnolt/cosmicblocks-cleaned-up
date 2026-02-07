@@ -89,11 +89,11 @@
 			
 			<div class="game__buttons-container">
 				<div class="game__buttons">
-					<div class="buttonStyle" id="forfeit">Forfeit</div>
-					<div id="exit" class="buttonStyle">Exit to Lobby</div>
-					<div class="buttonStyle notready" id="ready">Ready Up</div>
-					<div class="buttonStyle" id="rematch"><span>Rematch</span></div>
-					<div class="toggleAudio buttonStyle"></div>
+					<button class="buttonStyle" id="forfeit">Forfeit</button>
+					<button class="buttonStyle" id="exit">Exit to Lobby</button>
+					<button class="buttonStyle notready" id="ready">Ready Up</button>
+					<button class="buttonStyle" id="rematch"><span>Rematch</span></button>
+					<button class="toggleAudio buttonStyle"></button>
 				</div>
 				
 				<div class="game__buttons-bottominfo"></div>
