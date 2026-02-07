@@ -33,5 +33,19 @@ export const globals = {
 		
 		// waiting for other player
 		standby: null,
+		
+		boardSize: {
+			cols: -1,
+			rows: -1,
+		},
+		
+		// stores which cell you clicked on. 
+		clickedCell: {
+			x: -1,
+			y: -1,
+			type: null,
+		},
+		
+		players: null,
 	},
 }

@@ -6,10 +6,16 @@ import {
 	blocklist_readableNames
 } from './static.js'
 
+import {
+	get_linearBoardArrayPos_from_xyPos
+} from './util.js'
+
 import { 
 	resizeFunction,
 	exitGame,
-	log
+	log,
+	updateBlock,
+	renderstandby
 } from './subs.js'
 
 import {
@@ -189,11 +195,320 @@ $(".game__menu-container").on({
 	}
 }, ".menu_block"); //pass the element as an argument to .on
 
+$(".game__menu-container").on({
+	mouseenter: function () {
+		
+		var x = globals.gameplay.clickedCell.x
+		var y = globals.gameplay.clickedCell.y
+		var cols = globals.gameplay.boardSize.cols
+		var rows = globals.gameplay.boardSize.rows
+		
+		//stuff to do on mouse enter
+		if ($(this).hasClass('disabled') || (globals.menuState == false)) {
+			//log ('hover failed');
+		} else {
+			var type = $(this).attr('id');
+			var initialType = $('#x' + x + 'y' + y).data('blockType');
+			// var pos = get_linearBoardArrayPos_from_xyPos(x, y, cols);
+			if (type == 'circle') {
+				type = getCircleType(initialType);
+			}
+			updateBlock (x,y,type);
+			highlight(x, y, type, rows, cols); // show what moves are possible from that block
+			playAudio('hover')
+		}
+	},
+	mouseleave: function () {
+		var x = globals.gameplay.clickedCell.x
+		var y = globals.gameplay.clickedCell.y
+		var initialType = globals.gameplay.clickedCell.type
+		
+		// this is a mouse out function for when the hover ends
+		if ($(this).hasClass('disabled') || (globals.menuState == false)) {
+			// no hover.
+		} else {
+			updateBlock(x,y,initialType);
+			$(".highlighted").not('#x' + x + 'y' + y).removeClass("highlighted"); // remove the highlighted moves, keep the selected square highlighted though.
+		}
+	}
+}, ".menu_block:not(.nohover)"); //pass the element as an argument to .on
 
 
 
+
+
+$(document).on("click", function(e) {
+	if ((globals.gameplay.standby == false) && (globals.menuState == true)) {
+		if ($(e.target).closest(".block").length === 0) {
+			if ($(e.target).closest(".menu_block:not(.nohover)").length === 0) {
+				block_outsideClick();
+			}
+		}
+	}
+})
+
+function block_outsideClick() {
+	const x = globals.clickedCell.x
+	const y = globals.clickedCell.y
+	
+	$('#x' + x + 'y' + y).removeClass('prior-' + globals.gameplay.players[globals.socket.id].color.substr(1)).removeClass('highlighted');
+	$(".menu_block").addClass("disabled");
+	globals.menuState = false;
+	//log('<span class="dimMsg">outside click</span>');
+}
+
+function obtainID (object) {
+	//this gets the ID from the object. this is hard because x/y can be 1 or 2 characters long.
+	var id = $(object).attr('id');
+	var index = id.indexOf("y");  // breaks the ID into two sections at the "y" symbol
+	var x = parseInt(id.substr(1, index), 10); // Gets the first part as an int
+	var y = parseInt(id.substr(index + 1), 10);  // Gets the second part as an int
+	return [x,y];
+}
+
+// declare functions only used inside of joinGame
+function getCircleType (initialType) {
+	if (initialType == 'star') { return 'ostar'; }
+	else if (initialType == 'plus') { return 'oplus'; }
+	else if (initialType == 'cross') { return 'ocross'; }
+	else if (initialType == 'hbar') { return 'ohbar'; }
+	else if (initialType == 'vbar') { return 'ovbar'; }
+	else if (initialType == 'tlbr') { return 'otlbr'; }
+	else if (initialType == 'bltr') { return 'obltr'; }
+	else if (initialType == 'arrow1') { return 'arrow11'; }
+	else if (initialType == 'arrow2') { return 'arrow22'; }
+	else if (initialType == 'arrow3') { return 'arrow33'; }
+	else if (initialType == 'arrow4') { return 'arrow44'; }
+	else if (initialType == 'arrow6') { return 'arrow66'; }
+	else if (initialType == 'arrow7') { return 'arrow77'; }
+	else if (initialType == 'arrow8') { return 'arrow88'; }
+	else if (initialType == 'arrow9') { return 'arrow99'; }
+	else { return false; }
+}
+
+$('.game__board').on("click", '.block', function() {
+	const players = globals.gameplay.players
+	
+	//log(globals.gameplay.standby + " " + globals.menuState + " " + players[globals.socket.id].color);
+	// if the game is active
+	if (globals.gameplay.standby == false) {
+		const $block = $(this)
+		var xy = obtainID($block);
+		var x = xy[0];
+		var y = xy[1];
+		globals.gameplay.clickedCell.type = $block.data('blockType')
+		globals.gameplay.clickedCell.x = x
+		globals.gameplay.clickedCell.y = y
+		
+		$(".highlighted").removeClass('highlighted');
+		$(this).addClass('highlighted');
+		//$('.prior-' + collisionColor.substr(1)).removeClass('prior-' + collisionColor.substr(1));
+		$('.prior-collision').removeClass('prior-collision');
+		
+		if ($(this).hasClass('prior-' + players[globals.socket.id].color.substr(1))) {
+		// if this block is already activated by you, deactivate it.
+		
+			$('.prior-' + players[globals.socket.id].color.substr(1)).removeClass('prior-' + players[globals.socket.id].color.substr(1)).removeClass('highlighted');
+			$(".menu_block").addClass("disabled");
+			globals.menuState = false;
+			
+		} else {
+		// else, activate this block.
+		
+			$('.prior-' + players[globals.socket.id].color.substr(1)).removeClass('prior-' + players[globals.socket.id].color.substr(1));
+			$(this).addClass('prior-' + players[globals.socket.id].color.substr(1));
+			
+			if ($(this).hasClass('empty')) {
+				$(".menu_block:not(.nohover)").removeClass("disabled");
+				$("#circle").addClass("disabled");
+				$("#reclaim").addClass("disabled");
+				globals.menuState = true;
+				//type = $(this).data('blockType');
+				//highlight(x, y, type, rows, cols);
+			} else {
+				let initialType = $('#x' + x + 'y' + y).data('blockType');
+				$(".menu_block").addClass('disabled');
+				globals.menuState = true;
+				if (getCircleType(initialType) != false) {
+					$("#circle:not(.nohover)").removeClass('disabled');
+				}
+				var possession = $('#x' + x + 'y' + y).data('possession');
+				if (possession.length == 1) {
+					if ((possession[0] == globals.socket.id) && (initialType !== 'base') && (initialType !== 'blockade')) {
+						$("#reclaim:not(.nohover)").removeClass('disabled');
+					}
+				}
+			}
+		}
+		for (var i = 0; i < globals.gameplay.opponents.length; i++) {
+			$('.prior-' + players[globals.gameplay.opponents[i]].color.substr(1)).removeClass('prior-' + players[globals.gameplay.opponents[i]].color.substr(1));
+			// this put undefined?? idk.
+		}
+	}
+});
+
+/* @TODO: this won't work anymore. Change this into a delegate with a combination of mouseover and mouseout (I think at least) */ 
+$(  ".block" ).hover(function() {
+	if (globals.gameplay.standby == false) {
+		let tempXY = obtainID($(this));
+		let tempX = tempXY[0];
+		let tempY = tempXY[1];
+		type = $(this).data('blockType');
+		highlight(tempX, tempY, type, rows, cols); // show what moves are possible from that block
+	}
+}, function() {
+	if (globals.gameplay.standby == false) {
+		// remove prior highlight
+		$('.highlighted').removeClass('highlighted');
+	}
+});
+
+
+
+
+/*
+// hover over a menu block
+$(".game__menu-container").on("mouseover", ".menu_block:not(.nohover)", function() {
+//$( ".menu_block:not(.nohover)" ).hover(function() {
+	if ($(this).hasClass('disabled') || (globals.menuState == false)) {
+		//log ('hover failed');
+	} else {
+		type = $(this).attr('id');
+		initialType = $('#x' + x + 'y' + y).data('blockType');
+		var pos = get_linearBoardArrayPos_from_xyPos(x, y, cols);
+		if (type == 'circle') {
+			type = getCircleType(initialType);
+		}
+		updateBlock (x,y,type);
+		highlight(x, y, type, rows, cols); // show what moves are possible from that block
+		playAudio('hover')
+	}
+}, function() {
+	// this is a mouse out function for when the hover ends
+	if ($(this).hasClass('disabled') || (globals.menuState == false)) {
+		// no hover.
+	} else {
+		updateBlock(x,y,initialType);
+		$(".highlighted").not('#x' + x + 'y' + y).removeClass("highlighted"); // remove the highlighted moves, keep the selected square highlighted though.
+	}
+});
+*/
+
+// when a menu block is clicked, after you highlighted a cell, and such.
+// Aka: this actually builds the block.
+$('.game__menu-container').on("click", ".menu_block:not(.nohover)", function() {
+	//$('.menu_block:not(.nohover)').on("click",function() {
+	const menuAndGameActive = globals.menuState == true && globals.gameplay.standby == false
+	if(!menuAndGameActive) {
+		return
+	}
+	
+	// menu and game are both active
+	if ($(this).hasClass('disabled')) {
+		outsideClick();
+	} else {
+		renderstandby();
+		var type = $(this).attr('id');
+		if ($(this).find('.ammo').length != 0) {
+			var ammo = parseInt($('#' + type + '-ammo').html());
+			ammo--;
+			$('#' + type + '-ammo').html(ammo);
+			if (ammo == 0) {
+				$(this).addClass('nohover disabled noammo'); //.css('opacity', '0.5'); //.off();
+				// the css opacity 0.5 doesn't work anymore cause that's set in the disabled class now.
+				// off doesn't seem to matter bc i check for 0 ammo anyway, it only interferes w/ blockHoverData();
+			}
+		}
+		
+		const x = globals.gameplay.clickedCell.x
+		const y = globals.gameplay.clickedCell.y
+		// moveCount to check if it was placed at the last split second before the turn: returns invalid move.
+		globals.socket.emit('attempt move', x, y, type, globals.gameplay.moveCount); 
+	}
+	
+});
+
+function highlight(x,y, someType, rows, cols) {
+	
+	
+	// used for highlighting blocks
+	function getMoves(blockType) { 
+		var blockList = {
+			'base': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+			'star': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+			'ostar': function () { return [[-2,-2], [0,-2], [2,-2], [-2, 0], [2, 0], [-2, 2], [0, 2], [2, 2]]; },
+			'p1': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+			'p2': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
+			'plus': function () { return [[0,-1], [-1, 0], [1, 0], [0, 1]]; },
+			'oplus': function () { return [[0,-2], [-2, 0], [2, 0], [0, 2]]; },
+			'cross': function () { return [[-1,-1], [1,-1], [-1, 1], [1, 1]]; },
+			'ocross': function () { return [[-2,-2], [2,-2], [-2, 2], [2, 2]]; },
+			'hbar': function () { return [[-1, 0], [1, 0]]; },
+			'ohbar': function () { return [[-2, 0], [2, 0]]; },
+			'vbar': function () { return [[0, -1], [0, 1]]; },
+			'ovbar': function () { return [[0, -2], [0, 2]]; },
+			'tlbr': function () { return [[-1, -1], [1, 1]]; },
+			'otlbr': function () { return [[-2, -2], [2, 2]]; },
+			'bltr': function () { return [[-1, 1], [1, -1]]; },
+			'obltr': function () { return [[-2, 2], [2, -2]]; },
+			'arrow1': function () { return [[-1, 1]]; },
+			'arrow11': function () { return [[-2, 2]]; },
+			'arrow2': function () { return [[0, 1]]; },
+			'arrow22': function () { return [[0, 2]]; },
+			'arrow3': function () { return [[1, 1]]; },
+			'arrow33': function () { return [[2, 2,]]; },
+			'arrow4': function () { return [[-1, 0]]; },
+			'arrow44': function () { return [[-2, 0]]; },
+			'arrow6': function () { return [[1, 0]]; },
+			'arrow66': function () { return [[2, 0]]; },
+			'arrow7': function () { return [[-1, -1]]; },
+			'arrow77': function () { return [[-2, -2]]; },
+			'arrow8': function () { return [[0, -1]]; },
+			'arrow88': function () { return [[0, -2]]; },
+			'arrow9': function () { return [[1, -1]]; },
+			'arrow99': function () { return [[2, -2,]]; },
+			'blockade': function () { return [[]]; },
+			'blank': function () { return [[]]; },
+			'ice': function () { return [[]]; },
+			'knight': function () { return [[1, 2], [2, 1], [-1, 2], [2, -1], [1, -2], [-2, 1], [-1, -2], [-2, -1]]; },
+			'mine': function () { return [[]]; },
+			'reclaim': function () { return [[]]; }
+		};
+	
+		if (typeof blockList[blockType] !== 'function') {
+			console.log ("SHIT! SHIT!");
+			throw new Error('Invalid action.');
+		}
+	
+		return blockList[blockType]();
+	}
+	
+	
+	// handle highlight function
+	var dir = [];
+	dir = getMoves(someType);
+	
+	// for each direction,
+	$.each(dir, function( index, value ) {
+		
+		//get the actual x/y coord from the relative position
+		var newX = x + value[0];
+		var newY = y + value[1];
+			
+		// if we're not out of bounds
+		if (((newX >= 1) && (newX <= cols)) && ((newY >= 1) && (newY <= rows))) {
+			$('#x' + newX + 'y' + newY).addClass('highlighted'); // highlight the block
+		}
+	});
+}
+
+
+
+//--------------------------------------
+//
 // socket dependant event handlers:
-
+//
+//--------------------------------------
 
 // Handle sending chat messages
 $(".chat__form").on('submit', function(e) {
