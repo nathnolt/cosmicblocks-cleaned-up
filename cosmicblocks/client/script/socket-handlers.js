@@ -40,7 +40,7 @@ export function socket_disconnect() {
 	log('<b class="redMsg">Disconnected</b>')
 	globals.gameplay.show.winstate = false;
 	
-	$('#logContainer #log').empty()
+	$('.chat__scrollwrapper .chat__contents').empty()
 	
 	playAudio('disconnect')
 	//changeFavIcon('img/favico.png');
@@ -68,13 +68,14 @@ export function socket_update_lobby(lobbyData, leaderData) {
 
 
 export function socket_render_lobby(lobbyData, leaderData, lobbyUserData) {
-	$('#container')
+	$('.app-container')
 			.addClass('in-lobby')
 			.removeClass('in-gameplay')
+			.removeClass("timeWarning")
 	
 	globals.isPlayer = false
 	
-	$('#lobby .yourname').css('color', lobbyUserData.color).text(lobbyUserData.username)
+	$('.lobby-container .yourname').css('color', lobbyUserData.color).text(lobbyUserData.username)
 	
 	renderLeaderboard(leaderData);
 	
@@ -107,7 +108,7 @@ export function socket_setup_game(
 	timerValue, 
 	gameType
 ) {
-	$('#container')
+	$('.app-container')
 		.addClass('in-gameplay')
 		.removeClass('in-lobby')
 	
@@ -134,8 +135,8 @@ export function socket_setup_game(
 		.addClass('notready')
 	
 	// empty some elements
-	$('#playerRight').empty()
-	$("#timeRemaining").empty()
+	$('.game__player-right').empty()
+	$(".game__time-remaining").empty()
 	
 	
 	//renderRoomTitle(title);
@@ -155,7 +156,7 @@ export function socket_setup_game(
 		
 	} else if (gameState == 'inprogress') {
 		globals.gameplay.moveCount = moveCount;
-		$("#timeRemaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
+		$(".game__time-remaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
 		updateTimer(timerValue, moveCount);
 	}
 	
@@ -182,7 +183,7 @@ export function socket_game_preset(board, timeLimit, rows, cols, blockList, crea
 	if (globals.socket.id == creator) {
 		menuBlockEnableDisable();
 	} else {
-		$("#menu").css('opacity', '0.5'); // dim the menu
+		$(".game__menu").css('opacity', '0.5'); // dim the menu
 	}
 }
 
@@ -215,7 +216,7 @@ export function socket_update_lobby_name_color(color) {
 }
 
 export function socket_remove_player_heading() {
-	$("#playerRight").empty();
+	$(".game__player-right").empty();
 }
 
 export function socket_time_limit_update(timeLimit) {
@@ -240,13 +241,13 @@ export function socket_remove_from_heading(user) {
 }
 
 export function socket_update_lobby_welcome_name_color(color) {
-	$("#lobby > h1 > span").css('color', color);
+	$(".lobby-container > h1 > span").css('color', color);
 }
 
 export function socket_all_players_ready(gameID, timeLimit, players, rows, cols, board, gameType) {
 	if (gameType !== 'practice') {
 		console.log('do some button hiding @TODO: fix this logic')
-		// $("#gameButtons > *:not('#toggleAudio')").remove();
+		// $(".game__buttons > *:not('#toggleAudio')").remove();
 		
 	} else {
 		// practice mode reset cleanup:
@@ -254,17 +255,17 @@ export function socket_all_players_ready(gameID, timeLimit, players, rows, cols,
 			$(".block").removeClass(globals.priorColorList[i]); // this is longer than it needs to be for each game, oh well maybe fix later.
 		}
 		$(".highlighted").removeClass('highlighted');
-		//$("#menu").css('opacity', '0.5'); // dim the menu
+		//$(".game__menu").css('opacity', '0.5'); // dim the menu
 		$(".menu_block").addClass('disabled');
 	}
 	if (timeLimit == false) {
 		timeLimit = '&infin;';
 	}
 	if ($("#timer").length === 0) {
-		$("#timeRemaining").append('<div id="timer">Turn <b>1</b>, Time <b>' + timeLimit + '</b></div>');
+		$(".game__time-remaining").append('<div id="timer">Turn <b>1</b>, Time <b>' + timeLimit + '</b></div>');
 	}
 	globals.gameplay.moveCount = 1;
-	$("#menu").css('opacity', '1'); // dim the menu
+	$(".game__menu").css('opacity', '1'); // dim the menu
 	playAudio('newgame')
 	joinGame(gameID, globals.gameplay.moveCount, timeLimit, players, rows, cols, board, gameType);
 }
@@ -344,7 +345,7 @@ export function socket_store_id(id, displayName, ghost) {
 	globals.name = displayName
 	globals.isGhost = ghost
 	if(globals.isGhost) {
-		$('#container').addClass('is-ghost')
+		$('.app-container').addClass('is-ghost')
 	}
 }
 
@@ -404,10 +405,10 @@ export function socket_setup_rematch(blockList, creatorElo, playerElo) {
 	buildBlockMenu(blockList);
 	globals.gameplay.show.winstate = false;
 	if ((typeof creatorElo !== 'undefined') && (creatorElo > 0)) {
-		$("#playerLeft > div > span").html('(' + creatorElo + ')');
+		$(".game__player-left > div > span").html('(' + creatorElo + ')');
 	}
 	if ((typeof playerElo !== 'undefined') && (playerElo > 0)) {
-		$("#playerRight > div > span").html('(' + playerElo + ')');
+		$(".game__player-right > div > span").html('(' + playerElo + ')');
 	}
 }
 

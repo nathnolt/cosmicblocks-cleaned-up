@@ -37,7 +37,7 @@ socket.on('choose name', function(userID) {
 			//log('valid name "' + name + '"');
 			$("#flexcontainer").empty();
 			socket.emit('name chosen', name);
-			$("#container").append('<div id="username">' + name + '</div>');
+			$(".app-container").append('<div id="username">' + name + '</div>');
 		}
 	});
 });
@@ -47,7 +47,7 @@ socket.on('choose name', function(userID) {
 
 /*
 	socket.on('render lobby user data', function(lobbyUserData) {
-		//$("#container").css('background-color', lobbyUserData.color); //experimental
+		//$(".app-container").css('background-color', lobbyUserData.color); //experimental
 		var appendString = '<div class="lobbyName" style="color: ' + lobbyUserData.color + '">'+ lobbyUserData.username +'</div>';
 		if (lobbyUserData.gamesPlayed !== 0) {
 			appendString += '<ul id="lobbyUserData">';

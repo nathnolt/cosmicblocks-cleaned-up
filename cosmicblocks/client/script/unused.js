@@ -13,7 +13,7 @@ function renderRoomTitle(title) {
 function addHeadingOld (user, name, color, x) {
 	var blockWidth = $('.block').width();
 	var marginLeft = blockWidth * (x - 1);
-	$("#gameHead").append('<div class="heading-'+user+'" style="left: '+ marginLeft +'px; color: ' + color + ';">' + name + '</div>');
+	$(".game__header").append('<div class="heading-'+user+'" style="left: '+ marginLeft +'px; color: ' + color + ';">' + name + '</div>');
 	var textWidth = $('.heading-' + user).width() + 40; // 40 for the padding;
 	var difference = textWidth - $('.block').width();
 	var marginLeft = marginLeft - (difference / 2);
@@ -78,7 +78,7 @@ function creatorSettings() {
 	
 	// BOARD EDITOR
 	//$("#sidebar").append('<div class="sideButton" id="boardEditor">Board Editor</div>');
-	$("#boardEditor").on('click', function() {
+	$(".game__boardEditor").on('click', function() {
 		$("#sidebar > *:not('#roomTitle')").remove();
 		//$("#sidebar > *:not('#roomTitle')").css('display','none');
 		$("#sidebar").append('<div class="sideButton" id="doneEditingBlockList">Done Editing</div>');
@@ -155,7 +155,7 @@ function creatorSettings() {
 		$("#blank").addClass('active');
 		$("#blockade").css('background', '#000');
 		
-		$("#menu").on('click', '.menu_block', function() {
+		$(".game__menu").on('click', '.menu_block', function() {
 			if (!($(this).hasClass('active'))) {
 				$('.active').removeClass('active');
 				$(this).addClass('active');
@@ -163,7 +163,7 @@ function creatorSettings() {
 				log ('now painting with ' + currentType);
 			}
 		});
-		$("#board").on('click', '.block', function () {
+		$(".game__board").on('click', '.block', function () {
 			let xy = obtainID($(this));
 			let x = xy[0];
 			let y = xy[1];
@@ -188,7 +188,7 @@ function creatorSettings() {
 		//$("#headBoardContainer").remove();
 		$("#headBoardContainer").css('display','none');
 		let hWidth = hSpace();
-		$("#container").append('<div id="blockListEditor" style="width: '+ hWidth +'px"></div>');
+		$(".app-container").append('<div id="blockListEditor" style="width: '+ hWidth +'px"></div>');
 		
 		let fullSet = [
 			'plus',
@@ -524,7 +524,7 @@ if (gameState == 'open' && unused_functionality) {
 		collisionString += '<span class="collisionTurnCount">' + collisionMode.permanence.toString() + '</span> Turn';
 	}
 	collisionString += '</span></div>';
-	//$("#gameButtons").append(collisionString);
+	//$(".game__buttons").append(collisionString);
 	
 	// CREATOR SETTINGS:
 	// function creatorSettings() {...} // now in unused.js

@@ -22,15 +22,15 @@ import {
 
 
 // chat toggle
-$("#chatToggle").on('click', function() {
-	if ($("#chatPanel").is(":visible")) {
-		$("#chatPanel").hide();
-		$("#chatToggle").html('&raquo;');
+$(".chat__toggle").on('click', function() {
+	if ($(".chat").is(":visible")) {
+		$(".chat").hide();
+		$(".chat__toggle").html('&raquo;');
 		
 		resizeFunction();
 	} else {
-		$("#chatPanel").show();
-		$("#chatToggle").html('&laquo;');
+		$(".chat").show();
+		$(".chat__toggle").html('&laquo;');
 		
 		resizeFunction();
 	}
@@ -79,7 +79,7 @@ resizeFunction()
 
 
 // block hover data:
-$("#board").on({
+$(".game__board").on({
 	mouseenter: function () {
 		//stuff to do on mouse enter
 		var blockType = ($(this).data('blockType'));
@@ -128,16 +128,16 @@ $("#board").on({
 			}
 		}
 		
-		$("#bottomInfo").append(appendString);
+		$(".game__buttons-bottominfo").append(appendString);
 	},
 	mouseleave: function () {
 		// this is a mouse out function for when the hover ends
-		$("#bottomInfo").html('');
+		$(".game__buttons-bottominfo").html('');
 	}
 }, ".block"); //pass the element as an argument to .on
 
 
-$("#menuContainer").on({
+$(".game__menu-container").on({
 	mouseenter: function () {
 		//stuff to do on mouse enter
 		var blockType = $(this).attr('id');
@@ -181,11 +181,11 @@ $("#menuContainer").on({
 		}
 		*/
 		
-		$("#bottomInfo").append(appendString);
+		$(".game__buttons-bottominfo").append(appendString);
 	},
 	mouseleave: function () {
 		// this is a mouse out function for when the hover ends
-		$("#bottomInfo").html('');
+		$(".game__buttons-bottominfo").html('');
 	}
 }, ".menu_block"); //pass the element as an argument to .on
 
@@ -196,13 +196,13 @@ $("#menuContainer").on({
 
 
 // Handle sending chat messages
-$("#chat").on('submit', function(e) {
+$(".chat__form").on('submit', function(e) {
 	e.preventDefault()
 	// get the message from the input
-	let chatMessage = $("#chatInput").val().trim()
+	let chatMessage = $(".chat__input").val().trim()
 	
 	// clear the input
-	$("#chatInput").val('')
+	$(".chat__input").val('')
 	
 	// send the message
 	if(chatMessage != '') {

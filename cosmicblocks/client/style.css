@@ -28,7 +28,7 @@ body,button,input {
 	font-size: 15px;
 }
 
-h1, #gameHead {
+h1, .game__header {
   background: rgb(15, 13, 18);
   color: #eef;
   padding: 5px;
@@ -39,25 +39,32 @@ h1, #gameHead {
   text-align: center;
 }
 
-#container {
+.app-container {
   display: flex;
   height: 100vh;
   background-color: rgb(15, 13, 18);
 }
 
-#chatToggle {
+.chat__toggle {
   z-index: 4;
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
   background: black;
   color: white;
-  border-right: 1px #4a4a4a solid;
+  border: 2px solid #4a4a4a;
+	font-size: 2rem;
+	height: 32px;
+	width: 32px;
+	line-height: 0;
+	padding: 0;
 }
-#chatToggle:hover {
+.chat__toggle:hover {
   background: rgb(132, 116, 164);
   cursor: pointer;
 }
 
-#chatPanel {
+.chat {
   width: 222px;
   min-width: 222px;
   background: rgb(29, 26, 32);
@@ -66,34 +73,34 @@ h1, #gameHead {
   height: 100vh;
   position: relative;
 }
-#chatPanel > #logContainer {
+.chat > .chat__scrollwrapper {
   background: rgb(35, 33, 39);
   color: #ded9e8;
   max-height: calc(100% - 61px);
   overflow-y: scroll;
 }
-#chatPanel > #logContainer > #log .logLine {
+.chat > .chat__scrollwrapper > .chat__contents .logLine {
   padding: 0 6px;
 }
-#chatPanel > #logContainer > #log .logLine:nth-child(2n) {
+.chat > .chat__scrollwrapper > .chat__contents .logLine:nth-child(2n) {
   background: rgb(31, 29, 34);
 }
-#chatPanel > #logContainer > #log .logLine {
+.chat > .chat__scrollwrapper > .chat__contents .logLine {
   word-wrap: break-word;
 }
-#chatPanel > #logContainer > #log .logLine a {
+.chat > .chat__scrollwrapper > .chat__contents .logLine a {
   color: #8888FF;
 }
-#chatPanel > #logContainer > #log .logLine a:hover {
+.chat > .chat__scrollwrapper > .chat__contents .logLine a:hover {
   color: #CCCCFF;
 }
-#chatPanel > #logContainer > #log .logLine a:active {
+.chat > .chat__scrollwrapper > .chat__contents .logLine a:active {
   color: white;
 }
-#chatPanel > #logContainer > #log .logLine.special {
+.chat > .chat__scrollwrapper > .chat__contents .logLine.special {
   background: rgb(29, 26, 32);
 }
-#chatPanel > #chat {
+.chat > .chat__form {
   background: rgb(35, 33, 39);
   width: 100%;
   box-sizing: border-box;
@@ -102,7 +109,7 @@ h1, #gameHead {
   position: absolute;
   bottom: 0px;
 }
-#chatPanel > #chat > #chatInput {
+.chat > .chat__form > .chat__input {
   box-sizing: border-box;
   width: 100%;
   background: rgb(15, 13, 18);
@@ -112,7 +119,7 @@ h1, #gameHead {
   border: 1px solid #1f1d22;
   font-size: 15px;
 }
-#chatPanel > #chat > #chatInput:focus {
+.chat > .chat__form > .chat__input:focus {
   background-color: #000;
   outline: none !important;
   border: 1px solid rgb(132, 116, 164);
@@ -186,7 +193,7 @@ h1, #gameHead {
   color: #b6e3ff;
 }
 
-.buttonStyle, #lobby .lobbyButton {
+.buttonStyle, .lobby-container .lobbyButton {
   background: #e4e4e4;
   font-weight: bold;
   border: 2px solid #bfb0de;
@@ -197,12 +204,12 @@ h1, #gameHead {
   border-radius: 4px;
   margin-bottom: 5px;
 }
-.buttonStyle:hover, #lobby .lobbyButton:hover {
+.buttonStyle:hover, .lobby-container .lobbyButton:hover {
   cursor: pointer;
   background: white;
   color: #e984ff;
 }
-.buttonStyle:active, #lobby .lobbyButton:active {
+.buttonStyle:active, .lobby-container .lobbyButton:active {
   color: #2aaddd;
 }
 
@@ -222,89 +229,89 @@ h1, #gameHead {
   animation: blinkText 0.25s infinite alternate;
 }
 
-#lobby {
+.lobby-container {
   color: #fff;
   flex: 1;
 }
-#lobby .lobbyLabel {
+.lobby-container .lobbyLabel {
   text-align: center;
   padding-bottom: 5px;
 }
-#lobby #optionButtons {
+.lobby-container .lobby__buttons {
   float: left;
   display: flex;
   align-items: center;
   margin-bottom: 20px;
 }
-#lobby #optionButtons > * {
+.lobby-container .lobby__buttons > * {
   display: inline-block;
   margin-right: 5px;
   margin-bottom: 0;
 }
-#lobby #optionButtons > a {
+.lobby-container .lobby__buttons > a {
   text-decoration: none;
 }
-#lobby #playerStats {
+.lobby-container .lobby__player-stats {
   float: right;
   width: 200px;
   margin-bottom: 20px;
   padding-left: 20px;
   border-left: 1px rgb(74, 74, 74) solid;
 }
-#lobby #playerStats #lobbyUserData {
+.lobby-container .lobby__player-stats #lobby-UserData {
   color: #ded9e8;
   list-style: none;
   font-size: 15px;
   margin: 0;
   padding: 0;
 }
-#lobby #gameTypes {
+.lobby-container .lobby__games {
   clear: both;
   border-top: 1px rgb(74, 74, 74) solid;
 }
-#lobby #gameTypes > div {
+.lobby-container .lobby__games > div {
   box-sizing: border-box;
   width: 50%;
   padding: 3px;
 }
-#lobby #gameTypes #open {
+.lobby-container .lobby__games .lobby__games-open {
   /*.joinGameButton { @include blinkText; }*/
   float: left;
 }
-#lobby #gameTypes #inprogress {
+.lobby-container .lobby__games .lobby__games-in-progress {
   float: right;
   padding-left: 5px;
 }
-#lobby #gameTypes .lobbyGame {
+.lobby-container .lobby__games .lobbyGame {
   /*background:#a69cbc;*/
   background: rgb(29, 26, 32);
   border-radius: 5px;
   padding: 5px 10px;
 }
-#lobby #gameTypes .lobbyGame .gameSettings {
+.lobby-container .lobby__games .lobbyGame .gameSettings {
   color: rgb(132, 116, 164);
   float: right;
   font-size: 12px;
 }
-#lobby #gameTypes .lobbyGame {
+.lobby-container .lobby__games .lobbyGame {
   margin-bottom: 5px;
 }
-#lobby .lobbyButtons {
+.lobby-container .lobbyButtons {
   margin-top: 5px;
 }
-#lobby .lobbyButtons span {
+.lobby-container .lobbyButtons span {
   display: inline-block;
 }
-#lobby .lobbyButton.winner1 {
+.lobby-container .lobbyButton.winner1 {
   background: #ffb154;
 }
-#lobby .lobbyButton.winner2 {
+.lobby-container .lobbyButton.winner2 {
   background: #84bfff;
 }
-#lobby .lobbyButton.winner3 {
+.lobby-container .lobbyButton.winner3 {
   background: #7dd96f;
 }
-#lobby .lobbyButton {
+.lobby-container .lobbyButton {
   margin-right: 5px;
 }
 
@@ -680,7 +687,7 @@ h1, #gameHead {
 	}
 }
 */
-#board {
+.game__board {
   box-shadow: 2px 2px 5px 1px rgba(0, 0, 0, 0.2);
   /*          0px 2px 0px 0px rgba(128, 128, 128, 0.5);
   border:2px #675c56 solid;			*/
@@ -688,11 +695,11 @@ h1, #gameHead {
   margin: 0;
   border-radius: 2px;
 }
-#board .board_row {
+.game__board .board_row {
   height: 50px;
   white-space: nowrap;
 }
-#board .board_row .block {
+.game__board .board_row .block {
   display: block;
   border-radius: 1px;
   float: left;
@@ -706,11 +713,11 @@ h1, #gameHead {
   align-items: center;
   justify-content: center;
 }
-#board .board_row .block.disabled {
+.game__board .board_row .block.disabled {
   opacity: 0.85;
   cursor: default;
 }
-#board .board_row .block.nohover {
+.game__board .board_row .block.nohover {
   cursor: default;
 }
 .prior-collision::before {
@@ -744,11 +751,11 @@ h1, #gameHead {
   margin: 0 auto;
 }
 
-#gameHead {
+.game__header {
   background-color: transparent;
   display: flex;
 }
-#gameHead div {
+.game__header div {
   flex: 1;
 }
 
@@ -823,15 +830,15 @@ svg {
   opacity: 0;
 }
 
-#menuRightContainer {
+.game__buttons-container {
   margin-top: 10px;
 }
 
-#gameButtons {
+.game__buttons {
   float: right;
 }
 
-#bottomInfo {
+.game__buttons-bottominfo {
   float: right;
   text-align: right;
   font-size: 11px;
@@ -840,7 +847,7 @@ svg {
   max-width: 240px;
 }
 
-#menu {
+.game__menu {
   display: inline-block;
   /*
   padding: 5px 0 0 5px;
@@ -850,10 +857,10 @@ svg {
   box-shadow: 2px 2px 5px 1px rgba(0, 0, 0, 0.2);
   */
 }
-#menu .menu_row {
+.game__menu .menu_row {
   line-height: 0px;
 }
-#menu .menu_row .menu_block {
+.game__menu .menu_row .menu_block {
   background: #e4e4e4;
   display: inline-block;
   width: 60px;
@@ -867,7 +874,7 @@ svg {
   background-position: center center;
   z-index: 1;
 }
-#menu .menu_row .menu_block > .ammo {
+.game__menu .menu_row .menu_block > .ammo {
   position: absolute;
   display: inline-block;
   top: -3px;
@@ -881,24 +888,24 @@ svg {
   padding: 1px 3px;
   z-index: 2;
 }
-#menu .menu_row .menu_block:hover:not(.nohover) {
+.game__menu .menu_row .menu_block:hover:not(.nohover) {
   background: #d99fd6;
   cursor: pointer;
 }
-#menu .menu_row .menu_block.disabled {
+.game__menu .menu_row .menu_block.disabled {
   opacity: 0.5;
 }
-#menu .menu_row .menu_block.disabled > svg {
+.game__menu .menu_row .menu_block.disabled > svg {
   opacity: 0.5;
 }
-#menu .menu_row .menu_block.disabled:hover {
+.game__menu .menu_row .menu_block.disabled:hover {
   background: #e4e4e4;
   cursor: default;
 }
-#menu .menu_row .menu_block.noammo {
+.game__menu .menu_row .menu_block.noammo {
   opacity: 0.1;
 }
-#menu .menu_row .menu_block.active {
+.game__menu .menu_row .menu_block.active {
   border: 1px #4cd7e3 solid;
 }
 

@@ -78,18 +78,26 @@ h1 {
 	text-align:center;
 }
 
-#container {
+.app-container {
 	display: flex;
 	height:100vh;
 	background-color: $darkGrey;
 }
 
-#chatToggle {
+.chat__toggle {
 	z-index:4;
-	position:absolute;
+	position: fixed;
+	top: 0;
+	left: 0;
 	background: black;
 	color: white;
-	border-right: 1px #4a4a4a solid;
+	border: 2px solid #4a4a4a;
+	font-size: 2rem;
+	height: 32px;
+	width: 32px;
+	line-height: 0;
+	padding: 0;
+	
 	&:hover {
 		background: $dimMsg;
 		cursor:pointer;
@@ -102,20 +110,20 @@ h1 {
 	background:$sidebarBG;
 }
 
-#chatPanel {
+.chat {
 	@include sidebarStyle;
 	border-right: 1px #383040 solid;
 	box-shadow: 1px 0px 5px 1px rgba(0, 0, 0, 0.2);
 	height:100vh;
 	position:relative;
 	
-	> #logContainer {
+	> .chat__scrollwrapper {
 		background:$zebra1;	
 		color: #ded9e8;
 		max-height: calc(100% - 61px);
 		overflow-y: scroll;
 	
-		> #log {
+		> .chat__contents {
 			.logLine {
 				padding:0 6px;
 				&:nth-child(2n) {
@@ -132,7 +140,7 @@ h1 {
 		}
 	}
 	
-	> #chat {
+	> .chat__form {
 		background:$zebra1;
 		width:100%;
 		box-sizing: border-box;
@@ -141,7 +149,7 @@ h1 {
 		position:absolute;
 		bottom:0px;
 		
-		> #chatInput {
+		> .chat__input {
 			box-sizing: border-box;
 			width: 100%;
 			background:$darkGrey;
@@ -229,7 +237,7 @@ h1 {
 	@include blinkText;
 }
 
-#lobby {
+.lobby-container {
 	color: #fff;
 	flex: 1;
 
@@ -238,7 +246,7 @@ h1 {
 		padding-bottom: 5px;
 	}
 	
-	#optionButtons {
+	.lobby__buttons {
 		float:left;
 		display:flex;
 		align-items: center;
@@ -255,14 +263,14 @@ h1 {
 		
 	}
 
-	#playerStats {
+	.lobby__player-stats {
 		float:right;
 		width:200px;
 		margin-bottom:20px;
 		padding-left:20px;
 		border-left: 1px $borderColor solid;
 		
-		#lobbyUserData {
+		.lobby-containerUserData {
 			color: #ded9e8;
 			list-style: none;
 			font-size:15px;
@@ -272,7 +280,7 @@ h1 {
 	}
 
 	
-	#gameTypes {
+	.lobby__games {
 		clear:both;
 		border-top: 1px $borderColor solid;
 		
@@ -282,12 +290,12 @@ h1 {
 			padding:3px;
 		}
 		
-		#open {
+		.lobby__games-open {
 			/*.joinGameButton { @include blinkText; }*/
 			float:left;
 		}
 		
-		#inprogress {
+		.lobby__games-in-progress {
 			float:right;
 			padding-left:5px;
 		}
@@ -652,7 +660,7 @@ h1 {
 }
 */
 
-#board {
+.game__board {
 	box-shadow: 2px 2px 5px 1px rgba(0, 0, 0, 0.2);
 	/*          0px 2px 0px 0px rgba(128, 128, 128, 0.5);
 	border:2px #675c56 solid;			*/
@@ -717,7 +725,7 @@ h1 {
 	margin: 0 auto;
 }
 
-#gameHead {
+.game__header {
 	@extend h1;
 	background-color: transparent;
 	display:flex;
@@ -797,18 +805,18 @@ svg {
 	}
 }
 
-#menuContainer {
+.game__menu-container {
 }
 
-#menuRightContainer {
+.game__buttons-container {
 	margin-top:10px;
 }
 
-#gameButtons {
+.game__buttons {
 	float:right;
 }
 
-#bottomInfo {
+.game__buttons-bottominfo {
 	float:right;
 	text-align:right;
 	font-size:11px;
@@ -817,7 +825,7 @@ svg {
 	max-width:240px;
 }
 
-#menu {
+.game__menu {
 	display:inline-block;
 	/*
 	padding: 5px 0 0 5px;
