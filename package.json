@@ -12,7 +12,7 @@
 	},
 	"private": true,
 	"scripts": {
-		"dev": "npx nodemon cosmicblocks\\server\\main.js",
-		"start": "node cosmicblocks\\server\\main.js"
+		"dev": "npx nodemon cosmicblocks/server/main.js",
+		"start": "node cosmicblocks/server/main.js"
 	}
 }

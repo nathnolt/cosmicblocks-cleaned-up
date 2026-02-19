@@ -85,7 +85,10 @@ function startIO(server) {
 function handleConnection(socket) {
 	console.log('new connection')
 	
-	setUserDataAndGreet(socket, userData)
+	const wasSuccess = setUserDataAndGreet(socket, userData)
+	if(!wasSuccess) {
+		return
+	}
 	
 	socket.on('error', socket_error)
 	socket.on('disconnect', socket_disconnect)
@@ -115,12 +118,12 @@ function setUserDataAndGreet(socket, userData) {
 	// 1. Get userdata from the session.
 	const sessionValue = getSessionValue(socket.request)
 	if(sessionValue == undefined) {
-		return
+		return false
 	}
 	
 	const userId = db_getUseridFromSession(sessionValue)
 	if(userId == undefined) {
-		return
+		return false
 	}
 	
 	const user = db_getUserById(userId)
@@ -199,6 +202,8 @@ function setUserDataAndGreet(socket, userData) {
 	socket.join('lobby')
 	userData[socket.id].room = 'lobby'
 	sub_renderLobby(socket)
+	
+	return true
 }
 
 

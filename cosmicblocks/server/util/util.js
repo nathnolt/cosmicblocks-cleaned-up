@@ -27,10 +27,12 @@ async function passVerify(password, hash) {
 
 
 function getCookieSignerSecret() {
-	const FILE_PATH = path.join(__dirname, '../dynamic/cookie-sign-secret.txt')
+	const folder = path.join(__dirname, '../dynamic/')
+	const FILE_PATH = folder + 'cookie-sign-secret.txt'
 	
 	let secret
 	try {
+		ensureFolder(folder)
 		secret = fs.readFileSync(FILE_PATH, FS_ENCODING_UTF8)
 	} catch(err) {
 		secret = crypto.randomBytes(64).toString('hex')
@@ -48,10 +50,22 @@ function deepClone(obj) {
 	return JSON.parse(JSON.stringify(obj))
 }
 
+/**
+* create a folder if it does not exsit already
+*/
+function ensureFolder(folder) {
+	if(!fs.existsSync(folder)) {
+		fs.mkdirSync(folder, {recursive: true})
+	}
+}
+
+
 module.exports = {
 	random_inclusive_int,
 	passHash,
 	passVerify,
 	getCookieSignerSecret,
 	deepClone,
+	ensureFolder,
 }
+
