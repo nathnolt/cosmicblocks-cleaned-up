@@ -1,20 +1,20 @@
-const {
+import {
 	sign,
 	unsign
-} = require('./node-cookie-signature.js')
+} from './node-cookie-signature.js'
 
-const {
+import {
 	setCookie,
 	getCookie
-} = require('./cookie.js')
+} from './cookie.js'
 
-function setSignedCookie(response, secret, key, value) {
+export function setSignedCookie(response, secret, key, value) {
 	value = String(value)
 	const signedValue = sign(value, secret)
 	setCookie(response, key, signedValue)
 }
 
-function getSignedCookie(request, secret, findKey) {
+export function getSignedCookie(request, secret, findKey) {
 	const signedCookieVal = getCookie(request, findKey)
 	if(signedCookieVal == null) {
 		return null
@@ -24,9 +24,4 @@ function getSignedCookie(request, secret, findKey) {
 		return null
 	}
 	return unsignResult
-}
-
-module.exports = {
-	getSignedCookie,
-	setSignedCookie
 }

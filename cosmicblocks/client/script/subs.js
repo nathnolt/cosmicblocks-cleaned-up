@@ -7,8 +7,13 @@ import {
 } from './static.js'
 
 import {
-	get_linearBoardArrayPos_from_xyPos
+	get_linearBoardArrayPos_from_xyPos,
+	qs
 } from './util.js'
+
+import {
+	emptyEl
+} from './html.js'
 
 import {
 	globals
@@ -54,12 +59,7 @@ export function joinGame(gameID, moveCount, timeLeft, players, rows, cols, board
 	globals.gameplay.boardSize.cols = cols
 	
 
-	
-	
-	
-	//=======================
-	// handle joinGame code. 
-	//=======================
+	// @TODO: clean up
 	
 	$(".menu_block").removeClass('nohover');
 	function youArePlaying() {
@@ -93,38 +93,6 @@ export function joinGame(gameID, moveCount, timeLeft, players, rows, cols, board
 		} else {
 			console.log('show forfeit button')
 		}
-		
-		/*
-		if (players[globals.socket.id].offeredDraw) {
-			$("#sidebar").prepend('<div id="offerDraw">Offered Draw</div>');
-		} else {
-			
-			for (var i = 0; i < globals.gameplay.opponents.length; i++) {
-				if (opponent[i].offeredDraw) {
-					$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
-					drawOffered(gameID);
-				}
-			}
-			
-			opponent(trackPlayerNum) == offeredDraw) {
-			$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
-			drawOffered(gameID);
-		} else {
-			$("#sidebar").prepend('<div class="sideButton" id="offerDraw">Offer Draw</div>')
-			$("#offerDraw").on("click",function() {
-				socket.emit('offer draw', gameID);
-				$("#offerDraw").html('Offered Draw');
-				$("#offerDraw").removeClass('sideButton');
-				$("#offerDraw").off();
-			});
-		}
-		*/
-		//buildBlockMenu();
-		
-		var x = false, y = false, xy = false, type, initialType = 'blank';
-		
-		//log("off2");
-		//$( ".menu_block" ).off(); // remove prior click handlers if needed....
 		
 		var opponent = false;
 		
@@ -234,7 +202,6 @@ export function cleanup(winners, reason) {
 	// $("#forfeit").remove();
 	
 	$(".moveStatus").remove(); // remove the move status
-	$("#timer").remove();
 	$(".waitMsg").parent().remove();
 	renderExitButton();
 	
@@ -399,7 +366,7 @@ export function buildBlockMenu (blockList) {
 	var buildString = '';
 	var ammoString = '';
 	buildString += '<div class="menu_row">';
-	//<div class="menu_block nohover disabled" style="opacity:0"></div> dummy block
+	//<div class="menu_block bg-style nohover disabled" style="opacity:0"></div> dummy block
 	
 	var position = 0;
 	var splitPoint = Math.floor(Object.keys(menuBlocks).length / 2);
@@ -410,7 +377,7 @@ export function buildBlockMenu (blockList) {
 			splitPoint = 9001; // it's over 9000!!!
 			buildString += '</div><div class="menu_row">'; // new row
 		}
-		buildString += '<div class="menu_block';
+		buildString += '<div class="menu_block bg-style';
 		if (blockList[block].ammo == 0) {
 			buildString += ' disabled nohover noammo';
 			ammoString = '';
@@ -467,15 +434,22 @@ function vSpace () {
 
 
 
-export function renderBoard(data) {
+export function renderBoard(boardData) {
 	
 	for (var i = 0; i < globals.priorColorList.length; i++) {
 		$(".block").removeClass(globals.priorColorList[i]);
 	}
 	
-	$.each(data, function( index, value ) {
-		let tempX = value.x + 1;
-		let tempY = value.y + 1;
+	$.each(boardData, function( index, value ) {
+		if(value == null) {
+			console.log('error in renderBoard')
+			console.log(boardData)
+			debugger
+		}
+		
+		let tempX = value.x + 1
+		let tempY = value.y + 1
+		
 		updateBlock(
 			tempX, 
 			tempY, 
@@ -818,147 +792,173 @@ export function renderLeaderboard(leaderData) {
 
 
 
-
 export function renderGames(lobbyData) {
-	console.log('function renderGames', lobbyData)
 	
-	$('.lobby__games-open').empty()
-	$('.lobby__games-in-progress').empty()
+	const gamesContainer = qs('.lobby__games')
 	
-	// RENDER GAMES!
-	for (var i = 0; i < lobbyData.length; i++) {
-		const gamestate = lobbyData[i].gameState
+	lobbyGameBaseDummy()
+	emptyEl(gamesContainer)
+	
+	for(const game of lobbyData) {
 		
-		let $target
+		// 1. get a lobby game element and stuff
+		const {
+			lobbygameEl,
+			header, 
+			main, 
+			buttons
+		} = getLobbygame()
 		
-		if(gamestate == 'open') {
-			$target = $('.lobby__games-open')
-		} else
-		if(gamestate == 'inprogress') {
-			$target = $('.lobby__games-in-progress')
-		} else {
-			console.error('gamestate', gamestate, 'will result in error')
-			continue
+		// 2. set gameid, so that join / spectate functionality works
+		lobbygameEl.dataset.gameid = game.id
+		
+		// 3. Set game color, based on creator
+		lobbygameEl.style.setProperty("--color", game.creatorColor);
+		
+		// 4. state by classes
+		if(game.full) {
+			lobbygameEl.classList.add('lobbygame_is-full')
 		}
 		
-		var appendString = '<div class="lobbyGame" style="border: 2px ' + lobbyData[i].creatorColor + ' solid" data-gameid=' + lobbyData[i].id + '>';
-		appendString += '<span class="WhoVsWho"><b>' + lobbyData[i].creator + '</b>';
-		if (lobbyData[i].creatorElo > 0) {
-			appendString += '&ensp;(' + lobbyData[i].creatorElo + ')';
-		}
+		// 5. Fill header section
+		header.innerHTML = game.title
 		
-		if (lobbyData[i].gameType === 'practice') {
-			appendString += '&emsp;<span class="dimMsg">[practice room]</span>';
-		} else if (lobbyData[i].full) {
-			appendString += '&emsp;<span class="dimMsg">vs</span>&emsp;<b>' + lobbyData[i].opponent + '</b>';
-			if (lobbyData[i].opponentElo > 0) {
-				appendString += '&ensp;(' + lobbyData[i].opponentElo + ')';
+		// 6. fill main section
+		const userHTML = getUserLine(
+			game.creator, 
+			game.creatorColor, 
+			getEloString(game.creatorElo)
+		)
+		main.innerHTML = userHTML
+		
+		console.log(game)
+		
+		if(game.gameType != 'practice') {
+			if(game.full) {
+				main.innerHTML += ' vs '
+				
+				const opponentHTML = getUserLine(
+					game.opponent,
+					game.opponentColor, // not sure if this is a thing, but it should be.
+					getEloString(game.opponentElo)
+				)
+				main.innerHTML += opponentHTML
 			}
 		}
-		appendString += '</span>'
-
 		
-		if (lobbyData[i].gameType === 'random') {
-			appendString += '<span class="gameSettings">Random</span>';
-		}
-		
-		appendString += '<div class="lobbyButtons"><span class="lobbyButton spectateGameButton">Spectate</span>';
-		if (globals.isGhost == false) {
-			if ((lobbyData[i].gameState !== 'inprogress') && (lobbyData[i].full == false)) {
-				appendString += '<span class="lobbyButton joinGameButton">Play</span>';
-			}
-		}
-		appendString += '</div></div>';
-		$target.append(appendString);
+		gamesContainer.appendChild(lobbygameEl)
 	}
+}
+
+// For help in constructing lobby games
+let lobbyGameBase = null
+function lobbyGameBaseDummy() {
+	if(lobbyGameBase == null) {
+		const dummyGame = qs('.lobbygame.dummy')
+		dummyGame.remove()
+		dummyGame.classList.remove('dummy')
+		lobbyGameBase = dummyGame
+	}
+	return lobbyGameBase
+}
+function getLobbygame() {
 	
-	$(".lobby__games-open").prepend('<div class="lobbyLabel">open games:</div>');
-	$(".lobby__games-in-progress").prepend('<div class="lobbyLabel">in progress:</div>');
+	const lobbygameEl = lobbyGameBaseDummy().cloneNode(true)
 	
-	globals.debounce = Math.random();
-	var temp = globals.debounce;
-	if (globals.isGhost) {
-		setTimeout(function(){ 
-			var enticingGame = 'none';
-			var combinedElo = -9999999;
-			for (var i = 0; i < lobbyData.length; i++) {
-				if ((lobbyData[i].gameState == 'open') || (lobbyData[i].gameState == 'inprogress')) {
-					if ((lobbyData[i].full) && (lobbyData[i].creatorElo + lobbyData[i].opponentElo > combinedElo)) {
-						if (lobbyData[i].creatorElo + lobbyData[i].opponentElo > combinedElo) {
-							if (lobbyData[i].gameType !== 'practice') {
-								combinedElo = lobbyData[i].creatorElo + lobbyData[i].opponentElo;
-								enticingGame = i;
-							}
-						}
-					}
-				}
-			}
-			if (enticingGame !== 'none') {
-				if (globals.debounce = temp) {
-					globals.socket.emit('join game', lobbyData[enticingGame].id, 'spec');
-				}
-			}
-		}, 3000);
+	return {
+		lobbygameEl, 
+		header:  qs('.lobbygame__header',  lobbygameEl),
+		main:    qs('.lobbygame__main',    lobbygameEl),
+		buttons: qs('.lobbygame__buttons', lobbygameEl),
 	}
 }
 
 
-
-
-
-
-// toggles audio 
+function getUser(name, color) {
+	return `<strong class="user" style="--color: ${color};">${name}</strong>`
+}
+function getUserLine(name, color, line) {
+	return `<span>${getUser(name, color)} ${line}</span>`
+}
+function getEloString(elo) {
+	if(elo > 0) {
+		return '(' + elo + ')'
+	}
+	return ''
+}
 
 
 
 
 export function updateTimer(timerValue, turnCount) {
-	$(".app-container").removeClass("timeWarning");
-	if (timerValue == false) {
-		$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>&infin;</b>');
-	} else {
-		$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>' + timerValue + '</b>');
-		
-		clearInterval(globals.gameplay.timer);
-		// set global "globals.gameplay.timer" to a setInterval.
-		globals.gameplay.timer = setInterval( function () { 
-			timerValue--;
-			if (timerValue == 0) {
-				clearInterval(globals.gameplay.timer);
-			} else if ((timerValue <= 10) && (globals.gameplay.standby == false)) {
-				$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b class="redMsg">' + timerValue + '</b>');
-				if (timerValue == 10) {
-					 $(".app-container").addClass("timeWarning");
-				}
-				
-				// time running out audio
-				const volume = 1 - (timerValue / 15)
-				playAudio('beep', volume)
-				
-			} else {
-				$('#timer').html('Turn <b>' + turnCount + '</b>, Time <b>' + timerValue + '</b>');
-			}
-		}, 1000);
+	console.log('update timer', timerValue, turnCount)
+	$(".app-container").removeClass("timeWarning")
+	$('.game__turn').removeClass('redMsg')
+	
+	$('.game__turn').html(turnCount)
+	
+	// infinite time.
+	if(timerValue == false) {
+		$('.game__time').html('&infin;')
+		return
 	}
+	
+	// finite time, so we use a timer to reduce the counter.
+	$('.game__time').html(timerValue)
+	
+	clearInterval(globals.gameplay.timer)
+	
+	// set global "globals.gameplay.timer" to a setInterval.
+	globals.gameplay.timer = setInterval( function () { 
+		timerValue--
+		const $gameTime = $('.game__time')
+		$gameTime.html(timerValue)
+		
+		// Time warning
+		if (
+			(timerValue <= 10) && 
+			(globals.gameplay.standby == false)
+		) {
+			$(".app-container").addClass("timeWarning")		
+			$gameTime.addClass('redMsg')
+			
+			// time running out audio
+			const volume = 1 - (timerValue / 15)
+			playAudio('beep', volume)
+		}
+		
+		if (timerValue <= 0) {
+			clearInterval(globals.gameplay.timer)
+		}
+		
+	}, 1000)
+	
 }
 
 
 
 
-
-export function log(str, special) {
-	if ($(".logLine").length >= 500) {
-		// don't let the DOM get out of control.
-		$(".logLine").first().remove();
-	}
-	if (special) {
-		$(".chat__contents").append('<div class="logLine special">' + str + '</div>');
-	} else {
-		$(".chat__contents").append('<div class="logLine">' + str + '</div>');
+export function log(html_str, special) {
+	
+	// 1. Limit the amount of chat messages
+	if($(".chat__message").length >= 500) {
+		$(".chat__message").first().remove();
 	}
 	
+	// 2. Create a new message
+	const message = document.createElement('div')
+	message.classList.add('chat__message')
+	if(special) {
+		message.classList.add('chat__message-special')
+	}
+	message.innerHTML = html_str
+	
+	// 3. Append it
+	$(".chat__contents").append(message)
+	
+	// 4. Scroll to the bottom
 	const logEl = $('.chat__contents')[0]
 	if(logEl != null) {
-		$(".chat__scrollwrapper").scrollTop(logEl.scrollHeight);
+		$(".chat__scrollwrapper").scrollTop(logEl.scrollHeight)
 	}
 }

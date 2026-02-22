@@ -1,11 +1,12 @@
-const {cookie: cookieSettings} = require('../settings.js')
+import settings from '../settings.js'
 
-function setCookie(response, key, value) {
+const cookieSettings = settings.cookie
+
+export function setCookie(response, key, value) {
 	const cookieAttributes = []
 	
 	// set the value
 	cookieAttributes.push(`${key}=${encodeURI(value)}`)
-	
 	
 	if(cookieSettings.httpOnly) {
 		cookieAttributes.push('HttpOnly')
@@ -39,7 +40,7 @@ function setCookie(response, key, value) {
 	response.setHeader('Set-Cookie', existingCookies)
 }
 
-function getCookie(request, findKey) {
+export function getCookie(request, findKey) {
 	const cookieString = request.headers.cookie
 	if (!cookieString) {
 		return null
@@ -55,9 +56,4 @@ function getCookie(request, findKey) {
 	}
 	
 	return null
-}
-
-module.exports = {
-	setCookie,
-	getCookie
 }

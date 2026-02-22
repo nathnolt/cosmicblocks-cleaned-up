@@ -3,28 +3,39 @@
 // Cleanup by nathnolt
 ///////////////////////////////////////////
 
-// const { convert_client_sass_to_css } = require('./tasks.js')
-// // 2. run static tasks
-// convert_client_sass_to_css()
+import path from 'path'
+import { serveStatic } from '@hono/node-server/serve-static'
+import { app } from './create-server.js'
 
-const path = require('path')
-const { serveStatic } = require('@hono/node-server/serve-static')
-const { app } = require('./create-server.js')
-
-const {
+import {
 	getSetSessionValue,
-} = require('./cookie/session.js')
+} from './cookie/session.js'
 
-app.use('/*', serveStatic({ root: path.join(__dirname + '/../client/') }))
+const __dirname = import.meta.dirname
 
-const { eta_render } = require('./templating.js')
-const {
+const root = path.join(__dirname + '/../')
+const clientRoot = root + 'client/'
+
+console.log('root path', root)
+
+
+
+// Serve static files
+app.use('/*', serveStatic({ root: clientRoot }))
+app.use('/shared/*', serveStatic({ root: root }))
+
+import { eta_render } from './templating.js'
+
+import {
 	db_createUser,
 	db_getUserByUsername,
 	// session
 	db_linkSessionToUserid,
 	db_getUseridFromSession,
-} = require('./db/db.js')
+} from './db/db.js'
+
+
+
 
 
 // 4. define the routes

@@ -1,6 +1,6 @@
-// const { getDB } = require('./get-db.js')
-const { getRandomUserColor } = require('../util/color.js')
-const {
+
+import { getRandomUserColor } from '../util/color.js'
+import {
 	// user
 	create_user_stmt,
 	get_user_by_name_stmt,
@@ -15,11 +15,7 @@ const {
 	// session
 	link_session_stmt,
 	get_userid_from_session_stmt,
-} = require('./statements.js')
-
-// let db = getDB()
-
-// console.log('db', db)
+} from './statements.js'
 
 function db_createUser(username) {
 	
@@ -143,7 +139,7 @@ function db_updateUserWithGameResults(userid, elo, games_played, wins, losses, d
 }
 
 
-module.exports = {
+export {
 	// user
 	db_createUser,
 	db_getUserByUsername,

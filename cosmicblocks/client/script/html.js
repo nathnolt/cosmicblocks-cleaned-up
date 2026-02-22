@@ -17,3 +17,15 @@ export function redMsg(content, style) {
 	let styleStr = style ? ' style="' + style + '"' : ''
 	return `<span class="redMsg"${styleStr}>${content}</span>`
 }
+
+// export function getElement(htmlStr) {
+// 	const div = document.createElement('div')
+// 	div.innerHTML = htmlStr.trim()
+// 	return div.firstChild
+// }
+
+export function emptyEl(el) {
+	while(el.lastChild) {
+		el.removeChild(el.lastChild)
+	}
+}

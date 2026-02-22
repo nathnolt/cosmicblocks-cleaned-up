@@ -1,41 +1,41 @@
-const SocketIO = require('socket.io')
+import { Server as SocketIOServer } from 'socket.io'
 
-const {
+import {
 	sub_renderLobby,
 	sub_setIo,
-} = require('./subs.js')
+} from './subs.js'
 
-const {
+import {
 	ghostColor,
-} = require('./constants.js')
+} from './constants.js'
 
-const {
+import {
 	getSessionValue
-} = require('../cookie/session.js')
+} from '../cookie/session.js'
 
-const {
+import {
 	// session
 	db_getUseridFromSession,
 	db_getUserById,
-} = require('../db/db.js')
+} from '../db/db.js'
 
-const {
-	saveData,
-} = require('../settings.js')
+import settings from '../settings.js'
 
-const {
+const saveData = settings.saveData
+
+import {
 	userData,
-} = require('./vars.js')
+} from './vars.js'
 
-const {
+import {
 	fns_setIo,
 	socket_error,
 	socket_disconnect,
 	socket_attemptColorReroll,
 	socket_sendChatMessage,
-} = require('./socket-fns.js')
+} from './socket-fns.js'
 
-const {
+import {
 	socket_practiceMode,
 	socket_newGame,
 	socket_joinGame,
@@ -47,16 +47,16 @@ const {
 	socket_offer_rematch,
 	socket_forfeit,
 	socketGame_setIo,
-} = require('./socket-fns-game.js')
+} from './socket-fns-game.js'
 
-const {
+import {
 	gameplay_setio
-} = require('./gameplay/gameplay.js')
+} from './gameplay/gameplay.js'
 
-const {
+import {
 	dimMsg,
 	redMsg,
-} = require('../util/html.js')
+} from '../util/html.js'
 
 
 // @TODO: Split this file out further
@@ -68,10 +68,11 @@ const {
 //   ****  ****   *****   ***   ** **  //
 let io
 
-function startIO(server) {
+export function startIO(server) {
 	// socket.io is used for having a realtime application.
 	// all of the game-related stuff is passed between client and server via socket.io.
-	io = SocketIO(server)
+	
+	io = new SocketIOServer(server)
 	fns_setIo(io)
 	socketGame_setIo(io)
 	sub_setIo(io)
@@ -232,8 +233,3 @@ function commented_out_socket_ons(socket) {
 	*/
 }
 
-
-
-module.exports = {
-	startIO
-}

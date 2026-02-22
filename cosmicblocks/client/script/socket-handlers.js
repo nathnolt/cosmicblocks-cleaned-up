@@ -75,7 +75,7 @@ export function socket_render_lobby(lobbyData, leaderData, lobbyUserData) {
 	
 	globals.isPlayer = false
 	
-	$('.lobby-container .yourname').css('color', lobbyUserData.color).text(lobbyUserData.username)
+	$('.lobby .yourname').css('color', lobbyUserData.color).text(lobbyUserData.username)
 	
 	renderLeaderboard(leaderData);
 	
@@ -91,14 +91,14 @@ export function socket_render_lobby(lobbyData, leaderData, lobbyUserData) {
 	
 }
 
-
+// Cleanup this function.
 export function socket_setup_game(
 	gameID, 
 	joinStatus, 
 	title, 
 	rows, 
 	cols, 
-	board, 
+	boardData, 
 	players, 
 	gameState, 
 	blockList, 
@@ -108,6 +108,10 @@ export function socket_setup_game(
 	timerValue, 
 	gameType
 ) {
+	console.log('-----------')
+	console.log('socket_setup_game')
+	console.log('-----------')
+	
 	$('.app-container')
 		.addClass('in-gameplay')
 		.removeClass('in-lobby')
@@ -122,7 +126,7 @@ export function socket_setup_game(
 	
 	buildEmptyBoard(rows, cols);
 	
-	renderBoard(board);
+	renderBoard(boardData);
 	
 	$(".block").addClass('nohover');
 	
@@ -136,6 +140,7 @@ export function socket_setup_game(
 	
 	// empty some elements
 	$('.game__player-right').empty()
+	
 	$(".game__time-remaining").empty()
 	
 	
@@ -156,6 +161,7 @@ export function socket_setup_game(
 		
 	} else if (gameState == 'inprogress') {
 		globals.gameplay.moveCount = moveCount;
+		$('.game__time')
 		$(".game__time-remaining").append('<div id="timer">Turn <b>' + moveCount + '</b>, Time <b>' + timerValue + '</b></div>');
 		updateTimer(timerValue, moveCount);
 	}
@@ -173,11 +179,11 @@ export function socket_play_detonate_sfx() {
 
 
 
-export function socket_game_preset(board, timeLimit, rows, cols, blockList, creator, collisionMode) {
+export function socket_game_preset(boardData, timeLimit, rows, cols, blockList, creator, collisionMode) {
 	timeLimitUpdate(timeLimit);
 	collisionUpdate(collisionMode);
 	buildEmptyBoard(rows, cols);
-	renderBoard(board);
+	renderBoard(boardData);
 	buildBlockMenu(blockList);
 	$(".block").addClass('nohover');
 	if (globals.socket.id == creator) {
@@ -241,7 +247,7 @@ export function socket_remove_from_heading(user) {
 }
 
 export function socket_update_lobby_welcome_name_color(color) {
-	$(".lobby-container > h1 > span").css('color', color);
+	$(".lobby > h1 > span").css('color', color);
 }
 
 export function socket_all_players_ready(gameID, timeLimit, players, rows, cols, board, gameType) {
@@ -261,16 +267,14 @@ export function socket_all_players_ready(gameID, timeLimit, players, rows, cols,
 	if (timeLimit == false) {
 		timeLimit = '&infin;';
 	}
-	if ($("#timer").length === 0) {
-		$(".game__time-remaining").append('<div id="timer">Turn <b>1</b>, Time <b>' + timeLimit + '</b></div>');
-	}
+	
 	globals.gameplay.moveCount = 1;
 	$(".game__menu").css('opacity', '1'); // dim the menu
 	playAudio('newgame')
 	joinGame(gameID, globals.gameplay.moveCount, timeLimit, players, rows, cols, board, gameType);
 }
 
-export function socket_new_move(board, noMove, blockList) {
+export function socket_new_move(boardData, noMove, blockList) {
 	globals.gameplay.moveCount++;
 	$(".waitMsg").parent().remove();
 	$(".block").removeClass("nohover").removeClass('disabled');
@@ -289,7 +293,7 @@ export function socket_new_move(board, noMove, blockList) {
 		// play the audio for placing a block onto the board.
 		playAudio('move')
 	}
-	renderBoard(board);
+	renderBoard(boardData);
 	globals.gameplay.standby = false;
 	//checkForVictory(players);
 }
@@ -363,8 +367,8 @@ export function socket_remove_rematch_button(){
 	}
 }
 
-export function socket_render_board(data) {
-	renderBoard(data);
+export function socket_render_board(boardData) {
+	renderBoard(boardData);
 }
 
 export function socket_collision() {

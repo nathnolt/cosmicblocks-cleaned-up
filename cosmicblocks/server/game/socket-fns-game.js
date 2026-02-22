@@ -1,22 +1,22 @@
-const {
+import {
 	userData,
 	gameData
-} = require('./vars.js')
+} from './vars.js'
 
-const {
+import {
 	sub_returnDisplayElo,
 	sub_updateLobby,
 	sub_renderLobby,
-} = require('./subs.js')
+} from './subs.js'
 
-const {
+import {
 	setupgame_exMode,
 	setupgame_practiceMode,
 	setupgame_randomMode
-} = require('./gameplay/game-modes.js')
+} from './gameplay/game-modes.js'
 
 
-const {
+import {
 	getGameID,
 	optionsDetection2,
 	wipePossession,
@@ -27,20 +27,20 @@ const {
 	updateBlock,
 	gameOver,
 	setPossessionToSingleCell,
-} = require('./gameplay/gameplay.js')
+} from './gameplay/gameplay.js'
 
-const {
+import {
 	blocklist_circleable,
-} = require('./gameplay/game-static.js')
+} from '../../shared/game-static.js'
 
-const { 
+import { 
 	redMsg,
 	dimMsg
-} = require('../util/html.js')
+} from '../util/html.js'
 
-const { 
+import { 
 	deepClone
-} = require('../util/util.js')
+} from '../util/util.js'
 
 
 let io
@@ -251,7 +251,7 @@ function socket_handleGameReady() {
 		if (Object.keys(gameObj.players).length !== gameObj.maxPlayers) {
 			return false
 		}
-		for (id in gameObj.players) {
+		for (const id in gameObj.players) {
 			if (gameObj.players[id].ready !== true) { 
 				return false 
 			}
@@ -760,7 +760,7 @@ function gameExists(gameID) {
 }
 
 function log_invalidGame(socket) {
-	socket.emit('log', redMsg('not in a valid game'))
+	socket.emit('log', redMsg('Game does not exist'))
 }
 
 function socket_isPlayer_in_game(gameObj, socket) {
@@ -1028,8 +1028,8 @@ function startGame(gameID) {
 		resetTimer(gameID);
 	}
 				
-	for (block in gameObj.blockList) {
-		for (player in gameObj.players) {
+	for (const block in gameObj.blockList) {
+		for (const player in gameObj.players) {
 			gameObj.players[player].blockList[block] = { ammo: gameObj.blockList[block].ammo };
 		}
 	}
@@ -1280,9 +1280,20 @@ function performTurn(gameID, tBlock, tBlock2) {
 					var thisBoardCellItem = cellObj
 					var thatBoardCellItem = cellObj
 					
-					if(hideCellForSpectators) { specBoardCellItem = hiddenInformation(deepClone(cellObj)) }
-					if(hideCellForThisBoard ) { thisBoardCellItem = hiddenInformation(deepClone(cellObj)) }
-					if(hideCellForThatBoard ) { thatBoardCellItem = hiddenInformation(deepClone(cellObj)) } 
+					const hideTheCellForAnyone = (
+						hideCellForSpectators || 
+						hideCellForThisBoard || 
+						hideCellForThatBoard
+					)
+					let hiddenCell = null
+					if(hideTheCellForAnyone) {
+						hiddenCell = hiddenInformation(deepClone(cellObj))
+						console.log('hiddenCell', hiddenCell)
+					}
+					
+					if(hideCellForSpectators) { specBoardCellItem = hiddenCell }
+					if(hideCellForThisBoard ) { thisBoardCellItem = hiddenCell }
+					if(hideCellForThatBoard ) { thatBoardCellItem = hiddenCell } 
 					
 					specBoard.push(specBoardCellItem)
 					thisBoard.push(thisBoardCellItem)
@@ -1513,11 +1524,12 @@ function hiddenInformation(block) {
 	block.origin = false;
 	block.originColor = false;
 	block.history = [];
+	return block
 }
 
 
 
-module.exports = {
+export {
 	socketGame_setIo,
 	socket_practiceMode,
 	socket_newGame,

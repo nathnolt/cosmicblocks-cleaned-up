@@ -311,7 +311,7 @@ function getGameID (socket) {
 }
 
 
-module.exports = {
+export {
 	socket_classicMode,
 	socket_advancedMode,
 	socket_doneEditingGame,

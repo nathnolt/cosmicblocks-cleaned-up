@@ -1,18 +1,18 @@
-const {
+import {
 	gameData
-} = require('../vars.js')
+} from '../vars.js'
 
-const {
+import {
 	emptyColor
-} = require('../constants.js')
+} from '../constants.js'
 
-const {
+import {
 	updateBlock
-} = require('./gameplay.js')
+} from './gameplay.js'
 
-const {
+import {
 	random_inclusive_int
-} = require('../../util/util.js')
+} from '../../util/util.js'
 
 // GAME MODES
 function classicMode(gameID) {
@@ -95,7 +95,7 @@ function advancedMode(gameID) {
 	};
 }
 
-function setupgame_exMode(gameID) {
+export function setupgame_exMode(gameID) {
 	const gameObj = gameData[gameID]
 	gameObj.gameType = 'ex';
 	gameObj.rows = 11;
@@ -130,7 +130,7 @@ function setupgame_exMode(gameID) {
 	};
 }
 
-function setupgame_practiceMode(gameID) {
+export function setupgame_practiceMode(gameID) {
 	const gameObj = gameData[gameID]
 	gameObj.gameType = 'practice';
 	gameObj.rows = 11;
@@ -167,7 +167,7 @@ function setupgame_practiceMode(gameID) {
 	};
 }
 
-function setupgame_randomMode(gameID) {
+export function setupgame_randomMode(gameID) {
 	const gameObj = gameData[gameID]
 	gameObj.gameType = 'random';
 	var quadrant = (Math.floor(Math.random() * 2));
@@ -344,12 +344,4 @@ function initializeBoard(gameObj) {
 			addBlockInfo(j, i);
 		}
 	}
-}
-
-
-
-module.exports = {
-	setupgame_practiceMode,
-	setupgame_exMode,
-	setupgame_randomMode,
 }

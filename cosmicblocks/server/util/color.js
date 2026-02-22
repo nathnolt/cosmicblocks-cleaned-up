@@ -1,6 +1,6 @@
-const {
+import {
 	random_inclusive_int,
-} = require('./util.js')
+} from'./util.js'
 
 // 
 // Putting small requires flattened out here, 
@@ -8,7 +8,7 @@ const {
 // 
 
 // This was hsl npm package.
-function hslToHex(hue, saturation, luminosity) {
+export function hslToHex(hue, saturation, luminosity) {
 	
 	// resolve degrees to 0 - 359 range
 	{
@@ -106,7 +106,7 @@ function hslToRgb(hue, saturation, lightness) {
 
 
 
-function getRandomUserColor() {
+export function getRandomUserColor() {
 	var randomHue = random_inclusive_int(1, 360)
 	var randomSaturation = random_inclusive_int(40, 75)
 	
@@ -123,7 +123,7 @@ function getRandomUserColor() {
 	return hslToHex(randomHue,randomSaturation,randomLightness)
 }
 
-function hexColorDelta(hex1, hex2) {
+export function hexColorDelta(hex1, hex2) {
 	// this function finds the difference between two colors.
 	// stole this from stackoverflow :D
 	
@@ -150,7 +150,7 @@ function hexColorDelta(hex1, hex2) {
 	return (r + g + b) / 3;
 }
 
-function increase_brightness(hex, percent){
+export function increase_brightness(hex, percent){
 	// strip the leading # if it's there
 	hex = hex.replace(/^\s*#|\s*$/g, '');
 
@@ -169,7 +169,7 @@ function increase_brightness(hex, percent){
 		((0|(1<<8) + b + (256 - b) * percent / 100).toString(16)).substr(1);
 }
 
-function mix(color_1, color_2, weight) {
+export function mix(color_1, color_2, weight) {
 	color_1 = color_1.slice(1);
 	color_2 = color_2.slice(1);
 	function d2h(d) { return d.toString(16); }  // convert a decimal value to hex
@@ -185,13 +185,4 @@ function mix(color_1, color_2, weight) {
 		color += val; // concatenate val to our new color string
 	}
 	return color;
-}
-
-
-module.exports = {
-	hslToHex,
-	getRandomUserColor,
-	hexColorDelta,
-	increase_brightness,
-	mix
 }

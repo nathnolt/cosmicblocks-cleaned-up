@@ -1,6 +1,7 @@
 {
 	"name": "cosmic-blocks",
 	"version": "5.0.0",
+    "type": "module",
 	"description": "online game",
 	"dependencies": {
 		"@hono/node-server": "^1.19.9",

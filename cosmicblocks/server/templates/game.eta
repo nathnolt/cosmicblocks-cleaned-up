@@ -13,7 +13,7 @@
 			<div class="chat__contents"></div>
 		</div>
 		<form class="chat__form">
-			<input 
+			<input
 				class="chat__input"
 				type="text"
 				maxlength="140"
@@ -23,7 +23,7 @@
 		</form>
 	</div>
 	
-	<div class="lobby-container hidden-during-gameplay">
+	<div class="lobby hidden-during-gameplay">
 		<h1>
 			<span class="yourname"></span>, welcome to Cosmic Blocks!
 		</h1>
@@ -42,44 +42,63 @@
 				<button id="practice" class="buttonStyle hidden-for-ghost">Practice Mode</button>
 				
 				<a
-					id="howToPlay" 
-					class="buttonStyle" 
-					href="https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit" 
+					href="https://docs.google.com/document/d/1c_rIYxdl2udNHXPFnHj5ELoYPjtej4hDjy7nCHnceG0/edit"
 					target="_blank"
+					class="buttonStyle"
 				>How to Play</a>
 				
 				<a
-					class="buttonStyle" 
 					href="https://docs.google.com/document/d/1cIwGEWhQYZUPRn1sBzatFuVSNau3VPHxOu9ffszejU4/edit" 
 					target="_blank"
+					class="buttonStyle" 
 				>Documentation</a>
 				
-				<button class="toggleAudio buttonStyle"></button>
+				<button class="toggleAudio bg-style buttonStyle"></button>
 				
 				<button class="buttonStyle" id="rerollColor">New Color</button>
 			</div>
 			
 			<ul class="lobby__player-stats hidden-for-ghost">
 				<li>Games Played<span class="stat" id="stat-games-played"></span></li>
-				<li>Games Won<span class="stat" id="stat-games-won"></span></li>
-				<li>Games Drawn<span class="stat" id="stat-games-drawn"></span></li>
-				<li>Games Lost<span class="stat" id="stat-games-lost"></span></li>
-				<li>Elo<span class="stat" id="stat-display-elo"></span></li>
+				<li>Games Won<span    class="stat" id="stat-games-won"></span></li>
+				<li>Games Drawn<span  class="stat" id="stat-games-drawn"></span></li>
+				<li>Games Lost<span   class="stat" id="stat-games-lost"></span></li>
+				<li>Elo<span          class="stat" id="stat-display-elo"></span></li>
 			</ul>
 	
 		</div>
 		
 		<div class="lobby__games">
-			<div class="lobby__games-open"></div>
-			<div class="lobby__games-in-progress"></div>
+			
+			<div class="lobbygame dummy">
+				<div class="lobbygame__header">
+					Content
+				</div>
+				
+				<div class="lobbygame__main">
+				</div>
+				
+				<div class="lobbygame__buttons">
+					<button class="lobbygame__join buttonStyle hidden-for-ghost join-game-button">Play</button>
+					<button class="lobbygame__spectate buttonStyle spectate-game-button">Spectate</button>
+				</div>
+			</div>
+			
+			<!-- Just put the games in here I guess. -->
+			
 		</div>
 		
 	</div>
 	
 	<div class="game-container hidden-in-lobby">
-		<div class="game__header">
+		<div class="game__header h1">
 			<div class="game__player-left"></div>
-			<div class="game__time-remaining"></div>
+			
+			<div class="game__turn-time">
+				Turn <b class="game__turn"></b>, 
+				Time <b class="game__time"></b>
+			</div>
+			
 			<div class="game__player-right"></div>
 		</div>
 		
@@ -93,7 +112,7 @@
 					<button class="buttonStyle" id="exit">Exit to Lobby</button>
 					<button class="buttonStyle notready" id="ready">Ready Up</button>
 					<button class="buttonStyle" id="rematch"><span>Rematch</span></button>
-					<button class="toggleAudio buttonStyle"></button>
+					<button class="buttonStyle toggleAudio bg-style"></button>
 				</div>
 				
 				<div class="game__buttons-bottominfo"></div>
@@ -112,43 +131,6 @@
 	</div>
 	
 </div>
-
-<!-- small css code to make my modifications work. -->
-<style>
-
-.chat__header h2 {
-	margin: 0;
-	color: white;
-	text-align: center;
-}
-.in-gameplay .hidden-during-gameplay {
-	display: none;
-}
-
-.in-lobby .hidden-in-lobby{
-	display: none;
-}
-
-.is-ghost .hidden-for-ghost {
-	display: none;
-}
-
-button {
-	font-size: 1rem;
-}
-.buttonStyle {
-	white-space: nowrap;
-}
-.lobby-container .lobby__buttons {
-	flex-wrap:wrap;
-	gap: 2px;
-}
-
-.game-container {
-	flex-grow: 1;
-}
-
-</style>
 
 
 

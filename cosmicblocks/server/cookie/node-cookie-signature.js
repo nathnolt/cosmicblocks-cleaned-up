@@ -6,7 +6,7 @@
  * Module dependencies.
  */
 
-var crypto = require('crypto');
+import crypto from 'crypto'
 
 /**
  * Sign the given `val` with `secret`.
@@ -16,8 +16,7 @@ var crypto = require('crypto');
  * @return {String}
  * @api private
  */
-
-exports.sign = function(val, secret){
+export function sign(val, secret){
   if ('string' != typeof val) throw new TypeError("Cookie value must be provided as a string.");
   if (null == secret) throw new TypeError("Secret key must be provided.");
   return val + '.' + crypto
@@ -37,11 +36,11 @@ exports.sign = function(val, secret){
  * @api private
  */
 
-exports.unsign = function(input, secret){
+export function unsign(input, secret){
   if ('string' != typeof input) throw new TypeError("Signed cookie string must be provided.");
   if (null == secret) throw new TypeError("Secret key must be provided.");
   var tentativeValue = input.slice(0, input.lastIndexOf('.')),
-      expectedInput = exports.sign(tentativeValue, secret),
+      expectedInput = sign(tentativeValue, secret),
       expectedBuffer = Buffer.from(expectedInput),
       inputBuffer = Buffer.from(input);
   return (

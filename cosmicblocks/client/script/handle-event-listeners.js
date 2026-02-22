@@ -3,7 +3,9 @@ import {
 } from './globals.js'
 
 import {
-	blocklist_readableNames
+	blocklist_moves,
+	blocklist_readableNames,
+	getCircleType
 } from './static.js'
 
 import {
@@ -85,16 +87,17 @@ resizeFunction()
 
 // join games
 
-$('.lobby__games').on('click', ".joinGameButton", function () {
-	var tempID = $(this).parent().parent().data("gameid");
-	
-	globals.socket.emit('join game', tempID);
+$('.lobby__games').on('click', ".join-game-button", function () {
+	const lobbygameEl = this.closest('.lobbygame')
+	const gameId = lobbygameEl.dataset.gameid
+	globals.socket.emit('join game', gameId);
 	// should remove click handlers here or somethin.
 })
 
-$('.lobby__games').on('click', ".spectateGameButton", function() {
-	var tempID = $(this).parent().parent().data("gameid");
-	globals.socket.emit('join game', tempID, 'spec');
+$('.lobby__games').on('click', ".spectate-game-button", function() {
+	const lobbygameEl = this.closest('.lobbygame')
+	const gameId = lobbygameEl.dataset.gameid
+	globals.socket.emit('join game', gameId, 'spec');
 })
 
 
@@ -281,26 +284,6 @@ function obtainID (object) {
 	return [x,y];
 }
 
-// declare functions only used inside of joinGame
-function getCircleType (initialType) {
-	if (initialType == 'star') { return 'ostar'; }
-	else if (initialType == 'plus') { return 'oplus'; }
-	else if (initialType == 'cross') { return 'ocross'; }
-	else if (initialType == 'hbar') { return 'ohbar'; }
-	else if (initialType == 'vbar') { return 'ovbar'; }
-	else if (initialType == 'tlbr') { return 'otlbr'; }
-	else if (initialType == 'bltr') { return 'obltr'; }
-	else if (initialType == 'arrow1') { return 'arrow11'; }
-	else if (initialType == 'arrow2') { return 'arrow22'; }
-	else if (initialType == 'arrow3') { return 'arrow33'; }
-	else if (initialType == 'arrow4') { return 'arrow44'; }
-	else if (initialType == 'arrow6') { return 'arrow66'; }
-	else if (initialType == 'arrow7') { return 'arrow77'; }
-	else if (initialType == 'arrow8') { return 'arrow88'; }
-	else if (initialType == 'arrow9') { return 'arrow99'; }
-	else { return false; }
-}
-
 $('.game__board').on("click", '.block', function() {
 	const players = globals.gameplay.players
 	
@@ -443,65 +426,14 @@ $('.game__menu-container').on("click", ".menu_block:not(.nohover)", function() {
 	
 });
 
+
+// Show highlights when you click on a type after clicking on a square within the grid, it shows the possession.
 function highlight(x,y, someType, rows, cols) {
-	
-	
-	// used for highlighting blocks
-	function getMoves(blockType) { 
-		var blockList = {
-			'base': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
-			'star': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
-			'ostar': function () { return [[-2,-2], [0,-2], [2,-2], [-2, 0], [2, 0], [-2, 2], [0, 2], [2, 2]]; },
-			'p1': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
-			'p2': function () { return [[-1,-1], [0,-1], [1,-1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]; },
-			'plus': function () { return [[0,-1], [-1, 0], [1, 0], [0, 1]]; },
-			'oplus': function () { return [[0,-2], [-2, 0], [2, 0], [0, 2]]; },
-			'cross': function () { return [[-1,-1], [1,-1], [-1, 1], [1, 1]]; },
-			'ocross': function () { return [[-2,-2], [2,-2], [-2, 2], [2, 2]]; },
-			'hbar': function () { return [[-1, 0], [1, 0]]; },
-			'ohbar': function () { return [[-2, 0], [2, 0]]; },
-			'vbar': function () { return [[0, -1], [0, 1]]; },
-			'ovbar': function () { return [[0, -2], [0, 2]]; },
-			'tlbr': function () { return [[-1, -1], [1, 1]]; },
-			'otlbr': function () { return [[-2, -2], [2, 2]]; },
-			'bltr': function () { return [[-1, 1], [1, -1]]; },
-			'obltr': function () { return [[-2, 2], [2, -2]]; },
-			'arrow1': function () { return [[-1, 1]]; },
-			'arrow11': function () { return [[-2, 2]]; },
-			'arrow2': function () { return [[0, 1]]; },
-			'arrow22': function () { return [[0, 2]]; },
-			'arrow3': function () { return [[1, 1]]; },
-			'arrow33': function () { return [[2, 2,]]; },
-			'arrow4': function () { return [[-1, 0]]; },
-			'arrow44': function () { return [[-2, 0]]; },
-			'arrow6': function () { return [[1, 0]]; },
-			'arrow66': function () { return [[2, 0]]; },
-			'arrow7': function () { return [[-1, -1]]; },
-			'arrow77': function () { return [[-2, -2]]; },
-			'arrow8': function () { return [[0, -1]]; },
-			'arrow88': function () { return [[0, -2]]; },
-			'arrow9': function () { return [[1, -1]]; },
-			'arrow99': function () { return [[2, -2,]]; },
-			'blockade': function () { return [[]]; },
-			'blank': function () { return [[]]; },
-			'ice': function () { return [[]]; },
-			'knight': function () { return [[1, 2], [2, 1], [-1, 2], [2, -1], [1, -2], [-2, 1], [-1, -2], [-2, -1]]; },
-			'mine': function () { return [[]]; },
-			'reclaim': function () { return [[]]; }
-		};
-	
-		if (typeof blockList[blockType] !== 'function') {
-			console.log ("SHIT! SHIT!");
-			throw new Error('Invalid action.');
-		}
-	
-		return blockList[blockType]();
+	let dir = blocklist_moves[someType];
+	if(dir == undefined) {
+		console.log('no blocklist_moves for this type')
+		dir = [[]]
 	}
-	
-	
-	// handle highlight function
-	var dir = [];
-	dir = getMoves(someType);
 	
 	// for each direction,
 	$.each(dir, function( index, value ) {
@@ -540,8 +472,6 @@ $(".chat__form").on('submit', function(e) {
 	}
 	
 })
-
-
 
 
 
@@ -607,3 +537,4 @@ $("#rematch").on('click', function() {
 $("#forfeit").on("click",function() {
 	globals.socket.emit('forfeit')
 })
+

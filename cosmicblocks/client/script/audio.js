@@ -3,22 +3,23 @@ import {
 } from "./globals.js"
 
 
+const sfx = 'sfx/'
 const audios = {
-	hover: new Audio("sfx/hover.ogg"),
-	move: new Audio("sfx/move3.ogg"),
-	collision: new Audio("sfx/collision3.ogg"),
-	beep: new Audio("sfx/beep.ogg"),
-	newgame: new Audio("sfx/newgame.ogg"),
-	forfeit: new Audio("sfx/forfeit.ogg"),
-	drawgame: new Audio("sfx/drawgame.ogg"),
-	youwin: new Audio("sfx/youwin.ogg"),
-	gameover: new Audio("sfx/gameover.ogg"),
-	drawaccepted: new Audio("sfx/drawaccepted.ogg"),
-	connect: new Audio("sfx/connect.ogg"),
-	disconnect: new Audio("sfx/disconnected.ogg"),
-	opponentdisconnect: new Audio("sfx/opponentdisconnected.ogg"),
-	timeout: new Audio("sfx/timeover.ogg"),
-	detonate: new Audio("sfx/detonate2.ogg")
+             hover: new Audio(sfx + "hover.ogg"),
+              move: new Audio(sfx + "move3.ogg"),
+         collision: new Audio(sfx + "collision3.ogg"),
+              beep: new Audio(sfx + "beep.ogg"),
+           newgame: new Audio(sfx + "newgame.ogg"),
+           forfeit: new Audio(sfx + "forfeit.ogg"),
+          drawgame: new Audio(sfx + "drawgame.ogg"),
+            youwin: new Audio(sfx + "youwin.ogg"),
+          gameover: new Audio(sfx + "gameover.ogg"),
+      drawaccepted: new Audio(sfx + "drawaccepted.ogg"),
+           connect: new Audio(sfx + "connect.ogg"),
+        disconnect: new Audio(sfx + "disconnected.ogg"),
+opponentdisconnect: new Audio(sfx + "opponentdisconnected.ogg"),
+           timeout: new Audio(sfx + "timeover.ogg"),
+          detonate: new Audio(sfx + "detonate2.ogg")
 }
 
 // To potentially enable global volume bar functionality.
@@ -73,5 +74,3 @@ function getAudio(name) {
 	audioArr.push(audioClone)
 	return audioClone
 }
-
-window.playAudio = playAudio

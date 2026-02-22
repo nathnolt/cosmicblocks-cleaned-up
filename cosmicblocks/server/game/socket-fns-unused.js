@@ -117,7 +117,7 @@ function findBase (gameID, playerID) {
 }
 
 
-module.exports = {
+export {
 	socket_newColor,
 	socket_handleNameChosen
 }

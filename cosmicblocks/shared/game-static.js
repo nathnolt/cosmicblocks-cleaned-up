@@ -4,11 +4,7 @@
 // I want to also add ice block, which is complex...
 // I'll have to figure out not only which squares can be accessed
 // but also which direction the player came from...
-
-
-
-// @TODO: figure out if it's x, y or y, x   - and figure out if -1 means above or below for Y.
-const blocklist_moves = {
+export const blocklist_moves = {
 	
 	// base is your base, aka, where you start and what the capture goal is.
 	'base': [
@@ -93,7 +89,7 @@ const blocklist_moves = {
 	'arrow77': [[-2, -2]],
 	'arrow8': [[0, -1]],
 	'arrow88': [[0, -2]],
-	'arrow9': [[1, -1]],
+	'arrow9': [[0, -1]],
 	'arrow99': [[2, -2,]],
 	
 	// squares which don't capture anything
@@ -113,10 +109,10 @@ const blocklist_moves = {
 		[-2, 1], 
 		[-1, -2], 
 		[-2, -1]
-	]
+	],
 }
 
-const blocklist_readableNames = {
+export const blocklist_readableNames = {
 	'base': 'source',
 	'ostar': 'jump star',
 	
@@ -151,7 +147,7 @@ const blocklist_readableNames = {
 	'mine': 'stealthy mine'
 }
 
-const blocklist_circled = {
+export const blocklist_circled = {
 	star: 'ostar',
 	plus: 'oplus',
 	cross: 'ocross',
@@ -175,11 +171,14 @@ const blocklist_circled = {
 	arrow9: 'arrow99',
 }
 
-const blocklist_circleable = Object.keys(blocklist_circled)
 
-module.exports = {
-	blocklist_moves,
-	blocklist_readableNames,
-	blocklist_circled,
-	blocklist_circleable
+// declare functions only used inside of joinGame
+export function getCircleType(initialType) {
+	const circled = blocklist_circled[initialType]
+	if(circled == undefined) {
+		return false
+	}
+	return circled
 }
+
+export const blocklist_circleable = Object.keys(blocklist_circled)

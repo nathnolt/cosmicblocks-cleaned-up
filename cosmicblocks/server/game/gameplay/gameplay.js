@@ -1,46 +1,47 @@
-const crypto = require('crypto')
+import crypto from 'crypto'
 
-const {
+import {
 	gameData,
 	userData
-} = require('../vars.js')
+} from '../vars.js'
 
-const {
+import {
 	emptyColor
-} = require('../constants.js')
+} from '../constants.js'
 
-const {
+import {
 	blocklist_moves,
 	blocklist_readableNames,
 	blocklist_circled
-} = require('./game-static.js')
+} from '../../../shared/game-static.js'
 
-const {
+import {
 	sub_updateLobby
-} = require('../subs.js')
+} from '../subs.js'
 
-const {
+import {
 	b,
 	div,
 	dimMsg,
-} = require('../../util/html.js')
+} from '../../util/html.js'
 
-const {
+import {
 	// hslToHex,
 	// getRandomUserColor,
 	// hexColorDelta,
 	// increase_brightness,
 	mix
-} = require('../../util/color.js')
+} from '../../util/color.js'
 
-const {
+import {
 	random_inclusive_int,
-} = require('../../util/util.js')
+} from '../../util/util.js'
 
-const {
-	saveData
-} = require('../../settings.js')
-const { db_updateUserWithGameResults } = require('../../db/db.js')
+import settings from '../../settings.js'
+
+const saveData = settings.saveData
+
+import { db_updateUserWithGameResults } from '../../db/db.js'
 
 let io
 function gameplay_setio(ioValue) {
@@ -359,7 +360,7 @@ function optionsDetection(gameID, x, y, playerID, passedWinPath, currentLayer, i
 				iceDir = [ [iceX, iceY] ];
 			}
 			
-			newLayer = currentLayer + 1;
+			const newLayer = currentLayer + 1;
 			
 			// push the next thing into collection.
 			//optionsDetection(gameID, newX, newY, playerID, winPath, newLayer, iceDir);
@@ -596,7 +597,7 @@ function gameOver(gameID) {
 		}
 		
 		
-		for(playerID in gameObj.players) {
+		for(const playerID in gameObj.players) {
 			if (drawGame == false) {
 				if (playerID === winners[0]) {
 					gameObj.players[playerID].wins++;
@@ -799,7 +800,7 @@ function gameOver(gameID) {
 }
 
 
-module.exports = {
+export {
 	getGameID,
 	updateBlock,
 	get_linearBoardArrayPos_from_xyPos,

@@ -1,10 +1,11 @@
-const { port } = require('./settings.js')
-const { serve } = require('@hono/node-server')
-const { Hono } = require('hono')
+import settings from './settings.js'
+import { serve } from '@hono/node-server'
+import { Hono } from 'hono'
+import { startIO } from './game/socket.js'
 
-const { startIO } = require('./game/socket.js')
+const port = settings.port
 
-const app = new Hono()
+export const app = new Hono()
 
 const server = serve({
   fetch: app.fetch,
@@ -14,7 +15,3 @@ const server = serve({
 console.log('running on port ' + port)
 
 startIO(server)
-
-module.exports = {
-	app
-}

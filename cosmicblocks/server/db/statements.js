@@ -4,7 +4,7 @@
 // so that runtime performance is faster.
 // 
 
-const { getDB } = require('./get-db.js')
+import { getDB } from './get-db.js'
 let db = getDB()
 
 // Define this as a little string so we can add this
@@ -85,7 +85,7 @@ const get_userid_from_session_stmt = db.prepare(
 	/*sql*/`SELECT userid FROM session WHERE session = :session`
 )
 
-module.exports = {
+export {
 	// user
 	create_user_stmt,
 	get_user_by_name_stmt,

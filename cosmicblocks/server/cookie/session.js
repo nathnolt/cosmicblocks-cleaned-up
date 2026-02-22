@@ -1,17 +1,17 @@
-const crypto = require('crypto')
+import crypto from 'crypto'
 
-const {
+import {
 	getSignedCookie,
 	setSignedCookie,
-} = require('./signed-cookie.js')
+} from './signed-cookie.js'
 
-const {
+import {
 	getCookieSignerSecret
-} = require('../util/util.js')
+} from '../util/util.js'
 
 const session_key = 'sessionId'
 
-function getSetSessionValue(request, response) {
+export function getSetSessionValue(request, response) {
 	const cookieSecret = getCookieSignerSecret()
 	
 	const sessionValue = getSignedCookie(request, cookieSecret, session_key)
@@ -24,14 +24,9 @@ function getSetSessionValue(request, response) {
 	return newSessionVal
 }
 
-function getSessionValue(request) {
+export function getSessionValue(request) {
 	const cookieSecret = getCookieSignerSecret()
 	
 	const sessionValue = getSignedCookie(request, cookieSecret, session_key)
 	return sessionValue
-}
-
-module.exports = {
-	getSetSessionValue,
-	getSessionValue
 }

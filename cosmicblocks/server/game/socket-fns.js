@@ -1,34 +1,34 @@
-const {
-	adminUsernames,
-	saveData
-} = require('../settings.js')
+import settings from '../settings.js'
 
-const {
+const adminUsernames = settings.adminUsernames
+const saveData = settings.saveData
+
+import {
 	b,
 	dimMsg,
 	redMsg,
 	htmlEntities,
-} = require('../util/html.js')
+} from '../util/html.js'
 
-const {
+import {
 	getRandomUserColor
-} = require('../util/color.js')
+} from '../util/color.js'
 
-const {
+import {
 	db_updateColor
-} = require('../db/db.js')
+} from '../db/db.js'
 
-const {
+import {
 	userData,
-} = require('./vars.js')
+} from './vars.js'
 
-const {
+import {
 	sub_updateLobby,
-} = require('./subs.js')
+} from './subs.js'
 
-const {
+import {
 	checkForPlayerExit
-} = require('./gameplay/gameplay.js')
+} from './gameplay/gameplay.js'
 
 let io
 function fns_setIo(ioValue) {
@@ -161,7 +161,7 @@ function attemptColorReroll(socket) {
 	}
 }
 
-module.exports = {
+export {
 	fns_setIo,
 	socket_error,
 	socket_disconnect,

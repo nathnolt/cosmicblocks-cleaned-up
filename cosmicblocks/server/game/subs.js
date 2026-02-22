@@ -1,11 +1,11 @@
-const {
+import {
 	userData,
 	gameData
-} = require('./vars.js')
+} from './vars.js'
 
-const {
+import {
 	db_getUsersSortedByElo
-} = require('../db/db.js')
+} from'../db/db.js'
 
 let io
 
@@ -43,7 +43,7 @@ function sub_getLobbyData() {
 				_elo = sub_returnDisplayElo(gameData[game].creator);
 
 				if (_full) {
-					for (player in gameData[game].players) {
+					for (const player in gameData[game].players) {
 						if (player !== gameData[game].creator) {
 							if (typeof userData[player] !== 'undefined') {
 								_opponent = userData[player].username;
@@ -177,7 +177,7 @@ function sub_renderLobby(socket) {
 }
 
 
-module.exports = {
+export {
 	sub_leaderData,
 	sub_returnDisplayElo,
 	sub_getLobbyData,

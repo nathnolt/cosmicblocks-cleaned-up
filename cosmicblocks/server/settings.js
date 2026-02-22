@@ -4,7 +4,9 @@ const hour   = 60 * minute
 const day    = 24 * hour
 const month  = 31 * day
 
-module.exports = {
+// define settings
+
+export default {
 	port: 9001, 
 	saveData: true,
 	

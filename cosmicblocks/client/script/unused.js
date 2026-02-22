@@ -242,7 +242,7 @@ function creatorSettings() {
 		}
 		
 		/*
-		for (block in blockList) {
+		for (const block in blockList) {
 			if (!(fullSet.indexOf(block) > -1)) {
 			// if it doesn't exist
 				blockListForEditor[block] = false;
@@ -300,7 +300,7 @@ function creatorSettings() {
 		
 		for (block in blockListForEditor) {
 			let blockSVGString = getSVG8by8(block);
-			let appendString = '<div class="blockInfoContainer"><div class="blockInList';
+			let appendString = '<div class="blockInfoContainer"><div class="blockInList bg-style';
 			if (blockListForEditor[block] === false) {
 				appendString += ' disabled';
 			}

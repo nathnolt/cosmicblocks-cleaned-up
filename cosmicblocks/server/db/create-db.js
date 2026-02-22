@@ -1,4 +1,4 @@
-function createTheDBTables(db) {
+export function createTheDBTables(db) {
 	const {
 		session_table,
 		session_index1,
@@ -73,11 +73,6 @@ function getCreationQueries() {
 	}
 	
 }
-
-module.exports = {
-	createTheDBTables
-}
-
 
 
 
