@@ -6,6 +6,7 @@ export function createTheDBTables(db) {
 		user_index1,
 		userpassauth_table,
 		pragma_wal,
+		pragma_synchonous_normal,
 	} = getCreationQueries()
 	
 	db.exec(session_table)
@@ -15,8 +16,9 @@ export function createTheDBTables(db) {
 	
 	db.exec(userpassauth_table)
 	
-	// set journal_mode to write ahead logging.
+	// pragmas to improve db perf
 	db.exec(pragma_wal)
+	db.exec(pragma_synchonous_normal)
 }
 
 function getCreationQueries() {
@@ -62,6 +64,7 @@ function getCreationQueries() {
 	
 	// 3. pragma wal
 	const pragma_wal = `PRAGMA journal_mode=WAL`
+	const pragma_synchonous_normal = `PRAGMA synchronous=normal`
 	
 	return {
 		session_table,
@@ -69,7 +72,8 @@ function getCreationQueries() {
 		user_table,
 		user_index1,
 		userpassauth_table,
-		pragma_wal
+		pragma_wal,
+		pragma_synchonous_normal
 	}
 	
 }

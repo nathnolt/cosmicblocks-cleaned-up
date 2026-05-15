@@ -1,6 +1,6 @@
 /* manages everything having to do with the db */
-import Database from 'better-sqlite3'
-import path from 'path'
+import { DatabaseSync } from 'node:sqlite'
+import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { createTheDBTables } from './create-db.js'
 import { ensureFolder } from './../util/util.js'
@@ -28,7 +28,7 @@ export function getDB() {
 	}
 	
 	
-	db = new Database(DB_path)
+	db = new DatabaseSync(DB_path)
 	
 	if(createDB) {
 		createTheDBTables(db)

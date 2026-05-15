@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt'
-import crypto from 'crypto'
-import path   from 'path'
-import fs     from 'fs'
+import bcrypt from 'npm:bcryptjs'
+import crypto from 'node:crypto'
+import path   from 'node:path'
+import fs     from 'node:fs'
 
 const __dirname = import.meta.dirname
 

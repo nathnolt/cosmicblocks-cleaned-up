@@ -5,8 +5,7 @@
 	"description": "online game",
 	"dependencies": {
 		"@hono/node-server": "^1.19.9",
-		"bcrypt": "^6.0.0",
-		"better-sqlite3": "^12.6.2",
+		"bcryptjs": "^3.0.3",
 		"eta": "^4.5.0",
 		"hono": "^4.11.7",
 		"socket.io": "^4.8.3"
@@ -14,6 +13,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "npx nodemon cosmicblocks/server/main.js",
-		"start": "node cosmicblocks/server/main.js"
+		"start": "node cosmicblocks/server/main.js",
+		"start-deno": "deno run --allow-env --allow-read=./cosmicblocks/ --allow-write=./cosmicblocks/ --allow-net cosmicblocks/server/main.js"
 	}
 }

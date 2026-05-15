@@ -3,7 +3,7 @@
 // Cleanup by nathnolt
 ///////////////////////////////////////////
 
-import path from 'path'
+import path from 'node:path'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { app } from './create-server.js'
 

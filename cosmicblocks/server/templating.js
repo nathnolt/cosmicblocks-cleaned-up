@@ -1,6 +1,6 @@
 // Handle the HTML templating using eta
-import path from 'path'
-import { Eta } from 'eta'
+import path from 'node:path'
+import { Eta } from 'npm:eta'
 
 const __dirname = import.meta.dirname
 

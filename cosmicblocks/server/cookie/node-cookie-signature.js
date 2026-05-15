@@ -6,7 +6,7 @@
  * Module dependencies.
  */
 
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 /**
  * Sign the given `val` with `secret`.
